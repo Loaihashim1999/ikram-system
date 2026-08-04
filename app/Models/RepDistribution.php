@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class RepDistribution extends Model
+{
+    use HasFactory;
+
+    protected $keyType = 'string';
+    public $incrementing = false;
+
+    protected $fillable = [
+        'rep_id',
+        'basket_id',
+        'basket_count',
+        'target_beneficiaries_count',
+        'scheduled_at',
+        'barcode_code',
+        'status',
+        'picked_up_at',
+        'is_documented',
+    ];
+
+    protected $casts = [
+        'basket_count' => 'integer',
+        'target_beneficiaries_count' => 'integer',
+        'is_documented' => 'boolean',
+        'scheduled_at' => 'datetime',
+        'picked_up_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    // العلاقات
+    public function rep(): BelongsTo
+    {
+        return $this->belongsTo(NeighborhoodRep::class, 'rep_id');
+    }
+
+    public function basket(): BelongsTo
+    {
+        return $this->belongsTo(Basket::class);
+    }
+
+    public function proofs(): HasMany
+    {
+        return $this->hasMany(RepDistributionProof::class);
+    }
+}
