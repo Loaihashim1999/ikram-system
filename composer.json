@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.3",
         "barryvdh/laravel-dompdf": "^3.1",
+        "google/cloud-vision": "^2.2",
         "intervention/image": "^4.2",
         "laravel/framework": "^13.8",
         "laravel/sanctum": "^4.3",

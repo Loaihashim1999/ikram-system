@@ -3,23 +3,32 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // 1. إنشاء مستخدم المدير الافتراضي يدوياً لضمان البيانات الصحيحة
+        User::create([
+            'id' => Str::uuid(),
+            'username' => 'admin',
+            'password' => Hash::make('admin123'),
+            'full_name' => 'مدير النظام',
+            'phone' => '0501234567',
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // 2. تشغيل باقي الـ Seeders
+        $this->call([
+            SettingSeeder::class,
+            CategorySeeder::class,
         ]);
     }
 }

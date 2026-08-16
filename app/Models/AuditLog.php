@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AuditLog extends Model
 {
     use HasFactory;
+    public $timestamps = false;
 
     protected $keyType = 'string';
     public $incrementing = false;

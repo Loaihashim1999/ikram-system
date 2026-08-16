@@ -2,18 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
-
-return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
-   <?php
-
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
- Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -62,18 +51,26 @@ return new class extends Migration
             $table->enum('status', ['active', 'suspended', 'under_review'])->default('active');
             $table->foreignUuid('created_by')->constrained('users')->cascadeOnDelete();
             $table->timestamps();
+
+            // ... (الحقول السابقة تبقى كما هي)
+
+            // 🔥 الحقول الاجتماعية والأسرية الجديدة
+            $table->integer('family_members_count')->default(0); // عدد أفراد الأسرة
+            $table->integer('working_members_count')->default(0); // عدد العاملين في الأسرة
+            $table->integer('non_working_children_count')->default(0); // عدد الأبناء غير العاملين
+            $table->enum('father_status', ['alive', 'deceased'])->default('alive'); // حالة الأب
+            $table->enum('mother_status', ['alive', 'deceased'])->default('alive'); // حالة الأم
+
+            // 🔥 الحقول المالية والسكنية
+            $table->decimal('monthly_salary', 10, 2)->default(0); // الراتب الشهري
+            $table->enum('housing_type', ['rent', 'own'])->default('rent'); // نوع السكن (إيجار/ملك)
+            $table->decimal('social_security_amount', 10, 2)->default(0); // مبلغ الضمان الاجتماعي (للمواطن)
+            $table->decimal('citizen_account_amount', 10, 2)->default(0); // مبلغ حساب المواطن (للمواطن)
+
+// ... (rest of the code)
         });
     }
 
-    public function down(): void
-    {
-        Schema::dropIfExists('beneficiaries');
-    }
-};
-
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('beneficiaries');
