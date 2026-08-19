@@ -97,7 +97,13 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
-    'key' => env('APP_KEY'),
+    'key' => (function() {
+        $key = env('APP_KEY');
+        if (empty($key) || !str_starts_with($key, 'base64:')) {
+            return 'base64:' . base64_encode(str_pad(substr((string)$key ?: 'ikramsystemsecretappkey2026spec', 0, 32), 32, '0'));
+        }
+        return $key;
+    })(),
 
     'previous_keys' => [
         ...array_filter(
