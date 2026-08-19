@@ -58,25 +58,24 @@ jobs:
           echo "Building Frontend Production Assets..."
           cd frontend && npm run build && cd ..
           
+          echo "Running Full Test Suite..."
+          php artisan migrate --force
+          php artisan test
+          
           echo "Verifying Laravel Optimization & Cache..."
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
-          
-          echo "Running Full Test Suite..."
-          php artisan migrate --force
-          php artisan test
 
       - name: Synthetic Health Check Simulation (/up endpoint)
         id: health_check
         run: |
           echo "Starting ephemeral server for health verification..."
-          php artisan serve --port=8000 &
+          php artisan serve --host=127.0.0.1 --port=8000 &
           SERVER_PID=$!
-          sleep 3
           
           echo "Pinging health check endpoint..."
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/up || echo "000")
+          HTTP_CODE=$(curl --retry 10 --retry-delay 1 --retry-connrefused -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/up || echo "000")
           kill $SERVER_PID || true
           
           if [ "$HTTP_CODE" -ne 200 ]; then
