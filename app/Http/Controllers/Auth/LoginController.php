@@ -44,14 +44,18 @@ class LoginController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         // تسجيل في Audit Log
-        AuditLog::create([
-            'id' => Str::uuid(),
-            'user_id' => $user->id,
-            'action' => 'login',
-            'target_table' => 'users',
-            'target_id' => $user->id,
-            'details' => ['ip' => $request->ip(), 'user_agent' => $request->userAgent()],
-        ]);
+        try {
+            AuditLog::create([
+                'id' => Str::uuid(),
+                'user_id' => $user->id,
+                'action' => 'login',
+                'target_table' => 'users',
+                'target_id' => $user->id,
+                'details' => ['ip' => $request->ip(), 'user_agent' => $request->userAgent()],
+            ]);
+        } catch (\Throwable $e) {
+            // تجاهل خطأ الـ Audit Log لعدم تعطيل عملية تسجيل الدخول
+        }
 
         return response()->json([
             'success' => true,

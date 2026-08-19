@@ -25,7 +25,7 @@ services:
       - key: DB_HOST
         fromDatabase:
           name: ikram-postgres-db
-          property: host
+          property: internalHost
       - key: DB_PORT
         fromDatabase:
           name: ikram-postgres-db
