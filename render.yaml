@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: ikram-laravel-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /up
+    envVars:
+      - key: APP_NAME
+        value: "Ikram System"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: ikram-postgres-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: ikram-postgres-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: ikram-postgres-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: ikram-postgres-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: ikram-postgres-db
+          property: password
+
+databases:
+  - name: ikram-postgres-db
+    plan: free
+    databaseName: ikram_db
+    user: ikram_user
