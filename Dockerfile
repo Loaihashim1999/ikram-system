@@ -14,7 +14,7 @@ RUN apk add --no-cache \
     unzip \
     curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_pgsql zip gd bcmath intl opcache
+    && docker-php-ext-install pdo pdo_pgsql pgsql zip gd bcmath intl opcache
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
