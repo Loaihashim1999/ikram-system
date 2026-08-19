@@ -35,7 +35,7 @@ export default function LoginPage() {
         {/* 2. قسم الشعار والعنوان */}
         <div className="text-center mb-8">
          <img
-                src="/public/1.png"
+                src="/1.png"
                 alt="شعار جمعية إكرام الجود"
                 className="w-62 h-62 mx-auto mb-4 object-contain drop-shadow-md"
                 />
@@ -62,6 +62,7 @@ export default function LoginPage() {
               className="w-full px-4 py-3 rounded-lg border border-[#E5E2D9] focus:border-[#C9A24A] focus:ring-2 focus:ring-[#C9A24A]/20 outline-none transition-all text-right"
               placeholder="أدخل اسم المستخدم"
               required
+              autoComplete="username"
               dir="rtl"
             />
           </div>
@@ -77,6 +78,7 @@ export default function LoginPage() {
               className="w-full px-4 py-3 rounded-lg border border-[#E5E2D9] focus:border-[#C9A24A] focus:ring-2 focus:ring-[#C9A24A]/20 outline-none transition-all text-right"
               placeholder="••••••••"
               required
+              autoComplete="current-password"
               dir="rtl"
             />
           </div>

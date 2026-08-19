@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class LogoutController extends Controller
 {
@@ -18,7 +19,7 @@ class LogoutController extends Controller
 
         // تسجيل في Audit Log
         AuditLog::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'user_id' => $request->user()->id,
             'action' => 'logout',
             'target_table' => 'users',
@@ -28,7 +29,7 @@ class LogoutController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'تم تسجيل الخروج بنجاح'
+            'message' => 'تم تسجيل الخروج بنجاح',
         ]);
     }
 }

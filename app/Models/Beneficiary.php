@@ -18,7 +18,7 @@ class Beneficiary extends Model
         // عنوان
         'city', 'district', 'street',
         // الفئة والحالة
-        'category_id', 'status', 'priority', 'has_special_needs',
+        'category_id', 'status', 'priority', 'has_special_needs', 'is_elderly', 'is_special_needs',
         // أسرة
         'family_status', 'family_members_count', 'wives_count',
         'working_members_count', 'non_working_children_count',
@@ -43,21 +43,21 @@ class Beneficiary extends Model
     ];
 
     protected $casts = [
-        'date_of_birth'          => 'date',
-        'residence_issue_date'   => 'date',
-        'residence_expiry_date'  => 'date',
-        'has_special_needs'      => 'boolean',
-        'is_employee'            => 'boolean',
-        'owns_house'             => 'boolean',
-        'monthly_salary'         => 'decimal:2',
+        'date_of_birth' => 'date:Y-m-d',
+        'residence_issue_date' => 'date:Y-m-d',
+        'residence_expiry_date' => 'date:Y-m-d',
+        'has_special_needs' => 'boolean',
+        'is_employee' => 'boolean',
+        'owns_house' => 'boolean',
+        'monthly_salary' => 'decimal:2',
         'social_security_amount' => 'decimal:2',
         'citizen_account_amount' => 'decimal:2',
-        'retirement_pension'     => 'decimal:2',
-        'family_support'         => 'decimal:2',
-        'annual_rent_amount'     => 'decimal:2',
-        'income_sources'         => 'array',
-        'ocr_extracted_data'     => 'array',
-        'total_income'           => 'decimal:2',
+        'retirement_pension' => 'decimal:2',
+        'family_support' => 'decimal:2',
+        'annual_rent_amount' => 'decimal:2',
+        'income_sources' => 'array',
+        'ocr_extracted_data' => 'array',
+        'total_income' => 'decimal:2',
     ];
 
     // ─── Auto-compute total_income on save ──────────────────────────────────
@@ -68,11 +68,11 @@ class Beneficiary extends Model
 
         $compute = function (self $b) {
             $b->total_income =
-                (float)($b->monthly_salary ?? 0) +
-                (float)($b->citizen_account_amount ?? 0) +
-                (float)($b->social_security_amount ?? 0) +
-                (float)($b->retirement_pension ?? 0) +
-                (float)($b->family_support ?? 0);
+                (float) ($b->monthly_salary ?? 0) +
+                (float) ($b->citizen_account_amount ?? 0) +
+                (float) ($b->social_security_amount ?? 0) +
+                (float) ($b->retirement_pension ?? 0) +
+                (float) ($b->family_support ?? 0);
         };
 
         static::creating($compute);
@@ -84,17 +84,21 @@ class Beneficiary extends Model
     /** Masked IBAN — safe to expose in JSON */
     public function getIbanMaskedAttribute(): ?string
     {
-        if (!$this->iban_encrypted) return null;
+        if (! $this->iban_encrypted) {
+            return null;
+        }
         try {
             $plain = Crypt::decryptString($this->iban_encrypted);
-            return str_repeat('*', max(0, strlen($plain) - 4)) . substr($plain, -4);
+
+            return str_repeat('*', max(0, strlen($plain) - 4)).substr($plain, -4);
         } catch (\Exception) {
             return null;
         }
     }
 
     protected $appends = ['iban_masked'];
-    protected $hidden  = ['iban_encrypted'];
+
+    protected $hidden = ['iban_encrypted'];
 
     // ─── Relationships ───────────────────────────────────────────────────────
 

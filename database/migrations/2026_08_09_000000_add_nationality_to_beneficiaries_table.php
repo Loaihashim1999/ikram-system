@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         // The original migration has this column; this keeps existing databases aligned.
-        if (!Schema::hasColumn('beneficiaries', 'nationality')) {
+        if (! Schema::hasColumn('beneficiaries', 'nationality')) {
             Schema::table('beneficiaries', function (Blueprint $table) {
                 $table->string('nationality', 100)->nullable();
             });

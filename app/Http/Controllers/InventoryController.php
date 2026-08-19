@@ -6,15 +6,14 @@ use App\Models\InventoryItem;
 use App\Models\InventoryMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class InventoryController extends Controller
 {
     public function index()
     {
-        $items = InventoryItem::withCount(['movements as total_in' => function($q) {
+        $items = InventoryItem::withCount(['movements as total_in' => function ($q) {
             $q->where('type', 'in');
-        }, 'movements as total_out' => function($q) {
+        }, 'movements as total_out' => function ($q) {
             $q->where('type', 'out');
         }])->orderBy('created_at', 'desc')->get();
 
@@ -57,6 +56,7 @@ class InventoryController extends Controller
         ]);
 
         $item->update($validated);
+
         return response()->json(['success' => true, 'message' => 'تم تحديث الصنف بنجاح', 'data' => $item]);
     }
 
@@ -64,58 +64,59 @@ class InventoryController extends Controller
     {
         $item = InventoryItem::findOrFail($id);
         $item->delete();
+
         return response()->json(['success' => true, 'message' => 'تم حذف الصنف بنجاح']);
     }
 
-   public function adjustStock(Request $request, $id)
-{
-    try {
-        $request->validate([
-            'type' => 'required|in:in,out',
-            'quantity' => 'required|integer|min:1',
-            'reason' => 'required|string|max:255',
-        ]);
+    public function adjustStock(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'type' => 'required|in:in,out',
+                'quantity' => 'required|integer|min:1',
+                'reason' => 'required|string|max:255',
+            ]);
 
-        $item = InventoryItem::findOrFail($id);
+            $item = InventoryItem::findOrFail($id);
 
-        // التحقق من وجود المستخدم
-        if (!$request->user()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'المستخدم غير مسجل دخوله'
-            ], 401);
-        }
-
-        DB::transaction(function () use ($request, $item) {
-            if ($request->type === 'out' && $item->current_quantity < $request->quantity) {
-                throw new \Exception('الكمية المراد صرفها أكبر من المخزون المتاح');
+            // التحقق من وجود المستخدم
+            if (! $request->user()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'المستخدم غير مسجل دخوله',
+                ], 401);
             }
 
-            $item->current_quantity = $request->type === 'in' 
-                ? $item->current_quantity + $request->quantity 
-                : $item->current_quantity - $request->quantity;
-            
-            $item->save();
+            DB::transaction(function () use ($request, $item) {
+                if ($request->type === 'out' && $item->current_quantity < $request->quantity) {
+                    throw new \Exception('الكمية المراد صرفها أكبر من المخزون المتاح');
+                }
 
-            InventoryMovement::create([
-                'inventory_item_id' => $item->id,
-                'type' => $request->type,
-                'quantity' => $request->quantity,
-                'reason' => $request->reason,
-                'user_id' => $request->user()->id,
+                $item->current_quantity = $request->type === 'in'
+                    ? $item->current_quantity + $request->quantity
+                    : $item->current_quantity - $request->quantity;
+
+                $item->save();
+
+                InventoryMovement::create([
+                    'inventory_item_id' => $item->id,
+                    'type' => $request->type,
+                    'quantity' => $request->quantity,
+                    'reason' => $request->reason,
+                    'user_id' => $request->user()->id,
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تعديل المخزون بنجاح',
+                'data' => $item->fresh(),
             ]);
-        });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'تم تعديل المخزون بنجاح',
-            'data' => $item->fresh()
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage()
-        ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
-}
 }

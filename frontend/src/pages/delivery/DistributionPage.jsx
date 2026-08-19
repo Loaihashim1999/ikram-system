@@ -230,8 +230,8 @@ export default function DistributionPage() {
               >
                 <div className="font-bold text-gray-800">{b.name}</div>
                 <div className="text-sm text-gray-500 mt-1">
-                  المتوفر: <span className={`font-bold ${b.quantity <= 5 ? "text-red-600" : "text-green-600"}`}>
-                    {b.quantity ?? b.stock_quantity ?? 0}
+                  المتوفر: <span className={`font-bold ${ (b.current_quantity ?? b.quantity ?? b.stock_quantity ?? 0) <= 5 ? "text-red-600" : "text-green-600"}`}>
+                    {b.current_quantity ?? b.quantity ?? b.stock_quantity ?? 0}
                   </span>
                 </div>
               </button>
@@ -240,9 +240,9 @@ export default function DistributionPage() {
               <p className="text-gray-400 col-span-3">لا توجد مواد في المستودع.</p>
             )}
           </div>
-          {selectedBasket && selected.size > (selectedBasket.quantity ?? selectedBasket.stock_quantity ?? 0) && (
+          {selectedBasket && selected.size > (selectedBasket.current_quantity ?? selectedBasket.quantity ?? selectedBasket.stock_quantity ?? 0) && (
             <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              ⚠️ الكمية المتاحة ({selectedBasket.quantity ?? selectedBasket.stock_quantity}) أقل من عدد المستفيدين المختارين ({selected.size}).
+              ⚠️ الكمية المتاحة ({selectedBasket.current_quantity ?? selectedBasket.quantity ?? selectedBasket.stock_quantity ?? 0}) أقل من عدد المستفيدين المختارين ({selected.size}).
             </div>
           )}
         </div>

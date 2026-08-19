@@ -4,9 +4,10 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
@@ -23,17 +24,17 @@ class LoginController extends Controller
         ]);
 
         // البحث عن المستخدم
-        $user = \App\Models\User::where('username', $request->username)->first();
+        $user = User::where('username', $request->username)->first();
 
         // التحقق من وجود المستخدم وكلمة المرور
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'username' => ['اسم المستخدم أو كلمة المرور غير صحيحة'],
             ]);
         }
 
         // التحقق من أن الحساب نشط
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             throw ValidationException::withMessages([
                 'username' => ['هذا الحساب معطل. تواصل مع管理员.'],
             ]);
@@ -44,7 +45,7 @@ class LoginController extends Controller
 
         // تسجيل في Audit Log
         AuditLog::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'user_id' => $user->id,
             'action' => 'login',
             'target_table' => 'users',
@@ -61,9 +62,10 @@ class LoginController extends Controller
                     'username' => $user->username,
                     'full_name' => $user->full_name,
                     'role' => $user->role,
+                    'permissions' => $user->permissions,
                 ],
                 'token' => $token,
-            ]
+            ],
         ]);
     }
 
@@ -74,7 +76,7 @@ class LoginController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data' => $request->user()
+            'data' => $request->user(),
         ]);
     }
 }

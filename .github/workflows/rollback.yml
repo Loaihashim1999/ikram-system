@@ -1,0 +1,54 @@
+name: Manual / On-Demand Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: 'Git SHA or Tag to rollback to (e.g. main~1, v1.0.0, or specific SHA)'
+        required: true
+        default: 'HEAD~1'
+      reason:
+        description: 'Reason for manual rollback'
+        required: false
+        default: 'Manual operator rollback requested'
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  rollback:
+    name: Execute Manual Rollback
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Target Ref
+        id: resolve
+        run: |
+          TARGET_SHA=$(git rev-parse "${{ github.event.inputs.target_ref }}")
+          CURRENT_SHA=$(git rev-parse HEAD)
+          echo "target_sha=$TARGET_SHA" >> $GITHUB_OUTPUT
+          echo "current_sha=$CURRENT_SHA" >> $GITHUB_OUTPUT
+          echo "Rolling back from $CURRENT_SHA to $TARGET_SHA"
+
+      - name: Execute GitOps Rollback Pointer Update
+        run: |
+          TARGET_SHA="${{ steps.resolve.outputs.target_sha }}"
+          REASON="${{ github.event.inputs.reason }}"
+          
+          echo "Updating deployment target to $TARGET_SHA"
+          echo "Reason: $REASON"
+          
+          # Tag active rollback release
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f active-release "$TARGET_SHA"
+          
+          echo "### 🔄 Manual Rollback Successfully Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target SHA/Ref**: \`$TARGET_SHA\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reason**: $REASON" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered By**: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

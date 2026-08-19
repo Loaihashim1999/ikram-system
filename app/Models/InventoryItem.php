@@ -11,10 +11,11 @@ class InventoryItem extends Model
     use HasFactory;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
-        'name', 'unit', 'current_quantity', 'min_threshold', 'description'
+        'name', 'unit', 'current_quantity', 'min_threshold', 'description',
     ];
 
     protected static function boot()
@@ -35,8 +36,13 @@ class InventoryItem extends Model
     // دالة مساعدة لتحديد حالة المخزون
     public function getStockStatusAttribute()
     {
-        if ($this->current_quantity == 0) return 'out_of_stock';
-        if ($this->current_quantity <= $this->min_threshold) return 'low_stock';
+        if ($this->current_quantity == 0) {
+            return 'out_of_stock';
+        }
+        if ($this->current_quantity <= $this->min_threshold) {
+            return 'low_stock';
+        }
+
         return 'in_stock';
     }
 }

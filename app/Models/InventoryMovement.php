@@ -11,10 +11,11 @@ class InventoryMovement extends Model
     use HasFactory;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
-        'inventory_item_id', 'type', 'quantity', 'reason', 'user_id'
+        'inventory_item_id', 'type', 'quantity', 'reason', 'user_id',
     ];
 
     protected static function boot()
@@ -28,6 +29,11 @@ class InventoryMovement extends Model
     }
 
     public function item()
+    {
+        return $this->belongsTo(InventoryItem::class, 'inventory_item_id');
+    }
+
+    public function inventoryItem()
     {
         return $this->belongsTo(InventoryItem::class, 'inventory_item_id');
     }

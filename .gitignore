@@ -25,3 +25,7 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+google-credentials.json
+app/google/google-credentials.json
+scratch/
+scratch_users.php

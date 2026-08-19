@@ -11,7 +11,7 @@ class SettingSeeder extends Seeder
     {
         // الحد الأقصى لدخل المواطن
         Setting::set('income_threshold_citizen', 4000, 'الحد الأقصى لإجمالي الدخل للمواطن ليُصنف كدرجة أولى');
-        
+
         // الحد الأقصى لدخل المقيم
         Setting::set('income_threshold_resident', 4000, 'الحد الأقصى للراتب الشهري للمقيم ليُصنف كدرجة أولى');
     }

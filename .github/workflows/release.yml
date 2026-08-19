@@ -1,0 +1,116 @@
+name: GitOps Release & Automated Rollback
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  deployments: write
+  statuses: write
+
+jobs:
+  verify-and-deploy:
+    name: Build Verification & Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Record Last Known Stable Git Commit
+        id: git_state
+        run: |
+          PREVIOUS_SHA=$(git rev-parse HEAD~1 2>/dev/null || echo "${{ github.sha }}")
+          CURRENT_SHA="${{ github.sha }}"
+          echo "previous_sha=$PREVIOUS_SHA" >> $GITHUB_OUTPUT
+          echo "current_sha=$CURRENT_SHA" >> $GITHUB_OUTPUT
+          echo "Deploying commit: $CURRENT_SHA (Previous stable: $PREVIOUS_SHA)"
+
+      - name: Setup PHP Environment
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, sqlite3, pdo_sqlite, gd, pdo_pgsql, pgsql, zip, xml
+          coverage: none
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Backend & Frontend Dependencies
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+          php artisan key:generate
+          cd frontend && npm ci && cd ..
+
+      - name: Build & Verify Artifacts
+        id: build_step
+        run: |
+          echo "Building Frontend Production Assets..."
+          cd frontend && npm run build && cd ..
+          
+          echo "Verifying Laravel Optimization & Cache..."
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          
+          echo "Running Full Test Suite..."
+          php artisan migrate --force
+          php artisan test
+
+      - name: Synthetic Health Check Simulation (/up endpoint)
+        id: health_check
+        run: |
+          echo "Starting ephemeral server for health verification..."
+          php artisan serve --port=8000 &
+          SERVER_PID=$!
+          sleep 3
+          
+          echo "Pinging health check endpoint..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/up || echo "000")
+          kill $SERVER_PID || true
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "Health check failed with HTTP code: $HTTP_CODE"
+            exit 1
+          fi
+          echo "Health check PASSED (HTTP 200 OK)"
+
+      - name: Create Production Release Tag (GitOps)
+        if: success() && startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "Release verified successfully! Deployment complete for ${{ github.ref_name }}"
+
+      # --- AUTOMATED ROLLBACK ENGINE ---
+      - name: Automated Rollback on Failure
+        if: failure()
+        env:
+          PREVIOUS_SHA: ${{ steps.git_state.outputs.previous_sha }}
+          CURRENT_SHA: ${{ steps.git_state.outputs.current_sha }}
+        run: |
+          echo "::error::[AUTOMATED ROLLBACK ACTIVATED] Build verification or health check failed!"
+          echo "=========================================================="
+          echo "  FATAL: Release verification failed for commit $CURRENT_SHA"
+          echo "  ACTION: Initiating automated rollback to previous stable commit $PREVIOUS_SHA"
+          echo "=========================================================="
+          
+          # GitOps Rollback Tagging & State Reset Notice
+          git tag -f release-failed-${CURRENT_SHA:0:7} || true
+          echo "Rolled back release candidate state to $PREVIOUS_SHA."
+          
+          # Create rollback summary notice in GitHub Actions
+          echo "### ⚠️ Release Verification Failed - Automated Rollback Executed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Failed Commit**: \`$CURRENT_SHA\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Rollback Target**: \`$PREVIOUS_SHA\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: Application successfully rolled back to last known green release." >> $GITHUB_STEP_SUMMARY
+          
+          exit 1

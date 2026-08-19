@@ -11,7 +11,9 @@ class RepDistributionProof extends Model
     use HasFactory;
 
     protected $table = 'rep_distribution_proofs';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [

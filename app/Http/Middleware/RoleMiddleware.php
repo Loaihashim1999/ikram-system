@@ -15,17 +15,17 @@ class RoleMiddleware
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'غير مصرح بالوصول'
+                'message' => 'غير مصرح بالوصول',
             ], 401);
         }
 
-        if (!in_array($user->role, $roles)) {
+        if (! in_array($user->role, $roles)) {
             return response()->json([
                 'success' => false,
-                'message' => 'ليس لديك الصلاحيات المطلوبة'
+                'message' => 'ليس لديك الصلاحيات المطلوبة',
             ], 403);
         }
 

@@ -15,7 +15,7 @@ class CategoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $categories
+            'data' => $categories,
         ]);
     }
 
@@ -34,7 +34,7 @@ class CategoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'تم إضافة الفئة بنجاح',
-            'data' => $category
+            'data' => $category,
         ], 201);
     }
 
@@ -43,7 +43,7 @@ class CategoryController extends Controller
         $category = Category::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:100|unique:categories,name,' . $id,
+            'name' => 'sometimes|string|max:100|unique:categories,name,'.$id,
             'description' => 'nullable|string',
             'basket_entitlement_per_period' => 'sometimes|integer|min:1',
         ]);
@@ -53,7 +53,7 @@ class CategoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'تم تحديث الفئة',
-            'data' => $category
+            'data' => $category,
         ]);
     }
 
@@ -64,7 +64,7 @@ class CategoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'تم حذف الفئة'
+            'message' => 'تم حذف الفئة',
         ]);
     }
 }

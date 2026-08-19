@@ -49,6 +49,9 @@ export default function StaffImportPage() {
 
     const formData = new FormData();
     formData.append("file", file);
+    if (previewRows && previewRows.length > 0) {
+      formData.append("rows_json", JSON.stringify(previewRows));
+    }
 
     try {
       const res = await staffApi.importExcel(formData);
@@ -64,6 +67,23 @@ export default function StaffImportPage() {
     }
   };
 
+  const downloadSampleTemplate = () => {
+    const csvContent =
+      "\uFEFF" +
+      "اسم الموظف,رقم الهوية,رقم الهاتف,المسمى الوظيفي,القسم,تاريخ التعيين,الراتب,البريد الإلكتروني,العنوان الوطني,عدد أفراد الأسرة\n" +
+      "عبد الله محمد علي,1012345678,0501234567,محاسب مالية,المالية,2024-01-15,6500,abdullah@example.com,الرياض - حي الصفا,4\n" +
+      "سارة أحمد عمر,1023456789,0507654321,مدير مشاريع,المشاريع,2023-05-10,9000,sara@example.com,جدة - حي النعيم,3\n";
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "نموذج_استيراد_الموظفين_إكرام.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <MainLayout>
     <div className="p-6 max-w-4xl mx-auto" dir="rtl">
@@ -76,18 +96,25 @@ export default function StaffImportPage() {
       </div>
 
       {/* Guide box */}
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 text-amber-900 text-sm">
-        <h3 className="font-bold text-amber-800 text-base mb-2">💡 تعليمات رفع ملف الموظفين:</h3>
-        <ul className="list-disc list-inside space-y-1">
-          <li>تأكد من أن صيغة الملف هي <strong>.xlsx</strong> أو <strong>.csv</strong>.</li>
-          <li>تأكد من احتواء السطر الأول على الأعمدة الرئيسية:
-            <code className="bg-white px-2 py-0.5 rounded border mx-1 font-mono text-xs">name (اسم الموظف)</code>,
-            <code className="bg-white px-2 py-0.5 rounded border mx-1 font-mono text-xs">national_id (رقم الهوية - 10 أرقام)</code>,
-            <code className="bg-white px-2 py-0.5 rounded border mx-1 font-mono text-xs">phone (الهاتف)</code>,
-            <code className="bg-white px-2 py-0.5 rounded border mx-1 font-mono text-xs">job_title (المسمى الوظيفي)</code>,
-            <code className="bg-white px-2 py-0.5 rounded border mx-1 font-mono text-xs">hire_date (تاريخ التعيين)</code>.
-          </li>
-          <li>يتم فحص أرقام الهويات ومنع تكرار الموظفين المسجلين سلفاً.</li>
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 text-amber-900 text-sm shadow-xs">
+        <div className="flex flex-wrap justify-between items-center mb-2">
+          <h3 className="font-bold text-amber-900 text-base flex items-center gap-2">
+            <span>💡</span>
+            <span>تعليمات رفع ملف الموظفين:</span>
+          </h3>
+          <button
+            type="button"
+            onClick={downloadSampleTemplate}
+            className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs transition-colors shadow-sm cursor-pointer flex items-center gap-1.5"
+          >
+            <span>📥</span>
+            <span>تحميل نموذج تجريبي جاهز (CSV/Excel)</span>
+          </button>
+        </div>
+
+        <ul className="list-disc list-inside space-y-1 text-xs text-amber-800 mt-2">
+          <li>تأكد من أن صيغة الملف هي <strong>.xlsx</strong> أو <strong>.xls</strong> أو <strong>.csv</strong>.</li>
+          <li>يتم فحص أرقام الهواتف والهويات وتفادي تكرار الموظفين المسجلين سابقاً.</li>
         </ul>
       </div>
 

@@ -12,6 +12,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -20,6 +21,7 @@ class User extends Authenticatable
         'full_name',
         'phone',
         'role',
+        'permissions',
         'is_active',
     ];
 
@@ -31,6 +33,7 @@ class User extends Authenticatable
     protected $casts = [
         'password' => 'hashed',
         'is_active' => 'boolean',
+        'permissions' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

@@ -18,14 +18,19 @@ class Staff extends Model
     ];
 
     protected $casts = [
-        'hire_date'   => 'date',
-        'birth_date'  => 'date',
-        'salary'      => 'decimal:2',
-        'owns_house'  => 'boolean',
+        'hire_date' => 'date',
+        'birth_date' => 'date',
+        'salary' => 'decimal:2',
+        'owns_house' => 'boolean',
     ];
 
     public function dependents(): HasMany
     {
         return $this->hasMany(StaffDependent::class);
+    }
+
+    public function distributions(): HasMany
+    {
+        return $this->hasMany(StaffDistribution::class, 'staff_member_id');
     }
 }

@@ -12,11 +12,13 @@ class RepDistribution extends Model
     use HasFactory;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
         'rep_id',
         'basket_id',
+        'driver_id',
         'basket_count',
         'target_beneficiaries_count',
         'scheduled_at',
@@ -45,6 +47,11 @@ class RepDistribution extends Model
     public function basket(): BelongsTo
     {
         return $this->belongsTo(Basket::class);
+    }
+
+    public function driver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'driver_id');
     }
 
     public function proofs(): HasMany

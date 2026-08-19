@@ -11,7 +11,9 @@ class BeneficiaryDocument extends Model
     use HasFactory;
 
     protected $table = 'beneficiary_documents';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [

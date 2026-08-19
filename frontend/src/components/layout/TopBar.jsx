@@ -3,19 +3,38 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, LogOut, User, Menu } from 'lucide-react';
 
 export default function TopBar({ onMenuClick }) {
-  const { user, logout } = useAuth();
+  const { user: authUser, logout } = useAuth();
   const navigate = useNavigate();
+
+  const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = authUser || savedUser;
+  const role = user?.role || 'admin';
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
+  const getRoleLabel = (r) => {
+    switch (r) {
+      case 'admin':
+        return 'المدير العام (Supervisor)';
+      case 'assistant_admin':
+        return 'مساعد / نائب المدير (Assistant)';
+      case 'delivery_driver':
+      case 'driver':
+        return 'السائق الميداني (Driver)';
+      case 'staff':
+        return 'موظف دراسة حالات';
+      default:
+        return 'موظف إداري';
+    }
+  };
+
   return (
-    <header className="h-16 bg-white border-b border-[#E5E2D9] fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 lg:px-6 lg:right-72">
-      {/* القسم الأيمن - زر القائمة للهاتف + عنوان الصفحة */}
+    <header className="h-16 bg-white border-b border-[#E5E2D9] fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 lg:px-6 lg:right-72" dir="rtl">
+      {/* Right side: Mobile Menu button + Title */}
       <div className="flex items-center gap-4">
-        {/* زر القائمة (يظهر فقط على الهاتف) */}
         <button
           onClick={onMenuClick}
           className="lg:hidden p-2 rounded-lg hover:bg-[#F7F5F0] text-[#6B6B66]"
@@ -23,39 +42,33 @@ export default function TopBar({ onMenuClick }) {
           <Menu size={24} />
         </button>
 
-        <h1 className="text-lg font-medium text-[#6B6B66]">
-          لوحة التحكم
+        <h1 className="text-sm font-bold text-[#6B6B66]">
+          جمعية إكرام - نظام إدارة المستفيدين
         </h1>
       </div>
 
-      {/* القسم الأيسر - المستخدم والإشعارات */}
+      {/* Left side: User profile & Logout */}
       <div className="flex items-center gap-2 lg:gap-4">
-        {/* أيقونة الإشعارات */}
-        <button className="relative p-2 rounded-lg hover:bg-[#F7F5F0] transition-colors">
-          <Bell size={20} className="text-[#6B6B66]" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-[#C24B3F] rounded-full"></span>
-        </button>
-
-        {/* معلومات المستخدم */}
         <div className="flex items-center gap-3 pr-2 lg:pr-4 border-r border-[#E5E2D9]">
-          <div className="w-9 h-9 bg-[#C9A24A] rounded-full flex items-center justify-center text-white">
+          <div className="w-9 h-9 bg-[#C9A24A] rounded-full flex items-center justify-center text-white shadow-sm font-bold">
             <User size={18} />
           </div>
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-medium text-[#111111]">{user?.full_name}</p>
-            <p className="text-xs text-[#6B6B66]">
-              {user?.role === 'admin' ? 'مدير النظام' : user?.role === 'staff' ? 'موظف إداري' : 'موظف استقبال'}
+            <p className="text-xs font-bold text-[#111111]">{user?.full_name || user?.name || user?.username}</p>
+            <p className="text-[11px] font-bold text-amber-700">
+              {getRoleLabel(role)}
             </p>
           </div>
         </div>
 
-        {/* زر تسجيل الخروج */}
+        {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="p-2 rounded-lg hover:bg-[#FCE8E6] text-[#C24B3F] transition-colors"
+          className="p-2 rounded-lg hover:bg-[#FCE8E6] text-[#C24B3F] transition-colors flex items-center gap-1 text-xs font-bold"
           title="تسجيل الخروج"
         >
-          <LogOut size={20} />
+          <LogOut size={18} />
+          <span className="hidden md:inline">خروج</span>
         </button>
       </div>
     </header>

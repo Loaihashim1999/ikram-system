@@ -10,15 +10,15 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-{
-    Schema::create('staff_members', function (Blueprint $table) {
-        $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
-        $table->string('full_name', 150);
-        $table->string('phone', 20);
-        $table->string('job_title', 100);
-        $table->timestamps();
-    });
-}
+    {
+        Schema::create('staff_members', function (Blueprint $table) {
+            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->string('full_name', 150);
+            $table->string('phone', 20);
+            $table->string('job_title', 100);
+            $table->timestamps();
+        });
+    }
 
     /**
      * Reverse the migrations.

@@ -5,7 +5,14 @@ const beneficiaryApi = {
   list:   (params = {}) => api.get('/beneficiaries', { params }),
   get:    (id)          => api.get(`/beneficiaries/${id}`),
   create: (data)        => api.post('/beneficiaries', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  update: (id, data)    => api.put(`/beneficiaries/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update: (id, data)    => {
+    // If sending FormData with files, use POST (or append _method: PUT) to avoid PHP multipart PUT payload bug
+    if (data instanceof FormData) {
+      if (!data.has('_method')) data.append('_method', 'PUT');
+      return api.post(`/beneficiaries/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
+    }
+    return api.put(`/beneficiaries/${id}`, data);
+  },
   remove: (id)          => api.delete(`/beneficiaries/${id}`),
 
   // التحقق من رقم الهوية

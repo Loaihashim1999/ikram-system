@@ -11,17 +11,25 @@ class NeighborhoodRep extends Model
     use HasFactory;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
         'full_name',
         'phone',
-        'id_document_image_url',
+        'national_id',
+        'date_of_birth',
         'district_name',
+        'city',
+        'status',
+        'national_address',
+        'id_document_image_url',
         'district_location_lat',
         'district_location_lng',
         'beneficiaries_count',
         'support_letter_url',
+        'national_address_doc_url',
+        'dependents_ids_zip_url',
     ];
 
     protected $casts = [

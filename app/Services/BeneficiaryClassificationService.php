@@ -10,10 +10,7 @@ class BeneficiaryClassificationService
     /**
      * تحديد فئة المستفيد بناءً على الدخل والبيانات المالية
      *
-     * @param string $beneficiaryType 'citizen' أو 'resident'
-     * @param float $monthlySalary
-     * @param float $socialSecurityAmount
-     * @param float $citizenAccountAmount
+     * @param  string  $beneficiaryType  'citizen' أو 'resident'
      * @return string UUID الخاص بالفئة (category_id)
      */
     public function determineCategory(
@@ -25,6 +22,7 @@ class BeneficiaryClassificationService
     ): string {
         if ($hasSpecialNeeds) {
             $category = Category::where('name', 'ذوي الاحتياجات الخاصة')->first();
+
             return $category ? $category->id : Category::first()->id;
         }
 
@@ -34,7 +32,7 @@ class BeneficiaryClassificationService
 
         // 2. حساب إجمالي الدخل الشهري
         $totalIncome = $monthlySalary;
-        
+
         if ($beneficiaryType === 'citizen') {
             $totalIncome += $socialSecurityAmount + $citizenAccountAmount;
         }

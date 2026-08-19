@@ -11,6 +11,7 @@ class SettingsController extends Controller
     public function index(): JsonResponse
     {
         $settings = DB::table('settings')->pluck('value', 'key');
+
         return response()->json(['data' => $settings]);
     }
 
@@ -28,7 +29,7 @@ class SettingsController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'تم حفظ الإعدادات بنجاح.',
-            'data'    => DB::table('settings')->pluck('value', 'key'),
+            'data' => DB::table('settings')->pluck('value', 'key'),
         ]);
     }
 }
