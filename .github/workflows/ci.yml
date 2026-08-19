@@ -61,6 +61,13 @@ jobs:
           php artisan key:generate
           php artisan migrate --force
 
+      - name: Run Backend Test Suite (Laravel)
+        run: php artisan test
+
+      - name: Run Frontend Test Suite (Vitest)
+        working-directory: frontend
+        run: npm test
+
       - name: Start Laravel Server (Background)
         run: php artisan serve --port=8000 &
         env:
