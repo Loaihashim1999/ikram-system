@@ -15,15 +15,17 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // 1. إنشاء مستخدم المدير الافتراضي يدوياً لضمان البيانات الصحيحة
-        User::create([
-            'id' => Str::uuid(),
-            'username' => 'admin',
-            'password' => Hash::make('admin123'),
-            'full_name' => 'مدير النظام',
-            'phone' => '0501234567',
-            'role' => 'admin',
-            'is_active' => true,
-        ]);
+        User::updateOrCreate(
+            ['username' => 'admin'],
+            [
+                'id' => (string) Str::uuid(),
+                'password' => Hash::make('admin123'),
+                'full_name' => 'مدير النظام',
+                'phone' => '0501234567',
+                'role' => 'admin',
+                'is_active' => true,
+            ]
+        );
 
         // 2. تشغيل باقي الـ Seeders
         $this->call([
