@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('rep_distributions', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $idCol = $table->uuid('id')->primary();
+            if (Schema::getConnection()->getDriverName() === 'pgsql') {
+                $idCol->default(\DB::raw('gen_random_uuid()'));
+            }
             $table->foreignUuid('rep_id')->constrained('neighborhood_reps')->cascadeOnDelete();
             $table->foreignUuid('basket_id')->constrained('baskets')->cascadeOnDelete();
             $table->integer('basket_count')->default(1);

@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('rep_distribution_proofs', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $idCol = $table->uuid('id')->primary();
+            if (Schema::getConnection()->getDriverName() === 'pgsql') {
+                $idCol->default(\DB::raw('gen_random_uuid()'));
+            }
             $table->foreignUuid('rep_distribution_id')->constrained('rep_distributions')->cascadeOnDelete();
             $table->text('image_url');
             $table->timestamp('uploaded_at')->useCurrent();

@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('notifications', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $idCol = $table->uuid('id')->primary();
+            if (Schema::getConnection()->getDriverName() === 'pgsql') {
+                $idCol->default(\DB::raw('gen_random_uuid()'));
+            }
             $table->enum('recipient_type', ['beneficiary', 'staff', 'rep', 'driver']);
             $table->uuid('recipient_id');
             $table->string('related_record_type', 50);

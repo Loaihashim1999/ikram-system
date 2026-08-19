@@ -10,7 +10,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('beneficiaries', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $idCol = $table->uuid('id')->primary();
+            if (Schema::getConnection()->getDriverName() === 'pgsql') {
+                $idCol->default(\DB::raw('gen_random_uuid()'));
+            }
 
             // نوع المستفيد
             $table->enum('beneficiary_type', ['citizen', 'resident'])->default('citizen');

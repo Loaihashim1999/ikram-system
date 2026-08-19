@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('staff_members', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $idCol = $table->uuid('id')->primary();
+            if (Schema::getConnection()->getDriverName() === 'pgsql') {
+                $idCol->default(\DB::raw('gen_random_uuid()'));
+            }
             $table->string('full_name', 150);
             $table->string('phone', 20);
             $table->string('job_title', 100);

@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('baskets', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $idCol = $table->uuid('id')->primary();
+            if (Schema::getConnection()->getDriverName() === 'pgsql') {
+                $idCol->default(\DB::raw('gen_random_uuid()'));
+            }
             $table->string('name', 100); // مثال: سلة غذائية
             $table->text('description')->nullable(); // المحتويات
             $table->integer('stock_quantity')->default(0);
