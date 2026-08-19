@@ -1,0 +1,2 @@
+name = "ikram-system"
+pages_build_output_dir = "./frontend/dist"
