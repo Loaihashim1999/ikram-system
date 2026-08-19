@@ -20,14 +20,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->shouldRenderJsonWhen(function () {
-            return true;
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                return response()->json([
+                    'message' => array_values($e->errors())[0][0] ?? 'بيانات المدخلات غير صحيحة',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
         });
-        $exceptions->render(function (\Throwable $e, Request $request) {
-            return response()->json([
-                'message' => $e->getMessage() ?: get_class($e),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ], 500);
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                return response()->json(['message' => 'غير مصرح به. يرجى تسجيل الدخول.'], 401);
+            }
         });
     })->create();
