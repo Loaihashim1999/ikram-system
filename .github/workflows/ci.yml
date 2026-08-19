@@ -6,9 +6,7 @@ on:
   release:
     types: [published]
 
-permissions:
-  contents: write
-  workflows: write
+permissions: write-all
 
 jobs:
   release:
