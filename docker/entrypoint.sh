@@ -24,8 +24,8 @@ case "$APP_KEY" in
 esac
 
 echo "Running Laravel Migrations & Seeders..."
-php /var/www/html/artisan migrate --force || true
-php /var/www/html/artisan db:seed --force || true
+php /var/www/html/artisan migrate --force
+php /var/www/html/artisan db:seed --class=DatabaseSeeder --force
 
 echo "Clearing Caches..."
 php /var/www/html/artisan config:clear || true
