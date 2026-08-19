@@ -23,9 +23,9 @@ echo "Running Laravel Migrations & Seeders..."
 php /var/www/html/artisan migrate --force || true
 php /var/www/html/artisan db:seed --force || true
 
-echo "Clearing Caches..."
-php /var/www/html/artisan config:clear || true
-php /var/www/html/artisan route:clear || true
+echo "Optimizing Laravel Caches..."
 php /var/www/html/artisan storage:link || true
+php /var/www/html/artisan config:cache || true
+php /var/www/html/artisan route:cache || true
 
 echo "Laravel Initialization Completed Successfully!"

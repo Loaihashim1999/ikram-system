@@ -28,13 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 422);
             }
         });
-        $exceptions->render(function (\Throwable $e, Request $request) {
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*') || $request->wantsJson()) {
-                return response()->json([
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ], 500);
+                return response()->json(['message' => 'غير مصرح به. يرجى تسجيل الدخول.'], 401);
             }
         });
     })->create();
