@@ -16,6 +16,13 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 // ─── المصادقة والتنزيلات العامة ──────────────────────────────────────────
+Route::get('/', function () {
+    return response()->json([
+        'status' => 'online',
+        'message' => 'Ikram System API Server is running',
+        'version' => '1.0.0'
+    ]);
+});
 Route::post('/login', [LoginController::class, 'login'])->name('login');
 
 // تصدير PDF العام وتنزيل الشيتات
