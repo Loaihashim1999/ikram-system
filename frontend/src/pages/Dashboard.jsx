@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
+import api from '../api/axios';
 import {
   UserPlus,
   Users,
@@ -9,12 +11,47 @@ import {
   Package,
   Truck,
   ArrowLeft,
+  Loader2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const [stats, setStats] = useState({
+    beneficiariesCount: 0,
+    distributedCount: 0,
+    pendingCount: 0,
+    deliveredCount: 0,
+    loading: true,
+  });
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/beneficiaries').catch(() => ({ data: { data: [] } })),
+      api.get('/distributions').catch(() => ({ data: { data: [] } })),
+    ]).then(([bRes, dRes]) => {
+      const beneficiaries = Array.isArray(bRes.data?.data) ? bRes.data.data : bRes.data?.data?.data || [];
+      const distributions = Array.isArray(dRes.data?.data) ? dRes.data.data : dRes.data?.data?.data || [];
+
+      const distributedCount = distributions.length;
+      const pendingCount = distributions.filter(
+        (d) => d.status === 'pending' || d.status === 'preparing' || d.status === 'ready'
+      ).length;
+      const deliveredCount = distributions.filter((d) => d.status === 'delivered').length;
+
+      setStats({
+        beneficiariesCount: beneficiaries.length,
+        distributedCount,
+        pendingCount,
+        deliveredCount,
+        loading: false,
+      });
+    }).catch(() => {
+      setStats((prev) => ({ ...prev, loading: false }));
+    });
+  }, []);
 
   const cards = [
     {
@@ -114,50 +151,74 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* بطاقة الإحصائيات السريعة */}
+        {/* بطاقة الإحصائيات الحية المربوطة بالـ API */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white rounded-xl shadow-sm border border-[#E5E2D9] p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-[#6B6B66] mb-1">إجمالي المستفيدين</p>
-                <p className="text-3xl font-bold text-[#C9A24A]">1,250</p>
+                <p className="text-3xl font-bold text-[#C9A24A]">
+                  {stats.loading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-[#C9A24A]" />
+                  ) : (
+                    stats.beneficiariesCount.toLocaleString('ar-SA')
+                  )}
+                </p>
               </div>
               <Users size={40} className="text-[#C9A24A]/20" />
             </div>
-            <p className="text-xs text-[#3B8A5E] mt-2">↑ 12% من الشهر الماضي</p>
+            <p className="text-xs text-[#3B8A5E] mt-2">بيانات مباشرة حية</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-[#E5E2D9] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[#6B6B66] mb-1">السلل الموزعة</p>
-                <p className="text-3xl font-bold text-[#7C8D42]">890</p>
+                <p className="text-sm text-[#6B6B66] mb-1">إجمالي التوزيعات</p>
+                <p className="text-3xl font-bold text-[#7C8D42]">
+                  {stats.loading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-[#7C8D42]" />
+                  ) : (
+                    stats.distributedCount.toLocaleString('ar-SA')
+                  )}
+                </p>
               </div>
               <Package size={40} className="text-[#7C8D42]/20" />
             </div>
-            <p className="text-xs text-[#3B8A5E] mt-2">↑ 8% من الشهر الماضي</p>
+            <p className="text-xs text-[#3B8A5E] mt-2">بيانات مباشرة حية</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-[#E5E2D9] p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-[#6B6B66] mb-1">قيد الانتظار</p>
-                <p className="text-3xl font-bold text-[#D89A2E]">120</p>
+                <p className="text-3xl font-bold text-[#D89A2E]">
+                  {stats.loading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-[#D89A2E]" />
+                  ) : (
+                    stats.pendingCount.toLocaleString('ar-SA')
+                  )}
+                </p>
               </div>
               <BarChart3 size={40} className="text-[#D89A2E]/20" />
             </div>
-            <p className="text-xs text-[#C24B3F] mt-2">↓ 3% من الشهر الماضي</p>
+            <p className="text-xs text-[#D89A2E] mt-2">حالات جاهزة للتوثيق</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-[#E5E2D9] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[#6B6B66] mb-1">تم التوصيل</p>
-                <p className="text-3xl font-bold text-[#3B8A5E]">240</p>
+                <p className="text-sm text-[#6B6B66] mb-1">تم التوصيل والإنهاء</p>
+                <p className="text-3xl font-bold text-[#3B8A5E]">
+                  {stats.loading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-[#3B8A5E]" />
+                  ) : (
+                    stats.deliveredCount.toLocaleString('ar-SA')
+                  )}
+                </p>
               </div>
               <Truck size={40} className="text-[#3B8A5E]/20" />
             </div>
-            <p className="text-xs text-[#3B8A5E] mt-2">↑ 15% من الشهر الماضي</p>
+            <p className="text-xs text-[#3B8A5E] mt-2">عمليات مسلمة بنجاح</p>
           </div>
         </div>
       </div>
