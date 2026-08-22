@@ -54,6 +54,11 @@ export default function DeliveryPage() {
   const [dispatchResult, setDispatchResult] = useState(null);
   const [dispatchSearchQ, setDispatchSearchQ] = useState("");
 
+  const userStr = localStorage.getItem("user");
+  const currentUser = userStr ? JSON.parse(userStr) : null;
+  const userRole = currentUser?.role || "";
+  const isDriver = userRole === "driver" || userRole === "سائق" || currentUser?.username?.includes("driver");
+
   useEffect(() => {
     loadAllData();
   }, []);
@@ -314,14 +319,20 @@ ${qrUrl}`;
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Dedicated Home Delivery Support Dispatch Button */}
-            <button
-              onClick={openHomeDeliveryDispatchModal}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
-            >
-              <Send className="w-4 h-4" />
-              <span>🚀 تقديم وتوجيه دعم التوصيل (كبار السن / ذوو الاحتياجات / المناديب)</span>
-            </button>
+            {/* Dedicated Home Delivery Support Dispatch Button (Visible only to Admin/Supervisor) */}
+            {!isDriver ? (
+              <button
+                onClick={openHomeDeliveryDispatchModal}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                <span>🚀 تقديم وتوجيه دعم التوصيل (كبار السن / ذوو الاحتياجات / المناديب)</span>
+              </button>
+            ) : (
+              <div className="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-4 py-2 rounded-2xl text-xs flex items-center gap-2 shadow-2xs">
+                <span>🚚 نمط السائق الميداني: استعراض الشحنات الموكلة وتوثيق التسليم</span>
+              </div>
+            )}
 
             {/* Tab Buttons */}
             <div className="flex bg-gray-100 p-1.5 rounded-2xl border border-gray-200">
@@ -501,37 +512,41 @@ ${qrUrl}`;
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => {
-                                setEditBeneficiaryModal(b);
-                                setEditBenForm({
-                                  full_name: b.full_name || b.name || "",
-                                  phone: b.phone || "",
-                                  national_id: b.national_id || "",
-                                  city: b.city || "مكة المكرمة",
-                                  district: b.district || "",
-                                  status: b.status || "active",
-                                });
-                              }}
-                              className="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 cursor-pointer"
-                              title="تعديل البيانات"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleToggleBeneficiaryStatus(b)}
-                              className="p-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer"
-                              title="تعديل الحالة"
-                            >
-                              <RefreshCw className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteBeneficiary(b)}
-                              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer"
-                              title="حذف نهائي"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!isDriver && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEditBeneficiaryModal(b);
+                                    setEditBenForm({
+                                      full_name: b.full_name || b.name || "",
+                                      phone: b.phone || "",
+                                      national_id: b.national_id || "",
+                                      city: b.city || "مكة المكرمة",
+                                      district: b.district || "",
+                                      status: b.status || "active",
+                                    });
+                                  }}
+                                  className="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 cursor-pointer"
+                                  title="تعديل البيانات"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleToggleBeneficiaryStatus(b)}
+                                  className="p-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer"
+                                  title="تعديل الحالة"
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteBeneficiary(b)}
+                                  className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer"
+                                  title="حذف نهائي"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -648,38 +663,42 @@ ${qrUrl}`;
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => {
-                                setEditRepModal(r);
-                                setEditRepForm({
-                                  full_name: r.full_name || "",
-                                  phone: r.phone || "",
-                                  national_id: r.national_id || "",
-                                  city: r.city || "مكة المكرمة",
-                                  district_name: r.district_name || "",
-                                  beneficiaries_count: r.beneficiaries_count || 0,
-                                  status: r.status || "active",
-                                });
-                              }}
-                              className="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 cursor-pointer"
-                              title="تعديل بيانات المندوب"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleToggleRepStatus(r)}
-                              className="p-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer"
-                              title="تعديل الحالة"
-                            >
-                              <RefreshCw className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteRep(r)}
-                              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer"
-                              title="حذف المندوب"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!isDriver && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEditRepModal(r);
+                                    setEditRepForm({
+                                      full_name: r.full_name || "",
+                                      phone: r.phone || "",
+                                      national_id: r.national_id || "",
+                                      city: r.city || "مكة المكرمة",
+                                      district_name: r.district_name || "",
+                                      beneficiaries_count: r.beneficiaries_count || 0,
+                                      status: r.status || "active",
+                                    });
+                                  }}
+                                  className="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 cursor-pointer"
+                                  title="تعديل بيانات المندوب"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleToggleRepStatus(r)}
+                                  className="p-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 cursor-pointer"
+                                  title="تعديل الحالة"
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRep(r)}
+                                  className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer"
+                                  title="حذف المندوب"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
