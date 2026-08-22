@@ -5,6 +5,7 @@ import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
+import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
 import { Eye, Edit3, Trash2, RefreshCw, X, FileText, Download, UserCheck, ShieldAlert, Award, FileArchive, Users, Plus, Send, Truck, Package, Calendar, QrCode, CheckCircle2, XCircle } from "lucide-react";
 
 const DISPATCH_STEPS = ["اختيار المستفيدين / المناديب", "اختيار السائق المعتمد", "اختيار سلة الدعم", "تحديد الموعد", "مراجعة وإرسال"];
@@ -251,7 +252,7 @@ export default function DeliveryPage() {
         });
         setDispatchResult({ type: "beneficiaries", ...res.data });
       }
-      setDispatchStep(4);
+      setDispatchStep(5);
       loadAllData();
     } catch (err) {
       alert(err.response?.data?.message || "حدث خطأ أثناء إرسال وتوجيه الدعم.");
@@ -1071,19 +1072,12 @@ ${qrUrl}`;
                     <p className="text-gray-600 text-xs mt-1">تمت الإحالة لحساب السائق ({selectedDriverObj?.full_name || selectedDriverObj?.name}) وتوليد أكواد الـ QR</p>
                   </div>
 
-                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-72 overflow-y-auto">
                     {((dispatchResult.distributions || dispatchResult.repDistributions) || []).map((dist, idx) => {
                       const recipient = recipientMode === "beneficiaries"
                         ? selectedBensList.find((b) => b.id === dist.beneficiary_id) || { full_name: "مستفيد " + (idx + 1) }
                         : selectedRepsList.find((r) => r.id === dist.rep_id) || { full_name: "مندوب " + (idx + 1) };
                       const code = dist.barcode_code || dist.qr_code || "IKRAM-SUPPORT";
-                      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${code}`;
-
-                      const rawPhone = (recipient?.phone || "").replace(/[^0-9]/g, "");
-                      let phoneNum = rawPhone;
-                      if (phoneNum.startsWith("0")) phoneNum = "966" + phoneNum.slice(1);
-                      else if (!phoneNum.startsWith("966") && phoneNum.length === 9) phoneNum = "966" + phoneNum;
-                      if (!phoneNum) phoneNum = "966574917155";
 
                       const name = recipient?.full_name || recipient?.name || "المستفيد/المندوب";
                       const natId = recipient?.national_id || "—";
@@ -1094,40 +1088,25 @@ ${qrUrl}`;
                       const basketName = selectedBasketObj?.name || "سلة دعم مخصصة";
 
                       const textMsg = `مرحباً ${name}،
-جمعية إكرام الجود ترحب بكم وتفيدكم بتأكيد موعد وتفاصيل التوصيل:
+تسر جمعية إكرام الجود إفادتكم بتأكيد موعد وتفاصيل التوصيل:
 👤 *الاسم:* ${name}
 🪪 *رقم الهوية:* ${natId}
 📦 *سلة الدعم:* ${basketName}
-🚚 *السائق:* ${driverName}
+🚚 *السائق المكلف:* ${driverName}
 📞 *جوال السائق:* ${driverPhone}
 📅 *تاريخ التسليم:* ${date}
 📍 *الموقع:* ${loc}
 🔑 *رمز الاستلام والـ QR:* ${code}`;
 
-                      const waUrl = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(textMsg)}`;
-
                       return (
-                        <div key={dist.id || idx} className="p-3 bg-amber-50/50 rounded-xl border border-amber-200 flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <div className="font-bold text-gray-900">👤 {recipient.full_name || recipient.name} ({recipient.phone || "—"})</div>
-                            <div className="text-[11px] text-amber-900 font-bold mt-0.5">🚚 السائق: {selectedDriverObj?.full_name || selectedDriverObj?.name} ({selectedDriverObj?.phone || "—"})</div>
-                            <div className="text-[11px] text-gray-600">📦 السلة: {selectedBasketObj?.name}</div>
-                          </div>
-
-                          <div className="flex items-center gap-2 bg-white p-2 rounded-lg border shadow-xs">
-                            <img src={qrUrl} alt="QR" className="w-12 h-12 border p-0.5 rounded-md" />
-                            <div className="font-mono font-bold text-amber-900">{code}</div>
-                          </div>
-
-                          <a
-                            href={waUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1 shadow-xs cursor-pointer"
-                          >
-                            <span>💬 إرسال واتساب (يتضمن السائق والـ QR)</span>
-                          </a>
-                        </div>
+                        <QrWhatsAppCard
+                          key={dist.id || idx}
+                          text={code}
+                          recipientName={name}
+                          phone={recipient?.phone}
+                          detailsMessage={textMsg}
+                          title={`${name}`}
+                        />
                       );
                     })}
                   </div>
