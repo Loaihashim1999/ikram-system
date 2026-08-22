@@ -139,8 +139,8 @@ class NeighborhoodRepController extends Controller
                             'status' => 'active',
                         ];
 
-                        if ($natId) {
-                            Beneficiary::updateOrCreate(['national_id' => $natId], $benData);
+                        if ($natId && Beneficiary::where('national_id', $natId)->exists()) {
+                            Beneficiary::where('national_id', $natId)->update($benData);
                         } else {
                             $benData['id'] = (string) Str::uuid();
                             Beneficiary::create($benData);
@@ -263,10 +263,10 @@ class NeighborhoodRepController extends Controller
                             'status' => 'active',
                         ];
 
-                        if ($benId) {
+                        if ($benId && Beneficiary::where('id', $benId)->exists()) {
                             Beneficiary::where('id', $benId)->update($benData);
-                        } elseif ($natId) {
-                            Beneficiary::updateOrCreate(['national_id' => $natId], $benData);
+                        } elseif ($natId && Beneficiary::where('national_id', $natId)->exists()) {
+                            Beneficiary::where('national_id', $natId)->update($benData);
                         } else {
                             $benData['id'] = (string) Str::uuid();
                             Beneficiary::create($benData);
