@@ -302,7 +302,7 @@ class NeighborhoodRepController extends Controller
             'target_beneficiaries_count' => $count,
             'scheduled_at' => $validated['scheduled_date'],
             'driver_id' => $validated['driver_id'] ?? null,
-            'status' => 'pending',
+            'status' => 'scheduled',
         ]);
 
         if ($basket instanceof Basket) {
