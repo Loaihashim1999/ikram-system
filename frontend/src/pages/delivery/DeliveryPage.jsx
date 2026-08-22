@@ -782,33 +782,39 @@ ${qrUrl}`;
 
               {/* Rep 4 Documents Section */}
               <div className="border-t pt-3 space-y-2">
-                <h4 className="font-extrabold text-xs text-amber-900">الوثائق الرسمية الاربعة المرفقة:</h4>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
-                    <span>🪪 صورة هوية المندوب</span>
-                    {viewRep.id_document_image_url ? (
-                      <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.id_document_image_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
-                    ) : <span className="text-gray-400">غير مرفق</span>}
+                <h4 className="font-extrabold text-xs text-amber-900">الوثائق الرسمية الأربعة المرفقة:</h4>
+                {!isDriver ? (
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
+                      <span>🪪 صورة هوية المندوب</span>
+                      {viewRep.id_document_image_url ? (
+                        <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.id_document_image_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
+                      ) : <span className="text-gray-400">غير مرفق</span>}
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
+                      <span>📜 خطاب اعتماد العمدة</span>
+                      {viewRep.support_letter_url ? (
+                        <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.support_letter_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
+                      ) : <span className="text-gray-400">غير مرفق</span>}
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
+                      <span>📍 مستند العنوان الوطني</span>
+                      {viewRep.national_address_doc_url ? (
+                        <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.national_address_doc_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
+                      ) : <span className="text-gray-400">غير مرفق</span>}
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
+                      <span>📦 هويات الأسر (ZIP)</span>
+                      {viewRep.dependents_ids_zip_url ? (
+                        <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.dependents_ids_zip_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">تنزيل</a>
+                      ) : <span className="text-gray-400">غير مرفق</span>}
+                    </div>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
-                    <span>📜 خطاب اعتماد العمدة</span>
-                    {viewRep.support_letter_url ? (
-                      <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.support_letter_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
-                    ) : <span className="text-gray-400">غير مرفق</span>}
+                ) : (
+                  <div className="p-3.5 bg-amber-50/80 rounded-xl border border-amber-200 text-center font-bold text-amber-900 text-xs">
+                    🔒 الوثائق الرسمية والمرفقات محمية ومتاحة فقط لإدارة الجمعية والمشرفين
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
-                    <span>📍 مستند العنوان الوطني</span>
-                    {viewRep.national_address_doc_url ? (
-                      <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.national_address_doc_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
-                    ) : <span className="text-gray-400">غير مرفق</span>}
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
-                    <span>📦 هويات الأسر (ZIP)</span>
-                    {viewRep.dependents_ids_zip_url ? (
-                      <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.dependents_ids_zip_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">تنزيل</a>
-                    ) : <span className="text-gray-400">غير مرفق</span>}
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
