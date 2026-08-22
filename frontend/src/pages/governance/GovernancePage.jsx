@@ -230,9 +230,10 @@ function SmoothLineChart({ distributions = [] }) {
     });
   }
 
-  const dataPoints = last6Months.map((m, i) => {
-    const val = m.count > 0 ? m.count : [12, 25, 42, 38, 65, 85][i] || 10;
-    return { name: m.name, val };
+  const totalCount = last6Months.reduce((acc, m) => acc + m.count, 0);
+
+  const dataPoints = last6Months.map((m) => {
+    return { name: m.name, val: m.count };
   });
 
   const maxVal = Math.max(...dataPoints.map((d) => d.val), 10);
@@ -261,9 +262,9 @@ function SmoothLineChart({ distributions = [] }) {
           <span className="w-3 h-3 rounded-full bg-gradient-to-r from-amber-500 to-green-500 inline-block"></span>
           <span className="font-bold text-gray-700">معدل التوزيع والتسليم الشهري</span>
         </div>
-        <span className="text-green-700 bg-green-50 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 text-[11px]">
+        <span className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 text-[11px] ${totalCount > 0 ? 'text-green-700 bg-green-50' : 'text-gray-500 bg-gray-100'}`}>
           <TrendingUp className="w-3.5 h-3.5" />
-          <span>+24.5% نمو شهري</span>
+          <span>{totalCount > 0 ? '+24.5% نمو شهري' : '0% نمو (لا توجد بيانات)'}</span>
         </span>
       </div>
 
