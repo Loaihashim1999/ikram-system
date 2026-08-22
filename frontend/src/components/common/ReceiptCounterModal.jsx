@@ -123,7 +123,7 @@ export default function ReceiptCounterModal({ isOpen, onClose, recipient, recipi
 
           <div className="mt-5 flex justify-between items-center">
             <a
-              href={`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/documents/total-delivery/${recipient.id}/pdf`}
+              href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/total-delivery/${recipient.id}/pdf`}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm"

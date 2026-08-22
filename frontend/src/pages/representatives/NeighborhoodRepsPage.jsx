@@ -269,7 +269,7 @@ export default function NeighborhoodRepsPage() {
       link.click();
       link.remove();
     } catch {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com');
       window.open(`${baseUrl}/api/neighborhood-reps/${repId}/export-excel`, '_blank');
     }
   };
@@ -474,7 +474,7 @@ export default function NeighborhoodRepsPage() {
 
                       {/* Print Receipt PDF */}
                       <a
-                        href={`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/documents/rep-receipt/${r.id}/pdf`}
+                        href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/rep-receipt/${r.id}/pdf`}
                         target="_blank"
                         rel="noreferrer"
                         className="bg-amber-700 hover:bg-amber-800 text-white p-1.5 rounded-lg text-xs font-bold transition-all shadow-xs"
@@ -601,7 +601,7 @@ export default function NeighborhoodRepsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <a
-                    href={`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/documents/rep-receipt/${viewDetailsRep.id}/pdf`}
+                    href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/rep-receipt/${viewDetailsRep.id}/pdf`}
                     target="_blank"
                     rel="noreferrer"
                     className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl font-bold text-xs transition-all border border-white/30 flex items-center gap-1.5"
@@ -761,7 +761,7 @@ export default function NeighborhoodRepsPage() {
                       </div>
                       {viewDetailsRep.id_document_image_url ? (
                         <a
-                          href={`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/storage/${viewDetailsRep.id_document_image_url}`}
+                          href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewDetailsRep.id_document_image_url}`}
                           target="_blank"
                           rel="noreferrer"
                           className="bg-amber-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-amber-700 transition-all flex items-center gap-1"
@@ -785,7 +785,7 @@ export default function NeighborhoodRepsPage() {
                       </div>
                       {viewDetailsRep.support_letter_url ? (
                         <a
-                          href={`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/storage/${viewDetailsRep.support_letter_url}`}
+                          href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewDetailsRep.support_letter_url}`}
                           target="_blank"
                           rel="noreferrer"
                           className="bg-amber-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-amber-700 transition-all flex items-center gap-1"

@@ -68,7 +68,7 @@ export default function StaffDetailsPage() {
               </p>
             </div>
             <a
-              href={`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/documents/staff-receipt/${selectedStaff.id}/pdf`}
+              href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/staff-receipt/${selectedStaff.id}/pdf`}
               target="_blank"
               rel="noreferrer"
               className="bg-white/20 hover:bg-white/30 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all border border-white/30 flex items-center gap-1.5"
