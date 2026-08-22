@@ -294,12 +294,13 @@ class NeighborhoodRepController extends Controller
         $code = 'REP-'.strtoupper(Str::random(6));
 
         $repDist = RepDistribution::create([
-            'id' => Str::uuid(),
+            'id' => (string) Str::uuid(),
             'rep_id' => $rep->id,
             'basket_id' => $basket->id,
             'barcode_code' => $code,
-            'quantity' => $count,
-            'scheduled_date' => $validated['scheduled_date'],
+            'basket_count' => $count,
+            'target_beneficiaries_count' => $count,
+            'scheduled_at' => $validated['scheduled_date'],
             'driver_id' => $validated['driver_id'] ?? null,
             'status' => 'pending',
         ]);
