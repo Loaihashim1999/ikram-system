@@ -56,6 +56,15 @@ export default function BeneficiaryDetailsPage() {
 
   const cleanDate = (d) => (d ? String(d).substring(0, 10) : "—");
 
+  const getDocUrl = (url) => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    const clean = url.startsWith("/") ? url.slice(1) : url;
+    const path = clean.startsWith("storage/") ? clean : `storage/${clean}`;
+    const apiBase = (import.meta.env.VITE_API_URL || "https://ikram-system.onrender.com").replace(/\/api\/?$/, "");
+    return `${apiBase}/${path}`;
+  };
+
   const fullName = b.full_name || b.name || "مستفيد غير معنون";
   const nationalId = b.national_id || "—";
   const phone = b.phone || "—";
@@ -277,7 +286,7 @@ export default function BeneficiaryDetailsPage() {
               <div className="text-xs">
                 {documentsList.length === 0 ? (
                   <div className="p-8 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                    لا توجد وثائق مرفقة مسجلة لهذا المستفيد
+                    لا توجد وثائق مرفقة مسجلة لهذا المستفيد حالياً
                   </div>
                 ) : (
                   <div className="grid md:grid-cols-2 gap-4">
@@ -285,24 +294,34 @@ export default function BeneficiaryDetailsPage() {
                       <div key={i} className="border border-gray-200 p-3.5 rounded-2xl bg-gray-50 flex flex-col justify-between">
                         <div>
                           <span className="text-xs font-bold text-gray-800 block mb-2">{doc.label}</span>
-                          <div className="w-full h-32 bg-gray-200 rounded-xl overflow-hidden mb-3 border flex items-center justify-center">
-                            <img
-                              src={`/storage/${doc.url}`}
-                              alt={doc.label}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = "/assets/ekram-letterhead.jpeg";
-                              }}
-                            />
+                          <div className="w-full h-36 bg-gray-100 rounded-xl overflow-hidden mb-3 border flex items-center justify-center relative">
+                            {doc.url.toLowerCase().endsWith(".pdf") ? (
+                              <div className="text-center p-4">
+                                <FileText className="w-10 h-10 text-amber-600 mx-auto mb-1" />
+                                <span className="font-bold text-gray-700 text-xs">مستند بصيغة PDF</span>
+                              </div>
+                            ) : (
+                              <img
+                                src={getDocUrl(doc.url)}
+                                alt={doc.label}
+                                className="w-full h-full object-contain p-1"
+                                onError={(e) => {
+                                  e.target.style.display = "none";
+                                  if (e.target.nextSibling) e.target.nextSibling.style.display = "flex";
+                                }}
+                              />
+                            )}
+                            <div className="hidden absolute inset-0 items-center justify-center p-3 bg-amber-50/90 text-center">
+                              <span className="font-bold text-amber-900 text-[11px]">📁 يتعذر عرض المعاينة - انقر على الزر أدناه لفتح الوثيقة</span>
+                            </div>
                           </div>
                         </div>
 
                         <a
-                          href={`/storage/${doc.url}`}
+                          href={getDocUrl(doc.url)}
                           target="_blank"
                           rel="noreferrer"
-                          className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold py-2 rounded-xl text-center flex items-center justify-center gap-1 transition-colors"
+                          className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold py-2 rounded-xl text-center flex items-center justify-center gap-1 transition-colors shadow-xs"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           <span>فتح وتنزيل المستند</span>
