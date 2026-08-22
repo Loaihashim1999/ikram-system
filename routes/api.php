@@ -25,16 +25,25 @@ Route::get('/', function () {
 });
 Route::post('/login', [LoginController::class, 'login'])->name('login');
 Route::get('/seed-test-data', function () {
-    \Illuminate\Support\Facades\Artisan::call('db:seed', [
-        '--class' => 'ComprehensiveTestDataSeeder',
-        '--force' => true,
-    ]);
+    try {
+        \Illuminate\Support\Facades\Artisan::call('db:seed', [
+            '--class' => 'ComprehensiveTestDataSeeder',
+            '--force' => true,
+        ]);
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Comprehensive test data seeded successfully!',
-        'output' => \Illuminate\Support\Facades\Artisan::output(),
-    ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Comprehensive test data seeded successfully!',
+            'output' => \Illuminate\Support\Facades\Artisan::output(),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ], 500);
+    }
 });
 
 // تصدير PDF العام وتنزيل الشيتات
