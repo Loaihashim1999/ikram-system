@@ -127,18 +127,24 @@ class NeighborhoodRepController extends Controller
                         $bType = $item['beneficiary_type'] ?? $item['type'] ?? 'citizen';
                         $bTypeClean = (str_contains($bType, 'مقيم') || $bType === 'resident') ? 'resident' : 'citizen';
 
-                        Beneficiary::create([
-                            'id' => (string) Str::uuid(),
+                        $natId = ! empty($item['national_id']) ? $item['national_id'] : null;
+                        $benData = [
                             'full_name' => $fullName,
                             'phone' => $item['phone'] ?? null,
-                            'national_id' => $item['national_id'] ?? null,
                             'date_of_birth' => $dob,
                             'city' => $validated['city'],
                             'district' => $validated['district_name'],
                             'beneficiary_type' => $bTypeClean,
                             'family_members_count' => intval($item['family_members_count'] ?? 1),
                             'status' => 'active',
-                        ]);
+                        ];
+
+                        if ($natId) {
+                            Beneficiary::updateOrCreate(['national_id' => $natId], $benData);
+                        } else {
+                            $benData['id'] = (string) Str::uuid();
+                            Beneficiary::create($benData);
+                        }
                     }
                 }
             }
@@ -241,31 +247,29 @@ class NeighborhoodRepController extends Controller
                         $fullName = $item['full_name'] ?? $item['name'];
                         $dob = ! empty($item['date_of_birth']) ? $item['date_of_birth'] : (! empty($item['birth_date']) ? $item['birth_date'] : null);
                         $benId = $item['id'] ?? null;
+                        $natId = ! empty($item['national_id']) ? $item['national_id'] : null;
                         $bType = $item['beneficiary_type'] ?? $item['type'] ?? 'citizen';
                         $bTypeClean = (str_contains($bType, 'مقيم') || $bType === 'resident') ? 'resident' : 'citizen';
 
+                        $benData = [
+                            'full_name' => $fullName,
+                            'phone' => $item['phone'] ?? null,
+                            'national_id' => $natId,
+                            'date_of_birth' => $dob,
+                            'city' => $validated['city'] ?? $rep->city,
+                            'district' => $validated['district_name'] ?? $rep->district_name,
+                            'beneficiary_type' => $bTypeClean,
+                            'family_members_count' => intval($item['family_members_count'] ?? 1),
+                            'status' => 'active',
+                        ];
+
                         if ($benId) {
-                            Beneficiary::where('id', $benId)->update([
-                                'full_name' => $fullName,
-                                'phone' => $item['phone'] ?? null,
-                                'national_id' => $item['national_id'] ?? null,
-                                'date_of_birth' => $dob,
-                                'beneficiary_type' => $bTypeClean,
-                                'family_members_count' => intval($item['family_members_count'] ?? 1),
-                            ]);
+                            Beneficiary::where('id', $benId)->update($benData);
+                        } elseif ($natId) {
+                            Beneficiary::updateOrCreate(['national_id' => $natId], $benData);
                         } else {
-                            Beneficiary::create([
-                                'id' => (string) Str::uuid(),
-                                'full_name' => $fullName,
-                                'phone' => $item['phone'] ?? null,
-                                'national_id' => $item['national_id'] ?? null,
-                                'date_of_birth' => $dob,
-                                'city' => $validated['city'] ?? $rep->city,
-                                'district' => $validated['district_name'] ?? $rep->district_name,
-                                'beneficiary_type' => $bTypeClean,
-                                'family_members_count' => intval($item['family_members_count'] ?? 1),
-                                'status' => 'active',
-                            ]);
+                            $benData['id'] = (string) Str::uuid();
+                            Beneficiary::create($benData);
                         }
                     }
                 }
