@@ -268,66 +268,74 @@ function SmoothLineChart({ distributions = [] }) {
         </span>
       </div>
 
-      <div className="relative w-full bg-gradient-to-b from-gray-50/50 to-white rounded-xl p-3 border border-gray-100 flex flex-col justify-between">
-        <div className="relative w-full h-32">
-          <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full overflow-visible">
-            <defs>
-              <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#C9A24A" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="#C9A24A" stopOpacity="0.0" />
-              </linearGradient>
-              <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#D89A2E" />
-                <stop offset="50%" stopColor="#C9A24A" />
-                <stop offset="100%" stopColor="#7C8D42" />
-              </linearGradient>
-            </defs>
+      {totalCount === 0 ? (
+        <div className="h-44 bg-gradient-to-b from-gray-50/50 to-white rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center p-6">
+          <TrendingUp className="w-10 h-10 text-gray-300 mb-2" />
+          <p className="text-sm font-bold text-gray-700">لا توجد بيانات توزيعات مسجلة حتى الآن</p>
+          <p className="text-xs text-gray-400 mt-1">سيتم رسم المنحنى الخطي تلقائياً عند إضافة وتسليم أول سلة غذائية في النظام</p>
+        </div>
+      ) : (
+        <div className="relative w-full bg-gradient-to-b from-gray-50/50 to-white rounded-xl p-3 border border-gray-100 flex flex-col justify-between">
+          <div className="relative w-full h-32">
+            <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full overflow-visible">
+              <defs>
+                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#C9A24A" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#C9A24A" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#D89A2E" />
+                  <stop offset="50%" stopColor="#C9A24A" />
+                  <stop offset="100%" stopColor="#7C8D42" />
+                </linearGradient>
+              </defs>
 
-            {[0.25, 0.5, 0.75].map((ratio, idx) => (
-              <line
-                key={idx}
-                x1="0"
-                y1={chartHeight * ratio}
-                x2={chartWidth}
-                y2={chartHeight * ratio}
-                stroke="#F0EFEA"
-                strokeDasharray="4 4"
-                strokeWidth="1"
-              />
-            ))}
-
-            <path d={areaD} fill="url(#areaGradient)" />
-            <path d={pathD} fill="none" stroke="url(#lineGradient)" strokeWidth="3.5" strokeLinecap="round" />
-
-            {points.map((p, idx) => (
-              <g key={idx} className="group cursor-pointer">
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r="5"
-                  fill="#ffffff"
-                  stroke="#7C8D42"
-                  strokeWidth="3"
-                  className="transition-all duration-200 group-hover:r-7 group-hover:fill-[#C9A24A]"
+              {[0.25, 0.5, 0.75].map((ratio, idx) => (
+                <line
+                  key={idx}
+                  x1="0"
+                  y1={chartHeight * ratio}
+                  x2={chartWidth}
+                  y2={chartHeight * ratio}
+                  stroke="#F0EFEA"
+                  strokeDasharray="4 4"
+                  strokeWidth="1"
                 />
-                <foreignObject x={p.x - 30} y={p.y - 34} width="60" height="26" className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <div className="bg-gray-900 text-white text-[10px] font-bold py-0.5 px-1.5 rounded shadow text-center">
-                    {p.val} سلة
-                  </div>
-                </foreignObject>
-              </g>
-            ))}
-          </svg>
-        </div>
+              ))}
 
-        <div className="flex justify-between items-center text-[11px] font-bold text-gray-500 px-2 pt-2 border-t border-gray-100">
-          {dataPoints.map((dp, idx) => (
-            <span key={idx} className="hover:text-amber-700 transition-colors">
-              {dp.name}
-            </span>
-          ))}
+              <path d={areaD} fill="url(#areaGradient)" />
+              <path d={pathD} fill="none" stroke="url(#lineGradient)" strokeWidth="3.5" strokeLinecap="round" />
+
+              {points.map((p, idx) => (
+                <g key={idx} className="group cursor-pointer">
+                  <circle
+                    cx={p.x}
+                    cy={p.y}
+                    r="5"
+                    fill="#ffffff"
+                    stroke="#7C8D42"
+                    strokeWidth="3"
+                    className="transition-all duration-200 group-hover:r-7 group-hover:fill-[#C9A24A]"
+                  />
+                  <foreignObject x={p.x - 30} y={p.y - 34} width="60" height="26" className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <div className="bg-gray-900 text-white text-[10px] font-bold py-0.5 px-1.5 rounded shadow text-center">
+                      {p.val} سلة
+                    </div>
+                  </foreignObject>
+                </g>
+              ))}
+            </svg>
+          </div>
+
+          <div className="flex justify-between items-center text-[11px] font-bold text-gray-500 px-2 pt-2 border-t border-gray-100">
+            {dataPoints.map((dp, idx) => (
+              <span key={idx} className="hover:text-amber-700 transition-colors">
+                {dp.name}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
