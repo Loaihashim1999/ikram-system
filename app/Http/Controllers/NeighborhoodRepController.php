@@ -71,6 +71,17 @@ class NeighborhoodRepController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if ($request->has('status')) {
+            $st = mb_strtolower(trim($request->input('status')));
+            if (str_contains($st, 'نشط') || $st === 'active') {
+                $request->merge(['status' => 'active']);
+            } elseif (str_contains($st, 'موقوف') || $st === 'suspended') {
+                $request->merge(['status' => 'suspended']);
+            } else {
+                $request->merge(['status' => 'active']);
+            }
+        }
+
         $validated = $request->validate([
             'full_name' => 'required|string|max:150',
             'phone' => 'required|string|max:20',
@@ -80,7 +91,7 @@ class NeighborhoodRepController extends Controller
             'district_name' => 'required|string|max:100',
             'national_address' => 'nullable|string|max:255',
             'beneficiaries_count' => 'nullable|integer|min:0',
-            'status' => 'nullable|string|in:active,suspended',
+            'status' => 'nullable|string',
             'id_document_image' => 'nullable|file|image|max:5120',
             'support_letter' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'national_address_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
@@ -113,6 +124,8 @@ class NeighborhoodRepController extends Controller
                     if (is_array($item) && (! empty($item['name']) || ! empty($item['full_name']))) {
                         $fullName = $item['full_name'] ?? $item['name'];
                         $dob = ! empty($item['date_of_birth']) ? $item['date_of_birth'] : (! empty($item['birth_date']) ? $item['birth_date'] : null);
+                        $bType = $item['beneficiary_type'] ?? $item['type'] ?? 'citizen';
+                        $bTypeClean = (str_contains($bType, 'مقيم') || $bType === 'resident') ? 'resident' : 'citizen';
 
                         Beneficiary::create([
                             'id' => (string) Str::uuid(),
@@ -122,7 +135,7 @@ class NeighborhoodRepController extends Controller
                             'date_of_birth' => $dob,
                             'city' => $validated['city'],
                             'district' => $validated['district_name'],
-                            'beneficiary_type' => $item['beneficiary_type'] ?? $item['type'] ?? 'citizen',
+                            'beneficiary_type' => $bTypeClean,
                             'family_members_count' => intval($item['family_members_count'] ?? 1),
                             'status' => 'active',
                         ]);
@@ -178,6 +191,17 @@ class NeighborhoodRepController extends Controller
     {
         $rep = NeighborhoodRep::findOrFail($id);
 
+        if ($request->has('status')) {
+            $st = mb_strtolower(trim($request->input('status')));
+            if (str_contains($st, 'نشط') || $st === 'active') {
+                $request->merge(['status' => 'active']);
+            } elseif (str_contains($st, 'موقوف') || $st === 'suspended') {
+                $request->merge(['status' => 'suspended']);
+            } else {
+                $request->merge(['status' => 'active']);
+            }
+        }
+
         $validated = $request->validate([
             'full_name' => 'sometimes|required|string|max:150',
             'phone' => 'sometimes|required|string|max:20',
@@ -187,7 +211,7 @@ class NeighborhoodRepController extends Controller
             'district_name' => 'sometimes|required|string|max:100',
             'national_address' => 'nullable|string|max:255',
             'beneficiaries_count' => 'nullable|integer|min:0',
-            'status' => 'nullable|string|in:active,suspended',
+            'status' => 'nullable|string',
             'id_document_image' => 'nullable|file|image|max:5120',
             'support_letter' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'national_address_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
@@ -217,6 +241,8 @@ class NeighborhoodRepController extends Controller
                         $fullName = $item['full_name'] ?? $item['name'];
                         $dob = ! empty($item['date_of_birth']) ? $item['date_of_birth'] : (! empty($item['birth_date']) ? $item['birth_date'] : null);
                         $benId = $item['id'] ?? null;
+                        $bType = $item['beneficiary_type'] ?? $item['type'] ?? 'citizen';
+                        $bTypeClean = (str_contains($bType, 'مقيم') || $bType === 'resident') ? 'resident' : 'citizen';
 
                         if ($benId) {
                             Beneficiary::where('id', $benId)->update([
@@ -224,7 +250,7 @@ class NeighborhoodRepController extends Controller
                                 'phone' => $item['phone'] ?? null,
                                 'national_id' => $item['national_id'] ?? null,
                                 'date_of_birth' => $dob,
-                                'beneficiary_type' => $item['beneficiary_type'] ?? $item['type'] ?? 'citizen',
+                                'beneficiary_type' => $bTypeClean,
                                 'family_members_count' => intval($item['family_members_count'] ?? 1),
                             ]);
                         } else {
@@ -236,7 +262,7 @@ class NeighborhoodRepController extends Controller
                                 'date_of_birth' => $dob,
                                 'city' => $validated['city'] ?? $rep->city,
                                 'district' => $validated['district_name'] ?? $rep->district_name,
-                                'beneficiary_type' => $item['beneficiary_type'] ?? $item['type'] ?? 'citizen',
+                                'beneficiary_type' => $bTypeClean,
                                 'family_members_count' => intval($item['family_members_count'] ?? 1),
                                 'status' => 'active',
                             ]);
