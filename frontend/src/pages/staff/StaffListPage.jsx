@@ -456,7 +456,7 @@ ${qrUrl}`;
                   />
                 </th>
 
-                <th className="p-3 font-bold text-center font-mono">الراتب</th>
+                <th className="p-3 font-bold text-center">الراتب الشهري</th>
                 <th className="p-3 font-bold text-center">إجراءات الموظف</th>
               </tr>
             </thead>
@@ -471,6 +471,7 @@ ${qrUrl}`;
               )}
               {!loading && filteredStaff.map((s, idx) => {
                 const st = statusLabels[s.status] || { label: s.status, class: "bg-gray-100 text-gray-600" };
+                const formattedHireDate = s.hire_date ? String(s.hire_date).split('T')[0] : "—";
                 return (
                   <tr key={s.id || idx} className="border-b hover:bg-gray-50 transition-colors">
                     <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
@@ -479,13 +480,13 @@ ${qrUrl}`;
                     <td className="p-3 font-mono text-gray-600">{s.phone}</td>
                     <td className="p-3 font-bold text-amber-900">{s.job_title || "—"}</td>
                     <td className="p-3">{s.department || "—"}</td>
-                    <td className="p-3 font-mono text-gray-600">{s.hire_date || "—"}</td>
+                    <td className="p-3 font-semibold text-gray-700">{formattedHireDate}</td>
                     <td className="p-3">
                       <span className={`px-2.5 py-1 rounded-xl text-xs font-bold border ${st.class}`}>
                         {st.label}
                       </span>
                     </td>
-                    <td className="p-3 font-mono text-center font-bold text-green-700">{s.salary ? `${s.salary} ر.س` : "—"}</td>
+                    <td className="p-3 text-center font-bold text-emerald-800">{s.salary ? `${Number(s.salary).toLocaleString('ar-SA')} ر.س` : "—"}</td>
                     <td className="p-3">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
@@ -590,6 +591,16 @@ ${qrUrl}`;
               }`}
             >
               <span>🏠 3. الأسرة والتابعين ({dependents.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAddTab("docs")}
+              className={`px-4 py-2 rounded-xl transition-all cursor-pointer ${
+                addTab === "docs" ? "bg-amber-600 text-white shadow-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              <span>📁 4. الوثائق والمرفقات</span>
             </button>
           </div>
 
@@ -858,20 +869,88 @@ ${qrUrl}`;
                   </div>
                 </div>
 
-                <div className="flex justify-between pt-2">
+                <div className="flex justify-between items-center pt-3 border-t">
                   <button
                     type="button"
                     onClick={() => setAddTab("job")}
-                    className="bg-gray-200 text-gray-700 px-5 py-2 rounded-xl font-bold cursor-pointer"
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-xl font-bold cursor-pointer"
                   >
-                    ← السابق
+                    ← البيانات الوظيفية
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddTab("docs")}
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2 rounded-xl font-bold cursor-pointer shadow-xs"
+                  >
+                    التالي: الوثائق والمرفقات (الخطوة 4) ←
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: DOCUMENTS & ATTACHMENTS */}
+            {addTab === "docs" && (
+              <div className="space-y-3">
+                <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-200 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="p-3 bg-white border border-gray-200 rounded-xl space-y-1.5 shadow-xs">
+                    <label className="block font-bold text-gray-800">🪪 صورة الهوية الوطنية / الإقامة</label>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => setAddForm({ ...addForm, id_document_image: e.target.files[0] })}
+                      className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
+                    />
+                    <p className="text-[11px] text-gray-500">صورة واضحة من بطاقة الهوية الوطنية أو الإقامة</p>
+                  </div>
+
+                  <div className="p-3 bg-white border border-gray-200 rounded-xl space-y-1.5 shadow-xs">
+                    <label className="block font-bold text-gray-800">📜 عقد العمل والتكليف الرسمي</label>
+                    <input
+                      type="file"
+                      accept=".pdf,image/*"
+                      onChange={(e) => setAddForm({ ...addForm, employment_contract_doc: e.target.files[0] })}
+                      className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
+                    />
+                    <p className="text-[11px] text-gray-500">نسخة عقد الموظف المعتمد بالجمعية (PDF/صورة)</p>
+                  </div>
+
+                  <div className="p-3 bg-white border border-gray-200 rounded-xl space-y-1.5 shadow-xs">
+                    <label className="block font-bold text-gray-800">🎓 المؤهل والشهادات العلمية</label>
+                    <input
+                      type="file"
+                      accept=".pdf,image/*"
+                      onChange={(e) => setAddForm({ ...addForm, qualification_doc: e.target.files[0] })}
+                      className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
+                    />
+                    <p className="text-[11px] text-gray-500">شهادة المؤهل التعليمي أو الدورات التدريبية</p>
+                  </div>
+
+                  <div className="p-3 bg-white border border-gray-200 rounded-xl space-y-1.5 shadow-xs">
+                    <label className="block font-bold text-gray-800">📦 مرفقات إضافية (ZIP/PDF)</label>
+                    <input
+                      type="file"
+                      accept=".zip,.rar,.pdf"
+                      onChange={(e) => setAddForm({ ...addForm, other_docs_zip: e.target.files[0] })}
+                      className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
+                    />
+                    <p className="text-[11px] text-gray-500">أرشيف أوراق التابعين أو السيرة الذاتية</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-3 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setAddTab("family")}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-xl font-bold cursor-pointer"
+                  >
+                    ← الأسرة والتابعين
                   </button>
                   <button
                     type="submit"
                     disabled={submittingAdd}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white px-7 py-2.5 rounded-xl font-extrabold text-xs shadow-md cursor-pointer flex items-center gap-2"
                   >
-                    {submittingAdd ? "جاري الحفظ..." : "🚀 حفظ كافة بيانات الموظف والتابعين"}
+                    {submittingAdd ? "جاري الحفظ..." : "🚀 حفظ كافة بيانات الموظف والوثائق"}
                   </button>
                 </div>
               </div>
