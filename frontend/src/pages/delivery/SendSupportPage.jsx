@@ -3,6 +3,7 @@ import beneficiaryApi from "../../api/beneficiaries";
 import distributionApi from "../../api/distributions";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
+import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
 
 /* Inline QR / Barcode display component */
 const QrDisplay = ({ text }) => {
@@ -371,18 +372,12 @@ export default function SendSupportPage() {
             {(result.distributions || []).map((d) => {
               const b = selectedBeneficiaries.find((item) => item.id === d.beneficiary_id);
               const code = d.barcode_code || d.qr_code || "IKRAM-SUPPORT";
-              const rawPhone = (b?.phone || "").replace(/[^0-9]/g, "");
-              let phoneNum = rawPhone;
-              if (phoneNum.startsWith("0")) phoneNum = "966" + phoneNum.slice(1);
-              else if (!phoneNum.startsWith("966") && phoneNum.length === 9) phoneNum = "966" + phoneNum;
-              if (!phoneNum) phoneNum = "966574917155";
-
               const basketName = selectedBasket?.name || "سلة دعم مخصصة";
               const dateStr = scheduledAt || new Date().toISOString().split("T")[0];
               const locStr = pickupLocation || "توصيل للمنزل / مقر الجمعية";
 
               const textMsg = `مرحباً ${b?.full_name || b?.name || "المستفيد"}،
-جمعية إكرام الجود ترحب بكم وتفيدكم بتأكيد موعد وتخصيص السلة الغذائية:
+تسر جمعية إكرام الجود إفادتكم بتأكيد موعد وتخصيص السلة الغذائية:
 👤 *اسم المستفيد:* ${b?.full_name || b?.name || "المستفيد"}
 🪪 *رقم الهوية:* ${b?.national_id || "—"}
 📦 *سلة الدعم:* ${basketName}
@@ -392,23 +387,15 @@ export default function SendSupportPage() {
 
 يمكنكم حفظ صورة الـ QR وإبرازها عند الاستلام. شكراً لكم.`;
 
-              const waUrl = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(textMsg)}`;
-
               return (
-                <div key={d.id} className="border rounded-2xl p-4 bg-gray-50 text-center shadow-sm flex flex-col justify-between">
-                  <div>
-                    <div className="font-bold text-gray-800 text-sm mb-1">{b?.full_name || b?.name || d.beneficiary_id}</div>
-                    <div className="text-xs text-gray-500 mb-3">هوية: {b?.national_id || "—"} | جوال: {b?.phone || "—"}</div>
-                    <QrDisplay text={code} />
-                  </div>
-                  <a
-                    href={waUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
-                  >
-                    <span>💬 إرسال الإشعار والـ QR عبر واتساب</span>
-                  </a>
+                <div key={d.id} className="flex flex-col justify-between">
+                  <QrWhatsAppCard
+                    text={code}
+                    recipientName={b?.full_name || b?.name}
+                    phone={b?.phone}
+                    detailsMessage={textMsg}
+                    title={`المستفيد: ${b?.full_name || b?.name}`}
+                  />
                 </div>
               );
             })}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
+import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
 import {
   MapPin, UserPlus, FileSpreadsheet, Send, FileText, ShieldCheck,
@@ -1259,26 +1260,8 @@ export default function NeighborhoodRepsPage() {
                   <div className="text-4xl">✅</div>
                   <h4 className="font-bold text-green-800 text-sm">{dispatchResult.message}</h4>
                   
-                  <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl flex flex-col items-center">
-                    <div className="text-xs text-amber-900 font-bold mb-2">رمز الشحنة والاستلام بالـ QR المعتمد</div>
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(dispatchResult.qr_code || 'IKRAM-REP')}`}
-                      alt="QR Code"
-                      className="w-36 h-36 border-2 border-amber-300 p-1.5 bg-white rounded-xl shadow-xs mb-3"
-                    />
-                    <div className="font-mono text-lg font-extrabold text-amber-900 tracking-wider">
-                      {dispatchResult.qr_code}
-                    </div>
-                  </div>
-
                   {(() => {
                     const repObj = selectedRep;
-                    const rawPhone = (repObj?.phone || "").replace(/[^0-9]/g, "");
-                    let phoneNum = rawPhone;
-                    if (phoneNum.startsWith("0")) phoneNum = "966" + phoneNum.slice(1);
-                    else if (!phoneNum.startsWith("966") && phoneNum.length === 9) phoneNum = "966" + phoneNum;
-                    if (!phoneNum) phoneNum = "966574917155";
-
                     const repMsg = `مرحباً سعادة المندوب ${repObj?.full_name || "مندوب الحي"}،
 تسر جمعية إكرام الجود إفادتكم بتخصيص وتوجيه دفعة دعم جديدة لحي (${repObj?.district_name || ""}):
 👤 *اسم المندوب:* ${repObj?.full_name || ""}
@@ -1288,24 +1271,21 @@ export default function NeighborhoodRepsPage() {
 
 يرجى استخدام رمز الـ QR لإثبات توثيق استلام ودعم الحي. شكراً لكم.`;
 
-                    const waUrl = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(repMsg)}`;
-
                     return (
-                      <a
-                        href={waUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
-                      >
-                        <span>💬 إرسال الرمز والتفاصيل للمندوب عبر واتساب</span>
-                      </a>
+                      <QrWhatsAppCard
+                        text={dispatchResult.qr_code}
+                        recipientName={repObj?.full_name}
+                        phone={repObj?.phone}
+                        detailsMessage={repMsg}
+                        title={`المندوب: ${repObj?.full_name || "مندوب الحي"}`}
+                      />
                     );
                   })()}
 
                   <div className="pt-2">
                     <button
                       onClick={() => setShowDispatchModal(false)}
-                      className="px-6 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200"
+                      className="px-6 py-2 rounded-xl bg-amber-800 text-white font-bold text-xs hover:bg-amber-900"
                     >
                       إغلاق النافذة
                     </button>
