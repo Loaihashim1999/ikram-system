@@ -48,6 +48,7 @@ Route::get('/seed-test-data', function () {
 
 // تصدير PDF العام وتنزيل الشيتات
 Route::get('/documents/individual-receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
+Route::get('/documents/receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
 Route::get('/documents/total-delivery/{id}/pdf', [PdfExportController::class, 'exportTotalDelivery']);
 Route::get('/documents/rep-receipt/{id}/pdf', [PdfExportController::class, 'exportRepresentativeReceipt']);
 Route::get('/documents/staff-receipt/{id}/pdf', [PdfExportController::class, 'exportStaffReceipt']);

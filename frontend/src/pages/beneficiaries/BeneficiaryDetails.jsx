@@ -344,7 +344,7 @@ export default function BeneficiaryDetailsPage() {
                             <td className="p-3 font-bold text-emerald-700">تم التسليم بنجاح ✅</td>
                             <td className="p-3 text-center">
                               <a
-                                href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/receipt/${d.id}/pdf`}
+                                href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/individual-receipt/${d.id}/pdf`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-amber-700 hover:underline font-bold"
