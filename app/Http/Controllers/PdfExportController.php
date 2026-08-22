@@ -37,9 +37,19 @@ class PdfExportController extends Controller
     public function exportIndividualReceipt($distributionId)
     {
         $distribution = Distribution::with(['beneficiary.dependents', 'basket'])->find($distributionId);
+        
+        // Fallback: Check if the ID provided is a beneficiary ID
         if (!$distribution) {
-            return response()->json(['error' => 'سند التوزيع غير موجود'], 404);
+            $distribution = Distribution::with(['beneficiary.dependents', 'basket'])
+                ->where('beneficiary_id', $distributionId)
+                ->latest()
+                ->first();
         }
+
+        if (!$distribution) {
+            return response()->json(['error' => 'لا يوجد سند توزيع مسجل لهذا المستفيد حتى الآن'], 404);
+        }
+
         $beneficiary = $distribution->beneficiary;
 
         try {
