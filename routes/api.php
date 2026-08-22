@@ -24,6 +24,18 @@ Route::get('/', function () {
     ]);
 });
 Route::post('/login', [LoginController::class, 'login'])->name('login');
+Route::get('/seed-test-data', function () {
+    \Illuminate\Support\Facades\Artisan::call('db:seed', [
+        '--class' => 'ComprehensiveTestDataSeeder',
+        '--force' => true,
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Comprehensive test data seeded successfully!',
+        'output' => \Illuminate\Support\Facades\Artisan::output(),
+    ]);
+});
 
 // تصدير PDF العام وتنزيل الشيتات
 Route::get('/documents/individual-receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
