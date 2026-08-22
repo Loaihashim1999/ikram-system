@@ -253,6 +253,7 @@ class ComprehensiveTestDataSeeder extends Seeder
         RepDistribution::updateOrCreate(
             ['barcode_code' => 'REP-SUP-5500'],
             [
+                'id' => (string) Str::uuid(),
                 'rep_id' => $rep1->id,
                 'basket_id' => $basket1->id,
                 'driver_id' => $driver->id,
@@ -268,6 +269,7 @@ class ComprehensiveTestDataSeeder extends Seeder
         RepDistribution::updateOrCreate(
             ['barcode_code' => 'REP-SUP-3300'],
             [
+                'id' => (string) Str::uuid(),
                 'rep_id' => $rep2->id,
                 'basket_id' => $basket1->id,
                 'driver_id' => $driver->id,
