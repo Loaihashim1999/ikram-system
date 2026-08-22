@@ -1079,26 +1079,54 @@ ${qrUrl}`;
                       const code = dist.barcode_code || dist.qr_code || "IKRAM-SUPPORT";
                       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${code}`;
 
+                      const rawPhone = (recipient?.phone || "").replace(/[^0-9]/g, "");
+                      let phoneNum = rawPhone;
+                      if (phoneNum.startsWith("0")) phoneNum = "966" + phoneNum.slice(1);
+                      else if (!phoneNum.startsWith("966") && phoneNum.length === 9) phoneNum = "966" + phoneNum;
+                      if (!phoneNum) phoneNum = "966574917155";
+
+                      const name = recipient?.full_name || recipient?.name || "المستفيد/المندوب";
+                      const natId = recipient?.national_id || "—";
+                      const date = scheduledAt || new Date().toISOString().split("T")[0];
+                      const loc = pickupLocation || "توصيل للمنزل عبر السائق";
+                      const driverName = selectedDriverObj?.full_name || selectedDriverObj?.name || "سائق الجمعية المعتمد";
+                      const driverPhone = selectedDriverObj?.phone || "غير متوفر";
+                      const basketName = selectedBasketObj?.name || "سلة دعم مخصصة";
+
+                      const textMsg = `مرحباً ${name}،
+جمعية إكرام الجود ترحب بكم وتفيدكم بتأكيد موعد وتفاصيل التوصيل:
+👤 *الاسم:* ${name}
+🪪 *رقم الهوية:* ${natId}
+📦 *سلة الدعم:* ${basketName}
+🚚 *السائق:* ${driverName}
+📞 *جوال السائق:* ${driverPhone}
+📅 *تاريخ التسليم:* ${date}
+📍 *الموقع:* ${loc}
+🔑 *رمز الاستلام والـ QR:* ${code}`;
+
+                      const waUrl = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(textMsg)}`;
+
                       return (
                         <div key={dist.id || idx} className="p-3 bg-amber-50/50 rounded-xl border border-amber-200 flex flex-wrap items-center justify-between gap-3">
                           <div>
-                            <div className="font-bold text-gray-900">👤 {recipient.full_name || recipient.name} ({recipient.phone})</div>
-                            <div className="text-[11px] text-amber-900 font-bold mt-0.5">🚚 السائق: {selectedDriverObj?.full_name || selectedDriverObj?.name} ({selectedDriverObj?.phone})</div>
+                            <div className="font-bold text-gray-900">👤 {recipient.full_name || recipient.name} ({recipient.phone || "—"})</div>
+                            <div className="text-[11px] text-amber-900 font-bold mt-0.5">🚚 السائق: {selectedDriverObj?.full_name || selectedDriverObj?.name} ({selectedDriverObj?.phone || "—"})</div>
                             <div className="text-[11px] text-gray-600">📦 السلة: {selectedBasketObj?.name}</div>
                           </div>
 
-                          <div className="flex items-center gap-2 bg-white p-2 rounded-lg border">
-                            <img src={qrUrl} alt="QR" className="w-12 h-12" />
+                          <div className="flex items-center gap-2 bg-white p-2 rounded-lg border shadow-xs">
+                            <img src={qrUrl} alt="QR" className="w-12 h-12 border p-0.5 rounded-md" />
                             <div className="font-mono font-bold text-amber-900">{code}</div>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => sendSingleWhatsApp(dist, recipient)}
-                            className="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow-xs cursor-pointer"
+                          <a
+                            href={waUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1 shadow-xs cursor-pointer"
                           >
                             <span>💬 إرسال واتساب (يتضمن السائق والـ QR)</span>
-                          </button>
+                          </a>
                         </div>
                       );
                     })}

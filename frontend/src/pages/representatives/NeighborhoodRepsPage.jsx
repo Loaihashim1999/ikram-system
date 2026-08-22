@@ -1255,18 +1255,61 @@ export default function NeighborhoodRepsPage() {
                   </div>
                 </form>
               ) : (
-                <div className="text-center space-y-4">
+                <div className="text-center space-y-4 py-2">
                   <div className="text-4xl">✅</div>
                   <h4 className="font-bold text-green-800 text-sm">{dispatchResult.message}</h4>
-                  <div className="p-3 bg-gray-50 border rounded-xl font-mono text-lg font-bold text-amber-800">
-                    رمز الاستلام: {dispatchResult.qr_code}
+                  
+                  <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl flex flex-col items-center">
+                    <div className="text-xs text-amber-900 font-bold mb-2">رمز الشحنة والاستلام بالـ QR المعتمد</div>
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(dispatchResult.qr_code || 'IKRAM-REP')}`}
+                      alt="QR Code"
+                      className="w-36 h-36 border-2 border-amber-300 p-1.5 bg-white rounded-xl shadow-xs mb-3"
+                    />
+                    <div className="font-mono text-lg font-extrabold text-amber-900 tracking-wider">
+                      {dispatchResult.qr_code}
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setShowDispatchModal(false)}
-                    className="px-6 py-2 rounded-xl bg-amber-600 text-white font-bold text-xs"
-                  >
-                    تم الإغلاق
-                  </button>
+
+                  {(() => {
+                    const repObj = selectedRep;
+                    const rawPhone = (repObj?.phone || "").replace(/[^0-9]/g, "");
+                    let phoneNum = rawPhone;
+                    if (phoneNum.startsWith("0")) phoneNum = "966" + phoneNum.slice(1);
+                    else if (!phoneNum.startsWith("966") && phoneNum.length === 9) phoneNum = "966" + phoneNum;
+                    if (!phoneNum) phoneNum = "966574917155";
+
+                    const repMsg = `مرحباً سعادة المندوب ${repObj?.full_name || "مندوب الحي"}،
+تسر جمعية إكرام الجود إفادتكم بتخصيص وتوجيه دفعة دعم جديدة لحي (${repObj?.district_name || ""}):
+👤 *اسم المندوب:* ${repObj?.full_name || ""}
+📍 *الحي السكني:* ${repObj?.district_name || ""}
+🔑 *رمز الشحنة والـ QR:* ${dispatchResult.qr_code}
+📅 *تاريخ التوجيه:* ${dispatchForm.scheduled_date || "اليوم"}
+
+يرجى استخدام رمز الـ QR لإثبات توثيق استلام ودعم الحي. شكراً لكم.`;
+
+                    const waUrl = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(repMsg)}`;
+
+                    return (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                      >
+                        <span>💬 إرسال الرمز والتفاصيل للمندوب عبر واتساب</span>
+                      </a>
+                    );
+                  })()}
+
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setShowDispatchModal(false)}
+                      className="px-6 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200"
+                    >
+                      إغلاق النافذة
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -5,14 +5,22 @@ import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 
 /* Inline QR / Barcode display component */
-const QrDisplay = ({ text }) => (
-  <div className="flex flex-col items-center p-3 border rounded-xl bg-white shadow-sm">
-    <div className="text-xs text-gray-500 mb-1">رمز الاستلام (Barcode)</div>
-    <div className="font-mono font-bold text-lg tracking-widest text-amber-800 bg-amber-50 px-4 py-1.5 rounded-lg border border-amber-200">
-      {text}
+const QrDisplay = ({ text }) => {
+  const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(text)}`;
+  return (
+    <div className="flex flex-col items-center p-4 border rounded-2xl bg-white shadow-sm">
+      <div className="text-xs text-gray-500 font-bold mb-2">رمز الاستلام والـ QR المعتمد</div>
+      <img
+        src={qrImgUrl}
+        alt={`QR Code ${text}`}
+        className="w-36 h-36 border-2 border-amber-200 p-1.5 bg-white rounded-xl shadow-xs mb-3"
+      />
+      <div className="font-mono font-bold text-base tracking-widest text-amber-900 bg-amber-50 px-4 py-1.5 rounded-lg border border-amber-200">
+        {text}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const STEPS = ["اختيار المستفيدين", "اختيار سلة الدعم", "تحديد الموعد", "مراجعة وإرسال"];
 
@@ -362,11 +370,45 @@ export default function SendSupportPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(result.distributions || []).map((d) => {
               const b = selectedBeneficiaries.find((item) => item.id === d.beneficiary_id);
+              const code = d.barcode_code || d.qr_code || "IKRAM-SUPPORT";
+              const rawPhone = (b?.phone || "").replace(/[^0-9]/g, "");
+              let phoneNum = rawPhone;
+              if (phoneNum.startsWith("0")) phoneNum = "966" + phoneNum.slice(1);
+              else if (!phoneNum.startsWith("966") && phoneNum.length === 9) phoneNum = "966" + phoneNum;
+              if (!phoneNum) phoneNum = "966574917155";
+
+              const basketName = selectedBasket?.name || "سلة دعم مخصصة";
+              const dateStr = scheduledAt || new Date().toISOString().split("T")[0];
+              const locStr = pickupLocation || "توصيل للمنزل / مقر الجمعية";
+
+              const textMsg = `مرحباً ${b?.full_name || b?.name || "المستفيد"}،
+جمعية إكرام الجود ترحب بكم وتفيدكم بتأكيد موعد وتخصيص السلة الغذائية:
+👤 *اسم المستفيد:* ${b?.full_name || b?.name || "المستفيد"}
+🪪 *رقم الهوية:* ${b?.national_id || "—"}
+📦 *سلة الدعم:* ${basketName}
+🔑 *رمز الاستلام والـ QR:* ${code}
+📅 *تاريخ التوزيع:* ${dateStr}
+📍 *موقع الاستلام:* ${locStr}
+
+يمكنكم حفظ صورة الـ QR وإبرازها عند الاستلام. شكراً لكم.`;
+
+              const waUrl = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(textMsg)}`;
+
               return (
-                <div key={d.id} className="border rounded-2xl p-4 bg-gray-50 text-center shadow-sm">
-                  <div className="font-bold text-gray-800 text-sm mb-1">{b?.full_name || b?.name || d.beneficiary_id}</div>
-                  <div className="text-xs text-gray-500 mb-3">هوية: {b?.national_id}</div>
-                  <QrDisplay text={d.barcode_code} />
+                <div key={d.id} className="border rounded-2xl p-4 bg-gray-50 text-center shadow-sm flex flex-col justify-between">
+                  <div>
+                    <div className="font-bold text-gray-800 text-sm mb-1">{b?.full_name || b?.name || d.beneficiary_id}</div>
+                    <div className="text-xs text-gray-500 mb-3">هوية: {b?.national_id || "—"} | جوال: {b?.phone || "—"}</div>
+                    <QrDisplay text={code} />
+                  </div>
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                  >
+                    <span>💬 إرسال الإشعار والـ QR عبر واتساب</span>
+                  </a>
                 </div>
               );
             })}
