@@ -441,7 +441,7 @@ ${qrUrl}`;
                   />
                 </th>
 
-                <th className="p-3 font-bold">تاريخ التعيين</th>
+                <th className="p-3 font-bold">تاريخ الميلاد</th>
 
                 <th className="p-3">
                   <FilterableTableHeader
@@ -471,7 +471,7 @@ ${qrUrl}`;
               )}
               {!loading && filteredStaff.map((s, idx) => {
                 const st = statusLabels[s.status] || { label: s.status, class: "bg-gray-100 text-gray-600" };
-                const formattedHireDate = s.hire_date ? String(s.hire_date).split('T')[0] : "—";
+                const formattedBirthDate = s.birth_date ? String(s.birth_date).split('T')[0] : "—";
                 return (
                   <tr key={s.id || idx} className="border-b hover:bg-gray-50 transition-colors">
                     <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
@@ -480,7 +480,7 @@ ${qrUrl}`;
                     <td className="p-3 font-mono text-gray-600">{s.phone}</td>
                     <td className="p-3 font-bold text-amber-900">{s.job_title || "—"}</td>
                     <td className="p-3">{s.department || "—"}</td>
-                    <td className="p-3 font-semibold text-gray-700">{formattedHireDate}</td>
+                    <td className="p-3 font-semibold text-gray-700">{formattedBirthDate}</td>
                     <td className="p-3">
                       <span className={`px-2.5 py-1 rounded-xl text-xs font-bold border ${st.class}`}>
                         {st.label}
@@ -901,28 +901,6 @@ ${qrUrl}`;
                       className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
                     />
                     <p className="text-[11px] text-gray-500">صورة واضحة من بطاقة الهوية الوطنية أو الإقامة</p>
-                  </div>
-
-                  <div className="p-3 bg-white border border-gray-200 rounded-xl space-y-1.5 shadow-xs">
-                    <label className="block font-bold text-gray-800">📜 عقد العمل والتكليف الرسمي</label>
-                    <input
-                      type="file"
-                      accept=".pdf,image/*"
-                      onChange={(e) => setAddForm({ ...addForm, employment_contract_doc: e.target.files[0] })}
-                      className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
-                    />
-                    <p className="text-[11px] text-gray-500">نسخة عقد الموظف المعتمد بالجمعية (PDF/صورة)</p>
-                  </div>
-
-                  <div className="p-3 bg-white border border-gray-200 rounded-xl space-y-1.5 shadow-xs">
-                    <label className="block font-bold text-gray-800">🎓 المؤهل والشهادات العلمية</label>
-                    <input
-                      type="file"
-                      accept=".pdf,image/*"
-                      onChange={(e) => setAddForm({ ...addForm, qualification_doc: e.target.files[0] })}
-                      className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
-                    />
-                    <p className="text-[11px] text-gray-500">شهادة المؤهل التعليمي أو الدورات التدريبية</p>
                   </div>
 
                   <div className="p-3 bg-white border border-gray-200 rounded-xl space-y-1.5 shadow-xs">
