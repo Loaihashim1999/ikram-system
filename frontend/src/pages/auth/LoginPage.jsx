@@ -80,12 +80,17 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 border border-[#E5E2D9]">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-[#FAF8F5] border border-[#E5E2D9] rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-xs">
-            <span className="text-3xl font-extrabold text-[#3F6B3A]">إكرام</span>
+          <div className="mx-auto mb-4 flex items-center justify-center">
+            <img
+              src="/1.png"
+              alt="شعار جمعية إكرام"
+              className="h-20 max-w-[180px] object-contain drop-shadow-xs"
+            />
           </div>
           <h1 className="text-xl font-extrabold text-[#111827]">جمعية إكرام لخدمة ضيوف الرحمن</h1>
           <p className="text-[#6B7280] mt-1.5 text-xs">بوابة الدخول الموحدة لإدارة المستفيدين والعمليات</p>
         </div>
+
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">

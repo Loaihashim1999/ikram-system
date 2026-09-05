@@ -54,11 +54,16 @@ export default function TopBar({ onMenuClick }) {
           </button>
 
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#3F6B3A]" />
+            <img
+              src="/1.png"
+              alt="شعار جمعية إكرام"
+              className="h-8 w-auto object-contain"
+            />
             <h1 className="text-xs sm:text-sm font-extrabold text-[#111827]">
               جمعية إكرام — <span className="text-[#3F6B3A]">نظام إدارة المستفيدين والخدمات الميدانية</span>
             </h1>
           </div>
+
         </div>
 
         {/* Left side: Notifications, User profile & Actions */}

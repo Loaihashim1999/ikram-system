@@ -112,12 +112,14 @@ export default function Sidebar({ isOpen, onClose }) {
       >
         {/* Header */}
         <div className="p-4 border-b border-[#E5E2D9] flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1">
-            <div className="w-8 h-8 rounded-xl bg-[#3F6B3A] flex items-center justify-center text-white font-extrabold text-sm">
-              إ
-            </div>
+          <div className="flex items-center gap-2.5 flex-1">
+            <img
+              src="/1.png"
+              alt="شعار جمعية إكرام"
+              className="h-10 w-auto object-contain"
+            />
             <div>
-              <h2 className="text-base font-extrabold text-[#3F6B3A] leading-tight">جمعية إكرام</h2>
+              <h2 className="text-sm font-extrabold text-[#3F6B3A] leading-tight">جمعية إكرام</h2>
               <p className="text-[10px] text-[#6B7280]">لخدمة ضيوف الرحمن</p>
             </div>
           </div>
@@ -130,6 +132,7 @@ export default function Sidebar({ isOpen, onClose }) {
             <X size={20} />
           </button>
         </div>
+
 
         {/* User Role Badge */}
         <div className="px-4 py-2.5 bg-[#FAF8F5] border-b border-[#E5E2D9] flex items-center justify-between text-xs">
