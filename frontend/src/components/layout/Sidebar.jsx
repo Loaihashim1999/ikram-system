@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Scrim from '../overlays/Scrim';
+import logoImg from '../../assets/logo.png';
 import {
   Home,
   Users,
@@ -114,7 +115,7 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="p-4 border-b border-[#E5E2D9] flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 flex-1">
             <img
-              src="/1.png"
+              src={logoImg}
               alt="شعار جمعية إكرام"
               className="h-10 w-auto object-contain"
             />
@@ -123,6 +124,7 @@ export default function Sidebar({ isOpen, onClose }) {
               <p className="text-[10px] text-[#6B7280]">لخدمة ضيوف الرحمن</p>
             </div>
           </div>
+
 
           <button
             onClick={onClose}

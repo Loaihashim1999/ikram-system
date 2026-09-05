@@ -2,9 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, User, AlertTriangle, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import logoImg from '../../assets/logo.png';
 
 const FAILED_ATTEMPTS_KEY = 'ikram_failed_login_attempts';
 const LOCKED_ACCOUNTS_KEY = 'ikram_locked_accounts';
+
+// حساب المشرف العام محمي تماماً من الإيقاف التلقائي
+const ADMIN_USERNAMES = ['admin', 'supervisor', 'مدير_النظام', 'المشرف_العام'];
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -23,6 +27,7 @@ export default function LoginPage() {
     }
   };
 
+
   const getFailedAttempts = () => {
     try {
       return JSON.parse(localStorage.getItem(FAILED_ATTEMPTS_KEY) || '{}');
@@ -36,10 +41,11 @@ export default function LoginPage() {
     setError('');
 
     const cleanUser = username.trim().toLowerCase();
+    const isAdmin = ADMIN_USERNAMES.includes(cleanUser);
     const lockedAccounts = getLockedAccounts();
 
-    // Check if account is locked
-    if (lockedAccounts.includes(cleanUser)) {
+    // Check if account is locked (المشرف العام لا يقفل حسابه أبداً)
+    if (!isAdmin && lockedAccounts.includes(cleanUser)) {
       setError('تم إيقاف الحساب لتجاوز عدد محاولات الدخول المسموحة (3 محاولات). يرجى مراجعة المشرف العام لإعادة تفعيل الحساب.');
       return;
     }
@@ -57,7 +63,13 @@ export default function LoginPage() {
 
       navigate('/dashboard');
     } else {
-      // Record failed attempt
+      // إذا كان المستخدم هو المشرف العام، لا يتم زيادة العداد ولا قفل الحساب
+      if (isAdmin) {
+        setError('اسم المستخدم أو كلمة المرور غير صحيحة. يرجى التحقق وإعادة المحاولة.');
+        return;
+      }
+
+      // Record failed attempt for non-admin accounts
       const attempts = getFailedAttempts();
       const currentCount = (attempts[cleanUser] || 0) + 1;
       attempts[cleanUser] = currentCount;
@@ -82,14 +94,15 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <div className="mx-auto mb-4 flex items-center justify-center">
             <img
-              src="/1.png"
+              src={logoImg}
               alt="شعار جمعية إكرام"
-              className="h-20 max-w-[180px] object-contain drop-shadow-xs"
+              className="h-20 w-auto object-contain drop-shadow-xs"
             />
           </div>
           <h1 className="text-xl font-extrabold text-[#111827]">جمعية إكرام لخدمة ضيوف الرحمن</h1>
           <p className="text-[#6B7280] mt-1.5 text-xs">بوابة الدخول الموحدة لإدارة المستفيدين والعمليات</p>
         </div>
+
 
 
         {/* Form */}

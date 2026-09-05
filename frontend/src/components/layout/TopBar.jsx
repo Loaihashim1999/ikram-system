@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, LogOut, User, Menu, KeyRound, ChevronDown } from 'lucide-react';
 import NotificationCenter from './NotificationCenter';
 import ChangePasswordModal from '../common/ChangePasswordModal';
+import logoImg from '../../assets/logo.png';
+
 
 export default function TopBar({ onMenuClick }) {
   const { user: authUser, logout } = useAuth();
@@ -55,7 +57,7 @@ export default function TopBar({ onMenuClick }) {
 
           <div className="flex items-center gap-2">
             <img
-              src="/1.png"
+              src={logoImg}
               alt="شعار جمعية إكرام"
               className="h-8 w-auto object-contain"
             />
@@ -63,6 +65,7 @@ export default function TopBar({ onMenuClick }) {
               جمعية إكرام — <span className="text-[#3F6B3A]">نظام إدارة المستفيدين والخدمات الميدانية</span>
             </h1>
           </div>
+
 
         </div>
 
