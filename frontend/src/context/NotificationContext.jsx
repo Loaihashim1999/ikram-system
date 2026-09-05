@@ -30,8 +30,9 @@ export function NotificationProvider({ children }) {
     }
   }, [notifications]);
 
-  // Load system settings for threshold
+  // Load system settings for threshold only when authenticated
   useEffect(() => {
+    if (!user) return;
     api.get('/settings')
       .then(res => {
         if (res.data?.data?.warehouse_alert_threshold_days) {
@@ -39,7 +40,8 @@ export function NotificationProvider({ children }) {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [user]);
+
 
   // Check if current user has permission to see warehouse notifications
   const canViewWarehouseAlerts = useCallback(() => {
