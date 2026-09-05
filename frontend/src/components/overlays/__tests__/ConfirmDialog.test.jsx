@@ -32,6 +32,7 @@ describe('ConfirmDialog Component', () => {
         isOpen={true}
         onClose={vi.fn()}
         onConfirm={handleConfirm}
+        confirmText="حذف نهائياً"
       />
     )
     const confirmButton = screen.getByRole('button', { name: /حذف نهائياً/i })

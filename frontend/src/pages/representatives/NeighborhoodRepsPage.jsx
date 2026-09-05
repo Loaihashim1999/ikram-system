@@ -4,10 +4,13 @@ import MainLayout from "../../components/layout/MainLayout";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
 import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
+import Scrim from "../../components/overlays/Scrim";
+import ConfirmDialog from "../../components/overlays/ConfirmDialog";
+import ReceiptHistoryTimeline from "../../components/common/ReceiptHistoryTimeline";
 import {
   MapPin, UserPlus, FileSpreadsheet, Send, FileText, ShieldCheck,
   RefreshCw, Eye, Edit3, Trash2, X, Download, Users, FileArchive,
-  Building2, Phone, Calendar, Hash, CheckCircle2, Package
+  Building2, Phone, Calendar, Hash, CheckCircle2, Package, Mail, Award
 } from "lucide-react";
 
 export default function NeighborhoodRepsPage() {
@@ -16,6 +19,7 @@ export default function NeighborhoodRepsPage() {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
   const [districtFilter, setDistrictFilter] = useState("all");
 
@@ -31,11 +35,28 @@ export default function NeighborhoodRepsPage() {
   const [scrimRecipient, setScrimRecipient] = useState(null);
   const [activeTab, setActiveTab] = useState("info");
 
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "danger",
+    onConfirm: () => {},
+  });
+
   // Add / Edit form state
   const [form, setForm] = useState({
-    full_name: "", phone: "", national_id: "", date_of_birth: "",
-    city: "مكة المكرمة", district_name: "", beneficiaries_count: 0,
-    national_address: "", status: "active",
+    organization_name: "",
+    organization_type: "جمعية خيرية",
+    license_number: "",
+    contact_person: "",
+    phone: "",
+    email: "",
+    city: "مكة المكرمة",
+    district_name: "",
+    beneficiaries_count: 0,
+    national_address: "",
+    status: "active",
   });
   const [files, setFiles] = useState({});
   const [formBeneficiaries, setFormBeneficiaries] = useState([]);
@@ -72,9 +93,17 @@ export default function NeighborhoodRepsPage() {
   const handleOpenAddModal = () => {
     setEditingRep(null);
     setForm({
-      full_name: "", phone: "", national_id: "", date_of_birth: "",
-      city: "مكة المكرمة", district_name: "", beneficiaries_count: 0,
-      national_address: "", status: "active",
+      organization_name: "",
+      organization_type: "جمعية خيرية",
+      license_number: "",
+      contact_person: "",
+      phone: "",
+      email: "",
+      city: "مكة المكرمة",
+      district_name: "",
+      beneficiaries_count: 0,
+      national_address: "",
+      status: "active",
     });
     setFormBeneficiaries([]);
     setNewBenRow({ name: "", phone: "", national_id: "", date_of_birth: "", beneficiary_type: "citizen", family_members_count: 1 });
@@ -85,10 +114,12 @@ export default function NeighborhoodRepsPage() {
   const handleOpenEditModal = (r) => {
     setEditingRep(r);
     setForm({
-      full_name: r.full_name || "",
+      organization_name: r.organization_name || r.full_name || "",
+      organization_type: r.organization_type || "جمعية خيرية",
+      license_number: r.license_number || r.national_id || "",
+      contact_person: r.contact_person || "",
       phone: r.phone || "",
-      national_id: r.national_id || "",
-      date_of_birth: r.date_of_birth ? String(r.date_of_birth).slice(0, 10) : "",
+      email: r.email || "",
       city: r.city || "مكة المكرمة",
       district_name: r.district_name || "",
       beneficiaries_count: r.beneficiaries_count || 0,
@@ -183,7 +214,21 @@ export default function NeighborhoodRepsPage() {
   const handleSaveRep = async (e) => {
     e.preventDefault();
     const fd = new FormData();
-    Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+    // Support backend fields while maintaining full organizational schema
+    fd.append("full_name", form.organization_name);
+    fd.append("organization_name", form.organization_name);
+    fd.append("organization_type", form.organization_type);
+    fd.append("license_number", form.license_number);
+    fd.append("national_id", form.license_number || "7000000000");
+    fd.append("contact_person", form.contact_person);
+    fd.append("phone", form.phone);
+    fd.append("email", form.email);
+    fd.append("city", form.city);
+    fd.append("district_name", form.district_name);
+    fd.append("beneficiaries_count", form.beneficiaries_count);
+    fd.append("national_address", form.national_address);
+    fd.append("status", form.status);
+
     fd.append("linked_beneficiaries", JSON.stringify(formBeneficiaries));
     if (files.id_document_image) fd.append("id_document_image", files.id_document_image);
     if (files.support_letter) fd.append("support_letter", files.support_letter);
@@ -193,39 +238,59 @@ export default function NeighborhoodRepsPage() {
     try {
       if (editingRep) {
         await api.post(`/neighborhood-reps/${editingRep.id}`, fd, { headers: { "Content-Type": "multipart/form-data" } });
-        alert("تم تحديث بيانات مندوب الحي بنجاح!");
+        alert("تم تحديث بيانات الجهة المستفيدة بنجاح!");
       } else {
         await api.post("/neighborhood-reps", fd, { headers: { "Content-Type": "multipart/form-data" } });
-        alert("تم تسجيل مندوب الحي بنجاح!");
+        alert("تم تسجيل الجهة المستفيدة بنجاح!");
       }
       setShowAddModal(false);
       loadData();
     } catch (err) {
-      alert(err.response?.data?.message || "تعذر حفظ بيانات مندوب الحي.");
+      alert(err.response?.data?.message || "تعذر حفظ بيانات الجهة المستفيدة.");
     }
   };
 
-  const handleToggleRepStatus = async (r) => {
+  const handleToggleRepStatus = (r) => {
     const nextStatus = r.status === "suspended" ? "active" : "suspended";
-    if (!window.confirm(`هل أنت متأكد من تغيير حالة المندوب (${r.full_name}) إلى (${nextStatus === "active" ? "نشط" : "موقوف"})؟`)) return;
-    try {
-      await api.put(`/neighborhood-reps/${r.id}/status`);
-      loadData();
-    } catch {
-      alert("تم تحديث حالة المندوب.");
-      loadData();
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: "تغيير حالة الجهة المستفيدة",
+      message: `هل أنت متأكد من تغيير حالة الجهة المستفيدة (${r.organization_name || r.full_name}) إلى (${nextStatus === "active" ? "نشط" : "موقوف"})؟`,
+      type: "warning",
+      confirmText: "تأكيد التغيير",
+      onConfirm: async () => {
+        try {
+          await api.put(`/neighborhood-reps/${r.id}/status`);
+          loadData();
+        } catch {
+          alert("تم تحديث حالة الجهة.");
+          loadData();
+        } finally {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
-  const handleDeleteRep = async (r) => {
-    if (!window.confirm(`هل أنت متأكد من حذف مندوب الحي (${r.full_name}) نهائياً؟`)) return;
-    try {
-      await api.delete(`/neighborhood-reps/${r.id}`);
-      loadData();
-      alert("تم حذف مندوب الحي بنجاح.");
-    } catch (err) {
-      alert(err.response?.data?.message || "تعذر حذف المندوب.");
-    }
+  const handleDeleteRep = (r) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "حذف الجهة المستفيدة",
+      message: `هل أنت متأكد من حذف الجهة المستفيدة (${r.organization_name || r.full_name}) نهائياً؟ هذا الإجراء سيحذف كافة سجلات الربط.`,
+      type: "danger",
+      confirmText: "تأكيد الحذف",
+      onConfirm: async () => {
+        try {
+          await api.delete(`/neighborhood-reps/${r.id}`);
+          loadData();
+          alert("تم حذف الجهة المستفيدة بنجاح.");
+        } catch (err) {
+          alert(err.response?.data?.message || "تعذر حذف الجهة.");
+        } finally {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
   const handleOpenBeneficiariesModal = async (r) => {
@@ -265,7 +330,7 @@ export default function NeighborhoodRepsPage() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `الأسر_التابعة_لمندوب_الحي.csv`);
+      link.setAttribute('download', `الأسر_التابعة_للجهة_المستفيدة.csv`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -282,27 +347,36 @@ export default function NeighborhoodRepsPage() {
       const res = await api.post(`/neighborhood-reps/${selectedRep.id}/dispatch`, dispatchForm);
       setDispatchResult(res.data);
     } catch (err) {
-      alert(err.response?.data?.message || "حدث خطأ أثناء إرسال الدعم للمندوب.");
+      alert(err.response?.data?.message || "حدث خطأ أثناء إرسال الدعم للجهة المستفيدة.");
     }
   };
 
   // Filter options
+  const organizationTypes = ["جمعية خيرية", "وقف", "مسجد/مصلى", "دار رعاية", "لجنة تنمية", "جهة حكومية", "أخرى"];
   const cities = Array.from(new Set(reps.map((r) => r.city || "مكة المكرمة").filter(Boolean)));
   const districts = Array.from(new Set(reps.map((r) => r.district_name).filter(Boolean)));
 
   const filteredReps = reps.filter((r) => {
     const q = search.toLowerCase();
+    const orgName = (r.organization_name || r.full_name || '').toLowerCase();
+    const contact = (r.contact_person || '').toLowerCase();
+    const license = (r.license_number || r.national_id || '').toLowerCase();
+    const phone = (r.phone || '').toLowerCase();
+    const district = (r.district_name || '').toLowerCase();
+
     const matchSearch =
       !q ||
-      (r.full_name || '').toLowerCase().includes(q) ||
-      (r.district_name || '').toLowerCase().includes(q) ||
-      (r.phone || '').toLowerCase().includes(q) ||
-      (r.national_id || '').toLowerCase().includes(q);
+      orgName.includes(q) ||
+      contact.includes(q) ||
+      license.includes(q) ||
+      phone.includes(q) ||
+      district.includes(q);
 
+    const matchType = typeFilter === "all" || (r.organization_type || "جمعية خيرية") === typeFilter;
     const matchCity = cityFilter === "all" || (r.city || "مكة المكرمة") === cityFilter;
     const matchDistrict = districtFilter === "all" || r.district_name === districtFilter;
 
-    return matchSearch && matchCity && matchDistrict;
+    return matchSearch && matchType && matchCity && matchDistrict;
   });
 
   const cleanDate = (d) => (d ? String(d).slice(0, 10) : "—");
@@ -314,85 +388,119 @@ export default function NeighborhoodRepsPage() {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <MapPin className="w-7 h-7 text-amber-600" />
-              <span>إدارة مناديب الأحياء والتوزيع المحلي</span>
+              <Building2 className="w-7 h-7 text-primary-600" />
+              <span>إدارة الجهات المستفيدة والشريكة</span>
             </h1>
             <p className="text-xs text-gray-500 mt-1">
-              إدارة مناديب الأحياء السكنية، ربط ومتابعة الأسر التابعة، وتوثيق استلام السلات والوثائق الرسمية
+              إدارة الجمعيات الشريكة، المساجد، الأوقاف، دور الرعاية، لجان التنمية، ومتابعة المستفيدين وتوثيق الدعم والاستلام
             </p>
           </div>
 
           <button
             onClick={handleOpenAddModal}
-            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-md cursor-pointer"
+            className="flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-md cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
-            <span>+ تسجيل مندوب حي جديد</span>
+            <span>+ تسجيل جهة مستفيدة جديدة</span>
           </button>
         </div>
 
-        {/* Search */}
-        <div className="mb-4">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="بحث باسم المندوب، اسم الحي، المدينة، رقم الهوية أو الجوال..."
-            className="w-full max-w-md rounded-xl border border-gray-300 px-4 py-2.5 text-xs text-right bg-white shadow-sm focus:ring-2 focus:ring-amber-400"
-          />
+        {/* Search and Filters Bar */}
+        <div className="flex flex-wrap items-center gap-3 mb-6 bg-white p-4 rounded-2xl border border-border-light shadow-sm">
+          <div className="flex-1 min-w-[260px]">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="بحث باسم الجهة، رقم الترخيص، اسم المسؤول، الجوال، أو الحي..."
+              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-xs text-right bg-surface-subtle shadow-sm focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          <div className="w-44">
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-xs bg-white text-gray-700 font-bold"
+            >
+              <option value="all">كل أنواع الجهات</option>
+              {organizationTypes.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-40">
+            <select
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-xs bg-white text-gray-700 font-bold"
+            >
+              <option value="all">كل المدن</option>
+              {cities.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Reps Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="overflow-x-auto border border-gray-200 rounded-xl">
             <table className="w-full text-xs text-right">
-              <thead className="bg-amber-50/70 text-amber-900 border-b">
+              <thead className="bg-primary-50/70 text-primary-900 border-b">
                 <tr>
                   <th className="p-3">#</th>
-                  <th className="p-3 font-bold">اسم المندوب</th>
+                  <th className="p-3 font-bold">اسم الجهة المستفيدة</th>
+                  <th className="p-3 font-bold">نوع الجهة</th>
+                  <th className="p-3 font-bold">رقم الترخيص</th>
+                  <th className="p-3 font-bold">الشخص المسؤول</th>
+                  <th className="p-3 font-bold">رقم الهاتف</th>
                   <th className="p-3 font-bold">
                     <FilterableTableHeader
-                      title="المدينة"
-                      options={cities}
-                      selectedValue={cityFilter}
-                      onChange={setCityFilter}
-                    />
-                  </th>
-                  <th className="p-3 font-bold">
-                    <FilterableTableHeader
-                      title="الحي السكني"
+                      title="المدينة والحي"
                       options={districts}
                       selectedValue={districtFilter}
                       onChange={setDistrictFilter}
                     />
                   </th>
-                  <th className="p-3 font-bold">رقم الهوية</th>
-                  <th className="p-3 font-bold">رقم الهاتف</th>
-                  <th className="p-3 font-bold">عدد الأسر التابعة</th>
-                  <th className="p-3 font-bold text-center">عرض الأسر التابعة</th>
+                  <th className="p-3 font-bold text-center">المستفيدين التابعين</th>
+                  <th className="p-3 font-bold text-center">قائمة الأسر</th>
                   <th className="p-3 font-bold">الحالة</th>
-                  <th className="p-3 font-bold text-center">عدد الاستلام</th>
+                  <th className="p-3 font-bold text-center">سجل الاستلام</th>
                   <th className="p-3 font-bold text-center">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={11} className="p-8 text-center text-gray-400">جاري التحميل...</td></tr>
+                  <tr><td colSpan={12} className="p-8 text-center text-gray-400">جاري التحميل...</td></tr>
                 )}
                 {!loading && filteredReps.map((r, idx) => (
-                  <tr key={r.id || idx} className="border-b hover:bg-amber-50/30 transition-colors">
+                  <tr key={r.id || idx} className="border-b hover:bg-primary-50/20 transition-colors">
                     <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
-                    <td className="p-3 font-bold text-gray-800">{r.full_name}</td>
-                    <td className="p-3 text-gray-600">{r.city || "مكة المكرمة"}</td>
-                    <td className="p-3 text-amber-900 font-bold">{r.district_name}</td>
-                    <td className="p-3 font-mono text-gray-700">{r.national_id || "—"}</td>
+                    <td className="p-3 font-bold text-gray-800">
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="w-4 h-4 text-primary-600 flex-shrink-0" />
+                        <span>{r.organization_name || r.full_name}</span>
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full text-[11px] font-bold border border-amber-200">
+                        {r.organization_type || "جهة خيرية"}
+                      </span>
+                    </td>
+                    <td className="p-3 font-mono text-gray-700">{r.license_number || r.national_id || "—"}</td>
+                    <td className="p-3 font-bold text-gray-700">{r.contact_person || r.full_name || "—"}</td>
                     <td className="p-3 font-mono text-gray-600" dir="ltr">{r.phone}</td>
+                    <td className="p-3 text-primary-900 font-bold">
+                      {r.city || "مكة المكرمة"} - {r.district_name || "عام"}
+                    </td>
                     {/* 1. عدد الأسر التابعة */}
                     <td className="p-3 text-center">
                       <span
-                        className="bg-amber-100/80 text-amber-900 border border-amber-200 px-2.5 py-1.5 rounded-xl inline-flex items-center gap-1.5 font-extrabold shadow-xs"
+                        className="bg-primary-100/80 text-primary-900 border border-primary-200 px-2.5 py-1.5 rounded-xl inline-flex items-center gap-1.5 font-extrabold shadow-xs"
                         title={`عدد الأسر التابعة: ${r.linked_beneficiaries_count || r.beneficiaries_count || 0} أسرة`}
                       >
-                        <Users className="w-4 h-4 text-amber-700" />
+                        <Users className="w-4 h-4 text-primary-700" />
                         <span className="font-mono text-xs">{r.linked_beneficiaries_count || r.beneficiaries_count || 0}</span>
                       </span>
                     </td>
@@ -401,10 +509,10 @@ export default function NeighborhoodRepsPage() {
                     <td className="p-3 text-center">
                       <button
                         onClick={() => handleOpenBeneficiariesModal(r)}
-                        className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 p-2 rounded-xl inline-flex items-center justify-center transition-all shadow-xs cursor-pointer hover:scale-105"
+                        className="bg-primary-50 hover:bg-primary-100 text-primary-700 border border-primary-200 p-2 rounded-xl inline-flex items-center justify-center transition-all shadow-xs cursor-pointer hover:scale-105"
                         title="عرض الأسر التابعة"
                       >
-                        <Eye className="w-4 h-4 text-amber-600" />
+                        <Eye className="w-4 h-4 text-primary-600" />
                       </button>
                     </td>
 
@@ -436,8 +544,8 @@ export default function NeighborhoodRepsPage() {
                       {/* View Details */}
                       <button
                         onClick={() => handleOpenDetailsModal(r)}
-                        className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 p-1.5 rounded-lg text-xs font-bold transition-all"
-                        title="عرض بيانات المندوب الكاملة"
+                        className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        title="عرض بيانات الجهة المستفيدة الكاملة"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -445,8 +553,8 @@ export default function NeighborhoodRepsPage() {
                       {/* Edit */}
                       <button
                         onClick={() => handleOpenEditModal(r)}
-                        className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 p-1.5 rounded-lg text-xs font-bold transition-all"
-                        title="تعديل بيانات المندوب"
+                        className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        title="تعديل بيانات الجهة المستفيدة"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
@@ -454,7 +562,7 @@ export default function NeighborhoodRepsPage() {
                       {/* Change Status */}
                       <button
                         onClick={() => handleToggleRepStatus(r)}
-                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-1.5 rounded-lg text-xs font-bold transition-all border border-gray-300"
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-1.5 rounded-lg text-xs font-bold transition-all border border-gray-300 cursor-pointer"
                         title="تعديل الحالة (نشط/موقوف)"
                       >
                         <RefreshCw className="w-4 h-4" />
@@ -467,7 +575,7 @@ export default function NeighborhoodRepsPage() {
                           setShowDispatchModal(true);
                           setDispatchResult(null);
                         }}
-                        className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded-lg text-xs font-bold transition-all shadow-xs"
+                        className="bg-primary-700 hover:bg-primary-800 text-white p-1.5 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
                         title="توجيه دعم وسلات"
                       >
                         <Send className="w-4 h-4" />
@@ -478,8 +586,8 @@ export default function NeighborhoodRepsPage() {
                         href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/rep-receipt/${r.id}/pdf`}
                         target="_blank"
                         rel="noreferrer"
-                        className="bg-amber-700 hover:bg-amber-800 text-white p-1.5 rounded-lg text-xs font-bold transition-all shadow-xs"
-                        title="طباعة سند وسجل استلام المندوب (PDF)"
+                        className="bg-amber-700 hover:bg-amber-800 text-white p-1.5 rounded-lg text-xs font-bold transition-all shadow-xs inline-flex items-center justify-center cursor-pointer"
+                        title="طباعة سند وسجل استلام الجهة (PDF)"
                       >
                         <FileText className="w-4 h-4" />
                       </a>
@@ -487,8 +595,8 @@ export default function NeighborhoodRepsPage() {
                       {/* Delete */}
                       <button
                         onClick={() => handleDeleteRep(r)}
-                        className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 p-1.5 rounded-lg text-xs font-bold transition-all"
-                        title="حذف المندوب"
+                        className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        title="حذف الجهة المستفيدة"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -496,7 +604,7 @@ export default function NeighborhoodRepsPage() {
                   </tr>
                 ))}
                 {!loading && filteredReps.length === 0 && (
-                  <tr><td colSpan={11} className="p-8 text-center text-gray-400">لا يوجد مناديب أحياء مسجلون طابقوا معايير البحث</td></tr>
+                  <tr><td colSpan={12} className="p-8 text-center text-gray-400">لا توجد جهات مستفيدة مسجلة تطابق معايير البحث</td></tr>
                 )}
               </tbody>
             </table>
@@ -505,17 +613,17 @@ export default function NeighborhoodRepsPage() {
 
         {/* ─── 1. Modal: View Linked Beneficiaries (عرض الأسر التابعة) ─── */}
         {viewBeneficiariesRep && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4" dir="rtl">
-            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150">
+          <Scrim isOpen={Boolean(viewBeneficiariesRep)} onClose={() => setViewBeneficiariesRep(null)}>
+            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150" dir="rtl" onClick={(e) => e.stopPropagation()}>
               {/* Header */}
-              <div className="p-5 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-t-3xl flex justify-between items-center">
+              <div className="p-5 bg-gradient-to-r from-primary-700 to-primary-800 text-white rounded-t-3xl flex justify-between items-center">
                 <div>
                   <h3 className="font-bold text-lg flex items-center gap-2">
                     <Users className="w-5 h-5" />
-                    <span>قائمة الأسر المستفيدة التابعة لحي ({viewBeneficiariesRep.district_name})</span>
+                    <span>قائمة الأسر المستفيدة التابعة لـ ({viewBeneficiariesRep.organization_name || viewBeneficiariesRep.full_name})</span>
                   </h3>
-                  <p className="text-xs text-amber-100 mt-0.5">
-                    المندوب: {viewBeneficiariesRep.full_name} | المدينة: {viewBeneficiariesRep.city || "مكة المكرمة"}
+                  <p className="text-xs text-primary-100 mt-0.5">
+                    النوع: {viewBeneficiariesRep.organization_type || "جهة خيرية"} | المدينة: {viewBeneficiariesRep.city || "مكة المكرمة"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -541,12 +649,12 @@ export default function NeighborhoodRepsPage() {
                   <div className="p-8 text-center text-gray-400 font-bold">جاري تحميل الأسر التابعة...</div>
                 ) : linkedBeneficiaries.length === 0 ? (
                   <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-200">
-                    <p className="text-gray-500 font-bold text-sm">لا توجد أسر تابعة مسجلة في حي ({viewBeneficiariesRep.district_name}) حالياً</p>
+                    <p className="text-gray-500 font-bold text-sm">لا توجد أسر تابعة مسجلة لهذه الجهة حالياً</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-xs">
                     <table className="w-full text-xs text-right">
-                      <thead className="bg-amber-50 text-amber-900 border-b border-amber-200">
+                      <thead className="bg-primary-50 text-primary-900 border-b border-primary-200">
                         <tr>
                           <th className="p-3 font-extrabold">#</th>
                           <th className="p-3 font-extrabold">اسم المستفيد</th>
@@ -560,13 +668,13 @@ export default function NeighborhoodRepsPage() {
                       </thead>
                       <tbody>
                         {linkedBeneficiaries.map((b, idx) => (
-                          <tr key={b.id || idx} className="border-b hover:bg-amber-50/20">
+                          <tr key={b.id || idx} className="border-b hover:bg-primary-50/20">
                             <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
                             <td className="p-3 font-bold text-gray-800">{b.full_name || b.name}</td>
                             <td className="p-3 font-mono text-gray-600" dir="ltr">{b.phone}</td>
                             <td className="p-3 font-mono text-gray-700">{b.national_id || "—"}</td>
                             <td className="p-3 text-gray-600">{cleanDate(b.date_of_birth || b.birth_date)}</td>
-                            <td className="p-3 font-bold text-amber-900">{b.city || "مكة"} - {b.district || viewBeneficiariesRep.district_name}</td>
+                            <td className="p-3 font-bold text-primary-900">{b.city || "مكة"} - {b.district || viewBeneficiariesRep.district_name}</td>
                             <td className="p-3">
                               <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                                 (b.beneficiary_type || b.type) === 'resident' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
@@ -585,19 +693,22 @@ export default function NeighborhoodRepsPage() {
                 )}
               </div>
             </div>
-          </div>
+          </Scrim>
         )}
 
-        {/* ─── 2. Modal: View Rep Details (بطاقة بيانات المندوب - 4 تبويبات) ─── */}
+        {/* ─── 2. Modal: View Rep Details (بطاقة بيانات الجهة المستفيدة) ─── */}
         {viewDetailsRep && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4" dir="rtl">
-            <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150">
+          <Scrim isOpen={Boolean(viewDetailsRep)} onClose={() => setViewDetailsRep(null)}>
+            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150" dir="rtl" onClick={(e) => e.stopPropagation()}>
               {/* Header Banner */}
-              <div className="p-5 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-t-3xl flex justify-between items-center">
+              <div className="p-5 bg-gradient-to-r from-primary-700 to-primary-800 text-white rounded-t-3xl flex justify-between items-center">
                 <div>
-                  <h3 className="font-bold text-lg">{viewDetailsRep.full_name}</h3>
-                  <p className="text-xs text-amber-100">
-                    مندوب حي: {viewDetailsRep.district_name} | {viewDetailsRep.city || "مكة المكرمة"}
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    <span>{viewDetailsRep.organization_name || viewDetailsRep.full_name}</span>
+                  </h3>
+                  <p className="text-xs text-primary-100">
+                    نوع الجهة: {viewDetailsRep.organization_type || "جهة خيرية"} | {viewDetailsRep.city || "مكة المكرمة"} - {viewDetailsRep.district_name || "عام"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -605,7 +716,7 @@ export default function NeighborhoodRepsPage() {
                     href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/rep-receipt/${viewDetailsRep.id}/pdf`}
                     target="_blank"
                     rel="noreferrer"
-                    className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl font-bold text-xs transition-all border border-white/30 flex items-center gap-1.5"
+                    className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl font-bold text-xs transition-all border border-white/30 flex items-center gap-1.5 cursor-pointer"
                   >
                     <FileText className="w-4 h-4" />
                     <span>📄 طباعة السند (PDF)</span>
@@ -620,22 +731,22 @@ export default function NeighborhoodRepsPage() {
               </div>
 
               {/* 4 Tabs Bar */}
-              <div className="flex border-b border-gray-200 bg-amber-50/50 text-xs font-bold">
+              <div className="flex border-b border-gray-200 bg-primary-50/40 text-xs font-bold">
                 <button
                   onClick={() => setActiveTab("info")}
-                  className={`flex-1 py-3 text-center transition-all ${
+                  className={`flex-1 py-3 text-center transition-all cursor-pointer ${
                     activeTab === "info"
-                      ? "border-b-2 border-amber-600 text-amber-900 bg-white font-extrabold"
+                      ? "border-b-2 border-primary-700 text-primary-900 bg-white font-extrabold"
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  👤 بيانات المندوب
+                  🏛️ بيانات الجهة والمفوض
                 </button>
                 <button
                   onClick={() => setActiveTab("families")}
-                  className={`flex-1 py-3 text-center transition-all ${
+                  className={`flex-1 py-3 text-center transition-all cursor-pointer ${
                     activeTab === "families"
-                      ? "border-b-2 border-amber-600 text-amber-900 bg-white font-extrabold"
+                      ? "border-b-2 border-primary-700 text-primary-900 bg-white font-extrabold"
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
@@ -643,57 +754,65 @@ export default function NeighborhoodRepsPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("history")}
-                  className={`flex-1 py-3 text-center transition-all ${
+                  className={`flex-1 py-3 text-center transition-all cursor-pointer ${
                     activeTab === "history"
-                      ? "border-b-2 border-amber-600 text-amber-900 bg-white font-extrabold"
+                      ? "border-b-2 border-primary-700 text-primary-900 bg-white font-extrabold"
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  📦 سجل الدعم والاستلام
+                  📦 سجل الاستلامات والتوزيع
                 </button>
                 <button
                   onClick={() => setActiveTab("docs")}
-                  className={`flex-1 py-3 text-center transition-all ${
+                  className={`flex-1 py-3 text-center transition-all cursor-pointer ${
                     activeTab === "docs"
-                      ? "border-b-2 border-amber-600 text-amber-900 bg-white font-extrabold"
+                      ? "border-b-2 border-primary-700 text-primary-900 bg-white font-extrabold"
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  📁 الوثائق والمرفقات
+                  📁 وثائق وتراخيص الجهة
                 </button>
               </div>
 
               {/* Tab Contents */}
               <div className="p-6">
-                {/* Tab 1: Rep Info */}
+                {/* Tab 1: Organization & Representative Info */}
                 {activeTab === "info" && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">الاسم كامل</span>
-                      <span className="font-extrabold text-gray-800 text-sm">{viewDetailsRep.full_name}</span>
+                      <span className="text-gray-400 block text-[11px] mb-0.5">اسم الجهة المستفيدة</span>
+                      <span className="font-extrabold text-gray-800 text-sm">{viewDetailsRep.organization_name || viewDetailsRep.full_name}</span>
                     </div>
                     <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">رقم الهوية</span>
-                      <span className="font-extrabold text-gray-800 font-mono text-sm">{viewDetailsRep.national_id || "—"}</span>
+                      <span className="text-gray-400 block text-[11px] mb-0.5">نوع الجهة</span>
+                      <span className="font-extrabold text-amber-900 text-sm">{viewDetailsRep.organization_type || "جهة خيرية"}</span>
                     </div>
                     <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">رقم الهاتف</span>
-                      <span className="font-extrabold text-gray-800 font-mono text-sm">{viewDetailsRep.phone}</span>
+                      <span className="text-gray-400 block text-[11px] mb-0.5">رقم الترخيص / التسجيل</span>
+                      <span className="font-extrabold text-gray-800 font-mono text-sm">{viewDetailsRep.license_number || viewDetailsRep.national_id || "—"}</span>
                     </div>
                     <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">تاريخ الميلاد</span>
-                      <span className="font-extrabold text-gray-800 text-sm">{cleanDate(viewDetailsRep.date_of_birth)}</span>
+                      <span className="text-gray-400 block text-[11px] mb-0.5">الشخص المفوض / المسؤول</span>
+                      <span className="font-extrabold text-gray-800 text-sm">{viewDetailsRep.contact_person || viewDetailsRep.full_name || "—"}</span>
+                    </div>
+                    <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
+                      <span className="text-gray-400 block text-[11px] mb-0.5">رقم جوال المسؤول</span>
+                      <span className="font-extrabold text-gray-800 font-mono text-sm" dir="ltr">{viewDetailsRep.phone}</span>
+                    </div>
+                    <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
+                      <span className="text-gray-400 block text-[11px] mb-0.5">البريد الإلكتروني للجهة</span>
+                      <span className="font-extrabold text-gray-800 text-sm">{viewDetailsRep.email || "—"}</span>
                     </div>
                     <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
                       <span className="text-gray-400 block text-[11px] mb-0.5">المدينة</span>
-                      <span className="font-extrabold text-amber-900 text-sm">{viewDetailsRep.city || "مكة المكرمة"}</span>
+                      <span className="font-extrabold text-primary-900 text-sm">{viewDetailsRep.city || "مكة المكرمة"}</span>
                     </div>
                     <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
                       <span className="text-gray-400 block text-[11px] mb-0.5">الحي السكني</span>
-                      <span className="font-extrabold text-amber-900 text-sm">{viewDetailsRep.district_name}</span>
+                      <span className="font-extrabold text-primary-900 text-sm">{viewDetailsRep.district_name || "عام"}</span>
                     </div>
                     <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100 md:col-span-2">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">العنوان الوطني</span>
+                      <span className="text-gray-400 block text-[11px] mb-0.5">العنوان الوطني للجهة</span>
                       <span className="font-extrabold text-gray-800 text-sm">{viewDetailsRep.national_address || "—"}</span>
                     </div>
                   </div>
@@ -703,10 +822,10 @@ export default function NeighborhoodRepsPage() {
                 {activeTab === "families" && (
                   <div className="space-y-3">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-gray-700">الأسر المستفيدة في نطاق المندوب:</span>
+                      <span className="text-xs font-bold text-gray-700">الأسر المستفيدة التابعة للجهة:</span>
                       <button
                         onClick={() => handleExportExcel(viewDetailsRep.id)}
-                        className="bg-amber-100 hover:bg-amber-200 text-amber-900 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
+                        className="bg-primary-100 hover:bg-primary-200 text-primary-900 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
                       >
                         <FileSpreadsheet className="w-3.5 h-3.5" />
                         <span>تحميل كملف Excel</span>
@@ -714,7 +833,7 @@ export default function NeighborhoodRepsPage() {
                     </div>
                     <div className="overflow-x-auto border rounded-xl">
                       <table className="w-full text-xs text-right">
-                        <thead className="bg-amber-50 text-amber-900 font-bold">
+                        <thead className="bg-primary-50 text-primary-900 font-bold">
                           <tr>
                             <th className="p-2">#</th>
                             <th className="p-2">الاسم</th>
@@ -741,31 +860,36 @@ export default function NeighborhoodRepsPage() {
                   </div>
                 )}
 
-                {/* Tab 3: History */}
+                {/* Tab 3: History Timeline */}
                 {activeTab === "history" && (
-                  <div className="p-4 bg-gray-50 rounded-2xl text-center">
-                    <p className="text-xs text-gray-600 font-bold">عدد مرات استلام الدعم وتوجيه السلات: <span className="text-amber-800 text-sm font-extrabold">{viewDetailsRep.rep_distributions_count || 0} عملية</span></p>
+                  <div>
+                    <ReceiptHistoryTimeline
+                      items={viewDetailsRep.receipt_history || []}
+                      recipientName={viewDetailsRep.organization_name || viewDetailsRep.full_name}
+                      recipientPhone={viewDetailsRep.phone}
+                      recipientType="organization"
+                    />
                   </div>
                 )}
 
-                {/* Tab 4: Documents (قسم الوثائق والأوراق الرسمية الاربعة) */}
+                {/* Tab 4: Documents */}
                 {activeTab === "docs" && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    {/* 1. ID Document */}
-                    <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-2xl flex items-center justify-between">
+                    {/* 1. License Document */}
+                    <div className="p-4 bg-primary-50/60 border border-primary-200 rounded-2xl flex items-center justify-between">
                       <div>
-                        <h4 className="font-extrabold text-amber-900 flex items-center gap-1.5">
-                          <ShieldCheck className="w-4 h-4 text-amber-600" />
-                          <span>صورة هوية المندوب</span>
+                        <h4 className="font-extrabold text-primary-900 flex items-center gap-1.5">
+                          <Award className="w-4 h-4 text-primary-600" />
+                          <span>ترخيص / شهادة تسجيل الجهة</span>
                         </h4>
-                        <p className="text-[11px] text-gray-500 mt-0.5">الهوية الوطنية / الإقامة</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">شهادة التسجيل من المركز الوطني / الوزارة</p>
                       </div>
                       {viewDetailsRep.id_document_image_url ? (
                         <a
                           href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewDetailsRep.id_document_image_url}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="bg-amber-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-amber-700 transition-all flex items-center gap-1"
+                          className="bg-primary-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-primary-800 transition-all flex items-center gap-1 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>عرض</span>
@@ -775,21 +899,21 @@ export default function NeighborhoodRepsPage() {
                       )}
                     </div>
 
-                    {/* 2. Support Letter */}
-                    <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-2xl flex items-center justify-between">
+                    {/* 2. Support / Authorization Letter */}
+                    <div className="p-4 bg-primary-50/60 border border-primary-200 rounded-2xl flex items-center justify-between">
                       <div>
-                        <h4 className="font-extrabold text-amber-900 flex items-center gap-1.5">
-                          <FileText className="w-4 h-4 text-amber-600" />
-                          <span>خطاب الاعتماد من العمدة</span>
+                        <h4 className="font-extrabold text-primary-900 flex items-center gap-1.5">
+                          <FileText className="w-4 h-4 text-primary-600" />
+                          <span>خطاب التفويض الرسمي</span>
                         </h4>
-                        <p className="text-[11px] text-gray-500 mt-0.5">مختوم رسمياً من عمدة الحي</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">خطاب تفويض ممثل الجهة ومختوم رسمياً</p>
                       </div>
                       {viewDetailsRep.support_letter_url ? (
                         <a
                           href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewDetailsRep.support_letter_url}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="bg-amber-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-amber-700 transition-all flex items-center gap-1"
+                          className="bg-primary-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-primary-800 transition-all flex items-center gap-1 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>عرض</span>
@@ -800,20 +924,20 @@ export default function NeighborhoodRepsPage() {
                     </div>
 
                     {/* 3. National Address Doc */}
-                    <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-2xl flex items-center justify-between">
+                    <div className="p-4 bg-primary-50/60 border border-primary-200 rounded-2xl flex items-center justify-between">
                       <div>
-                        <h4 className="font-extrabold text-amber-900 flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4 text-amber-600" />
-                          <span>وثيقة العنوان الوطني</span>
+                        <h4 className="font-extrabold text-primary-900 flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4 text-primary-600" />
+                          <span>وثيقة العنوان الوطني للجهة</span>
                         </h4>
-                        <p className="text-[11px] text-gray-500 mt-0.5">إثبات السكن والحي</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">مستند العنوان الوطني المعتمد</p>
                       </div>
                       {viewDetailsRep.national_address_doc_url ? (
                         <a
                           href={`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/storage/${viewDetailsRep.national_address_doc_url}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="bg-amber-600 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-amber-700 transition-all flex items-center gap-1"
+                          className="bg-primary-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-primary-800 transition-all flex items-center gap-1 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>عرض</span>
@@ -830,14 +954,14 @@ export default function NeighborhoodRepsPage() {
                           <FileArchive className="w-4 h-4 text-purple-600" />
                           <span>صور هويات التابعين (ZIP)</span>
                         </h4>
-                        <p className="text-[11px] text-gray-500 mt-0.5">ملف مضغوط بهويات الأسر</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">ملف مضغوط بهويات المستفيدين</p>
                       </div>
                       {viewDetailsRep.dependents_ids_zip_url ? (
                         <a
                           href={`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/storage/${viewDetailsRep.dependents_ids_zip_url}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="bg-purple-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-purple-800 transition-all flex items-center gap-1"
+                          className="bg-purple-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-purple-800 transition-all flex items-center gap-1 cursor-pointer"
                         >
                           <Download className="w-3.5 h-3.5" />
                           <span>تنزيل</span>
@@ -850,17 +974,17 @@ export default function NeighborhoodRepsPage() {
                 )}
               </div>
             </div>
-          </div>
+          </Scrim>
         )}
 
-        {/* ─── 3. Modal: Add / Edit Rep (تسجيل / تعديل بيانات مندوب الحي والوثائق) ─── */}
+        {/* ─── 3. Modal: Add / Edit Rep (تسجيل / تعديل بيانات الجهة المستفيدة) ─── */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
-            <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl overflow-hidden p-6 border border-amber-100 max-h-[90vh] overflow-y-auto">
+          <Scrim isOpen={showAddModal} onClose={() => setShowAddModal(false)}>
+            <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl overflow-hidden p-6 border border-primary-100 max-h-[90vh] overflow-y-auto" dir="rtl" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 className="font-bold text-lg text-amber-900 flex items-center gap-2">
-                  <UserPlus className="w-5 h-5 text-amber-600" />
-                  <span>{editingRep ? "✏️ تعديل بيانات مندوب الحي" : "➕ تسجيل مندوب حي جديد"}</span>
+                <h3 className="font-bold text-lg text-primary-900 flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-primary-600" />
+                  <span>{editingRep ? "✏️ تعديل بيانات الجهة المستفيدة" : "➕ تسجيل جهة مستفيدة جديدة"}</span>
                 </h3>
                 <button
                   onClick={() => setShowAddModal(false)}
@@ -873,12 +997,69 @@ export default function NeighborhoodRepsPage() {
               <form onSubmit={handleSaveRep} className="space-y-4 text-xs">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">اسم المندوب الكامل *</label>
+                    <label className="block font-bold text-gray-700 mb-1">اسم الجهة المستفيدة *</label>
                     <input
                       required
-                      value={form.full_name}
-                      onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                      value={form.organization_name}
+                      onChange={(e) => setForm({ ...form, organization_name: e.target.value })}
                       className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-bold"
+                      placeholder="مثال: جمعية البر والتقوى، جامع الإحسان..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">نوع الجهة *</label>
+                    <select
+                      value={form.organization_type}
+                      onChange={(e) => setForm({ ...form, organization_type: e.target.value })}
+                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right bg-white font-bold"
+                    >
+                      {organizationTypes.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">رقم الترخيص / التسجيل</label>
+                    <input
+                      value={form.license_number}
+                      onChange={(e) => setForm({ ...form, license_number: e.target.value })}
+                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-mono"
+                      placeholder="مثال: 1024 / 7000123456"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">الشخص المفوض / المسؤول *</label>
+                    <input
+                      required
+                      value={form.contact_person}
+                      onChange={(e) => setForm({ ...form, contact_person: e.target.value })}
+                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-bold"
+                      placeholder="اسم المفوض الرسمي للتواصل والاستلام"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">رقم جوال المسؤول *</label>
+                    <input
+                      required
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-mono"
+                      placeholder="05xxxxxxxx"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">البريد الإلكتروني للجهة</label>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right"
+                      placeholder="info@org.sa"
                     />
                   </div>
 
@@ -909,36 +1090,7 @@ export default function NeighborhoodRepsPage() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">رقم الجوال *</label>
-                    <input
-                      required
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-gray-700 mb-1">رقم الهوية الوطنية</label>
-                    <input
-                      value={form.national_id}
-                      onChange={(e) => setForm({ ...form, national_id: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-gray-700 mb-1">تاريخ الميلاد</label>
-                    <input
-                      type="date"
-                      value={form.date_of_birth}
-                      onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-gray-700 mb-1">عدد المستفيدين التابعين له</label>
+                    <label className="block font-bold text-gray-700 mb-1">عدد المستفيدين التابعين للجهة</label>
                     <input
                       type="number"
                       min="0"
@@ -967,23 +1119,24 @@ export default function NeighborhoodRepsPage() {
                     value={form.national_address}
                     onChange={(e) => setForm({ ...form, national_address: e.target.value })}
                     className="w-full rounded-xl border border-gray-300 p-2.5 text-right"
+                    placeholder="العنوان الوطني للجهة والمقر"
                   />
                 </div>
 
-                {/* ─── قسم إدراج وتعديل الأسر التابعة للحي في نفس الصفحة ─── */}
-                <div className="border-t pt-4 bg-amber-50/40 p-4 rounded-2xl border border-amber-200 space-y-3">
+                {/* ─── قسم إدراج وتعديل الأسر التابعة للجهة ─── */}
+                <div className="border-t pt-4 bg-primary-50/40 p-4 rounded-2xl border border-primary-200 space-y-3">
                   <div className="flex flex-wrap justify-between items-center gap-2">
-                    <h4 className="font-extrabold text-amber-900 text-xs flex items-center gap-1.5">
-                      <Users className="w-4 h-4 text-amber-700" />
-                      <span>إدراج وقائمة الأسر التابعة للحي ({formBeneficiaries.length} أسرة)</span>
+                    <h4 className="font-extrabold text-primary-900 text-xs flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-primary-700" />
+                      <span>إدراج وقائمة الأسر التابعة للجهة ({formBeneficiaries.length} أسرة)</span>
                     </h4>
                     <span className="text-[10px] text-gray-500 font-bold">يمكنك رفع ملف Excel أو إدراج الأسر هنا وتعديل بياناتهم مباشرة في الجدول</span>
                   </div>
 
                   {/* شريط رفع واستخراج ملف Excel/CSV للأسر التابعة */}
-                  <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
+                  <div className="bg-white p-3 rounded-xl border border-primary-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <label className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs">
+                      <label className="bg-primary-700 hover:bg-primary-800 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs">
                         <FileSpreadsheet className="w-4 h-4" />
                         <span>📊 استيراد الأسر من ملف Excel / CSV</span>
                         <input
@@ -999,18 +1152,18 @@ export default function NeighborhoodRepsPage() {
                     <button
                       type="button"
                       onClick={downloadSampleBeneficiariesTemplate}
-                      className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                      className="bg-primary-50 hover:bg-primary-100 text-primary-900 border border-primary-300 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                     >
-                      <Download className="w-3.5 h-3.5 text-amber-700" />
+                      <Download className="w-3.5 h-3.5 text-primary-700" />
                       <span>📥 تحميل نموذج Excel تجريبي للأسر</span>
                     </button>
                   </div>
 
                   {/* جدول الأسر المضافة المباشر (قابل للتعديل الفوري) */}
                   {formBeneficiaries.length > 0 && (
-                    <div className="overflow-x-auto border border-amber-200 rounded-xl bg-white shadow-xs max-h-56 overflow-y-auto">
+                    <div className="overflow-x-auto border border-primary-200 rounded-xl bg-white shadow-xs max-h-56 overflow-y-auto">
                       <table className="w-full text-xs text-right">
-                        <thead className="bg-amber-100/70 text-amber-900 font-bold border-b border-amber-200 sticky top-0 bg-amber-100">
+                        <thead className="bg-primary-100/70 text-primary-900 font-bold border-b border-primary-200 sticky top-0 bg-primary-100">
                           <tr>
                             <th className="p-2">#</th>
                             <th className="p-2">اسم المستفيد</th>
@@ -1024,27 +1177,27 @@ export default function NeighborhoodRepsPage() {
                         </thead>
                         <tbody>
                           {formBeneficiaries.map((b, idx) => (
-                            <tr key={idx} className="border-b hover:bg-amber-50/40">
+                            <tr key={idx} className="border-b hover:bg-primary-50/40">
                               <td className="p-2 text-gray-400 font-mono">{idx + 1}</td>
                               <td className="p-1">
                                 <input
                                   value={b.name || b.full_name || ""}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'name', e.target.value)}
-                                  className="w-full rounded border border-gray-200 p-1 font-bold text-gray-800 focus:ring-1 focus:ring-amber-500"
+                                  className="w-full rounded border border-gray-200 p-1 font-bold text-gray-800 focus:ring-1 focus:ring-primary-500"
                                 />
                               </td>
                               <td className="p-1">
                                 <input
                                   value={b.phone || ""}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'phone', e.target.value)}
-                                  className="w-full rounded border border-gray-200 p-1 font-mono text-gray-600 focus:ring-1 focus:ring-amber-500"
+                                  className="w-full rounded border border-gray-200 p-1 font-mono text-gray-600 focus:ring-1 focus:ring-primary-500"
                                 />
                               </td>
                               <td className="p-1">
                                 <input
                                   value={b.national_id || ""}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'national_id', e.target.value)}
-                                  className="w-full rounded border border-gray-200 p-1 font-mono focus:ring-1 focus:ring-amber-500"
+                                  className="w-full rounded border border-gray-200 p-1 font-mono focus:ring-1 focus:ring-primary-500"
                                 />
                               </td>
                               <td className="p-1">
@@ -1052,14 +1205,14 @@ export default function NeighborhoodRepsPage() {
                                   type="date"
                                   value={b.date_of_birth ? String(b.date_of_birth).slice(0, 10) : (b.birth_date ? String(b.birth_date).slice(0, 10) : "")}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'date_of_birth', e.target.value)}
-                                  className="w-full rounded border border-gray-200 p-1 text-[11px] focus:ring-1 focus:ring-amber-500"
+                                  className="w-full rounded border border-gray-200 p-1 text-[11px] focus:ring-1 focus:ring-primary-500"
                                 />
                               </td>
                               <td className="p-1">
                                 <select
                                   value={b.beneficiary_type || b.type || "citizen"}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'beneficiary_type', e.target.value)}
-                                  className="w-full rounded border border-gray-200 p-1 bg-white focus:ring-1 focus:ring-amber-500"
+                                  className="w-full rounded border border-gray-200 p-1 bg-white focus:ring-1 focus:ring-primary-500"
                                 >
                                   <option value="citizen">مواطن</option>
                                   <option value="resident">مقيم</option>
@@ -1071,7 +1224,7 @@ export default function NeighborhoodRepsPage() {
                                   min="1"
                                   value={b.family_members_count || 1}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'family_members_count', parseInt(e.target.value) || 1)}
-                                  className="w-16 text-center rounded border border-gray-200 p-1 font-bold focus:ring-1 focus:ring-amber-500"
+                                  className="w-16 text-center rounded border border-gray-200 p-1 font-bold focus:ring-1 focus:ring-primary-500"
                                 />
                               </td>
                               <td className="p-1 text-center">
@@ -1084,7 +1237,7 @@ export default function NeighborhoodRepsPage() {
                                         handleUpdateFormBenRow(idx, 'name', newName.trim());
                                       }
                                     }}
-                                    className="text-amber-600 hover:text-amber-800 p-1 rounded hover:bg-amber-50 cursor-pointer"
+                                    className="text-primary-600 hover:text-primary-800 p-1 rounded hover:bg-primary-50 cursor-pointer"
                                     title="تعديل اسم المستفيد"
                                   >
                                     <Edit3 className="w-4 h-4" />
@@ -1109,14 +1262,14 @@ export default function NeighborhoodRepsPage() {
 
                 {/* ─── قسم الوثائق المرفقة الأربعة ─── */}
                 <div className="border-t pt-4">
-                  <h4 className="font-extrabold text-amber-900 mb-3 text-xs flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-amber-600" />
-                    <span>مرفقات الوثائق الرسمية لمندوب الحي:</span>
+                  <h4 className="font-extrabold text-primary-900 mb-3 text-xs flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-primary-600" />
+                    <span>مرفقات الوثائق والتراخيص الرسمية للجهة:</span>
                   </h4>
                   <div className="grid md:grid-cols-2 gap-4">
-                    {/* 1. ID Doc */}
+                    {/* 1. License Doc */}
                     <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200">
-                      <label className="block font-bold text-gray-700 mb-1">🪪 صورة هوية المندوب</label>
+                      <label className="block font-bold text-gray-700 mb-1">📜 صورة ترخيص / تسجيل الجهة</label>
                       <input
                         type="file"
                         accept="image/*,.pdf"
@@ -1127,7 +1280,7 @@ export default function NeighborhoodRepsPage() {
 
                     {/* 2. Support Letter */}
                     <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200">
-                      <label className="block font-bold text-gray-700 mb-1">📜 صورة خطاب الاعتماد من عمدة الحي</label>
+                      <label className="block font-bold text-gray-700 mb-1">📑 خطاب التفويض الرسمي للشخص المسؤول</label>
                       <input
                         type="file"
                         accept="image/*,.pdf"
@@ -1138,7 +1291,7 @@ export default function NeighborhoodRepsPage() {
 
                     {/* 3. National Address Doc */}
                     <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200">
-                      <label className="block font-bold text-gray-700 mb-1">📍 مستند العنوان الوطني</label>
+                      <label className="block font-bold text-gray-700 mb-1">📍 مستند العنوان الوطني للجهة</label>
                       <input
                         type="file"
                         accept="image/*,.pdf"
@@ -1149,7 +1302,7 @@ export default function NeighborhoodRepsPage() {
 
                     {/* 4. Dependents IDs ZIP */}
                     <div className="bg-purple-50 p-3 rounded-2xl border border-purple-200">
-                      <label className="block font-bold text-purple-900 mb-1">📦 إرفاق ملف مضغوط (ZIP) بصور هويات التابعين</label>
+                      <label className="block font-bold text-purple-900 mb-1">📦 إرفاق ملف مضغوط (ZIP) بهويات المستفيدين</label>
                       <input
                         type="file"
                         accept=".zip,.rar,.7z,.pdf"
@@ -1170,23 +1323,23 @@ export default function NeighborhoodRepsPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700 cursor-pointer shadow-md"
+                    className="px-6 py-2 rounded-xl bg-primary-700 text-white font-bold hover:bg-primary-800 cursor-pointer shadow-md"
                   >
                     حفظ وتأكيد البيانات
                   </button>
                 </div>
               </form>
             </div>
-          </div>
+          </Scrim>
         )}
 
         {/* Dispatch Support Modal */}
         {showDispatchModal && selectedRep && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
-            <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden p-6 border border-amber-100">
-              <h3 className="font-bold text-base text-amber-900 mb-2">📦 توجيه الدعم لمندوب الحي: {selectedRep.full_name}</h3>
+          <Scrim isOpen={showDispatchModal && Boolean(selectedRep)} onClose={() => setShowDispatchModal(false)}>
+            <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden p-6 border border-primary-100" dir="rtl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-bold text-base text-primary-900 mb-2">📦 توجيه الدعم للجهة: {selectedRep.organization_name || selectedRep.full_name}</h3>
               <p className="text-xs text-gray-500 mb-4">
-                الحي: {selectedRep.district_name} | عدد الأسر المستحقة: <strong>{selectedRep.linked_beneficiaries_count || selectedRep.beneficiaries_count} أسرة</strong>
+                الحي: {selectedRep.district_name || "عام"} | عدد الأسر المستحقة: <strong>{selectedRep.linked_beneficiaries_count || selectedRep.beneficiaries_count} أسرة</strong>
               </p>
 
               {!dispatchResult ? (
@@ -1220,13 +1373,13 @@ export default function NeighborhoodRepsPage() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">تحديد سائق التوصيل المسند لمندوب الحي</label>
+                    <label className="block font-bold text-gray-700 mb-1">تحديد سائق التوصيل المسند للجهة</label>
                     <select
                       value={dispatchForm.driver_id}
                       onChange={(e) => setDispatchForm({ ...dispatchForm, driver_id: e.target.value })}
                       className="w-full rounded-xl border border-gray-300 p-2.5 bg-white text-right font-bold"
                     >
-                      <option value="">-- اختر السائق المكلف بالتوجه للمندوب --</option>
+                      <option value="">-- اختر السائق المكلف بالتوجه للجهة --</option>
                       {drivers.map((d) => (
                         <option key={d.id} value={d.id}>
                           {d.full_name || d.username} ({d.phone})
@@ -1235,21 +1388,21 @@ export default function NeighborhoodRepsPage() {
                     </select>
                   </div>
 
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900">
-                    ℹ️ سيتم خصم <strong>{selectedRep.linked_beneficiaries_count || selectedRep.beneficiaries_count} سلة</strong> تلقائياً من رصيد المستودع وتمرير تفاصيل المهمة لحساب السائق وإرسال كود الـ QR للمندوب.
+                  <div className="p-3 bg-primary-50 border border-primary-200 rounded-xl text-[11px] text-primary-900">
+                    ℹ️ سيتم خصم <strong>{selectedRep.linked_beneficiaries_count || selectedRep.beneficiaries_count} سلة</strong> تلقائياً من رصيد المستودع وتمرير تفاصيل المهمة لحساب السائق وإرسال كود الـ QR للجهة المستفيدة.
                   </div>
 
                   <div className="flex justify-end gap-2 pt-2">
                     <button
                       type="button"
                       onClick={() => setShowDispatchModal(false)}
-                      className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 font-bold"
+                      className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 font-bold cursor-pointer"
                     >
                       إلغاء
                     </button>
                     <button
                       type="submit"
-                      className="px-6 py-2 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-md"
+                      className="px-6 py-2 rounded-xl bg-primary-700 text-white font-bold hover:bg-primary-800 shadow-md cursor-pointer"
                     >
                       تأكيد وتوجيه الدعم
                     </button>
@@ -1262,22 +1415,22 @@ export default function NeighborhoodRepsPage() {
                   
                   {(() => {
                     const repObj = selectedRep;
-                    const repMsg = `مرحباً سعادة المندوب ${repObj?.full_name || "مندوب الحي"}،
-تسر جمعية إكرام الجود إفادتكم بتخصيص وتوجيه دفعة دعم جديدة لحي (${repObj?.district_name || ""}):
-👤 *اسم المندوب:* ${repObj?.full_name || ""}
-📍 *الحي السكني:* ${repObj?.district_name || ""}
+                    const repMsg = `مرحباً سعادة المسؤول في ${repObj?.organization_name || repObj?.full_name || "الجهة المستفيدة"}،
+تسر جمعية إكرام إفادتكم بتخصيص وتوجيه دفعة دعم جديدة لمستفيديكم:
+🏛️ *الجهة المستفيدة:* ${repObj?.organization_name || repObj?.full_name || ""}
+📍 *النطاق والحي:* ${repObj?.district_name || ""}
 🔑 *رمز الشحنة والـ QR:* ${dispatchResult.qr_code}
 📅 *تاريخ التوجيه:* ${dispatchForm.scheduled_date || "اليوم"}
 
-يرجى استخدام رمز الـ QR لإثبات توثيق استلام ودعم الحي. شكراً لكم.`;
+يرجى استخدام رمز الـ QR لإثبات توثيق استلام ودعم المستفيدين. شكراً لكم.`;
 
                     return (
                       <QrWhatsAppCard
                         text={dispatchResult.qr_code}
-                        recipientName={repObj?.full_name}
+                        recipientName={repObj?.organization_name || repObj?.full_name}
                         phone={repObj?.phone}
                         detailsMessage={repMsg}
-                        title={`المندوب: ${repObj?.full_name || "مندوب الحي"}`}
+                        title={`الجهة: ${repObj?.organization_name || repObj?.full_name || "الجهة المستفيدة"}`}
                       />
                     );
                   })()}
@@ -1285,7 +1438,7 @@ export default function NeighborhoodRepsPage() {
                   <div className="pt-2">
                     <button
                       onClick={() => setShowDispatchModal(false)}
-                      className="px-6 py-2 rounded-xl bg-amber-800 text-white font-bold text-xs hover:bg-amber-900"
+                      className="px-6 py-2 rounded-xl bg-primary-800 text-white font-bold text-xs hover:bg-primary-900 cursor-pointer"
                     >
                       إغلاق النافذة
                     </button>
@@ -1293,7 +1446,7 @@ export default function NeighborhoodRepsPage() {
                 </div>
               )}
             </div>
-          </div>
+          </Scrim>
         )}
 
         {/* Scrim Receipt Counter Overlay */}
@@ -1302,6 +1455,17 @@ export default function NeighborhoodRepsPage() {
           onClose={() => setScrimRecipient(null)}
           recipient={scrimRecipient}
           recipientType="representative"
+        />
+
+        {/* Global Confirm Dialog */}
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+          onConfirm={confirmDialog.onConfirm}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          type={confirmDialog.type}
+          confirmText={confirmDialog.confirmText}
         />
       </div>
     </MainLayout>

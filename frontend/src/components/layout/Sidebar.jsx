@@ -1,19 +1,17 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import Scrim from '../overlays/Scrim';
 import {
   Home,
-  UserPlus,
   Users,
   Briefcase,
-  MapPin,
+  Building2,
   ShieldCheck,
   Package,
   Truck,
   Settings,
   Shield,
   ScrollText,
-  Send,
-  FileSpreadsheet,
   QrCode,
   X,
 } from 'lucide-react';
@@ -22,7 +20,6 @@ export default function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
   const { user: authUser } = useAuth();
 
-  // Retrieve logged in user role dynamically
   const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
   const user = authUser || savedUser;
   const role = user?.role || 'admin';
@@ -31,31 +28,28 @@ export default function Sidebar({ isOpen, onClose }) {
   let menuItems = [];
 
   if (role === 'delivery_driver' || role === 'driver') {
-    // Driver Role: Only 2 operational pages (Delivery & Receiver)
     menuItems = [
       { path: '/delivery', label: 'إدارة وتوصيل المنازل', icon: Truck },
       { path: '/receiver', label: 'صفحة الاستلام والمسح (QR Scanner)', icon: QrCode },
     ];
   } else if (role === 'assistant_admin') {
-    // Assistant Supervisor Role: Operational pages
     menuItems = [
       { path: '/dashboard', label: 'لوحة التحكم', icon: Home },
-      { path: '/receiver', label: 'صفحة الاستلام والمسح (الرئيسية)', icon: QrCode },
+      { path: '/receiver', label: 'صفحة الاستلام والمسح', icon: QrCode },
       { path: '/beneficiaries', label: 'إدارة وقوائم المستفيدين', icon: Users },
       { path: '/warehouse', label: 'المستودع والمخزون', icon: Package },
       { path: '/staff', label: 'إدارة وقوائم الموظفين', icon: Briefcase },
-      { path: '/representatives', label: 'مناديب الأحياء', icon: MapPin },
+      { path: '/representatives', label: 'إدارة الجهات المستفيدة', icon: Building2 },
       { path: '/delivery', label: 'إدارة وتوصيل المنازل', icon: Truck },
       { path: '/governance', label: 'الحوكمة والمؤشرات', icon: ShieldCheck },
     ];
   } else {
-    // Supervisor (Admin) Role: FULL menu
     menuItems = [
       { path: '/dashboard', label: 'لوحة التحكم', icon: Home },
       { path: '/beneficiaries', label: 'إدارة وقوائم المستفيدين', icon: Users },
       { path: '/warehouse', label: 'المستودع والمخزون', icon: Package },
       { path: '/staff', label: 'إدارة وقوائم الموظفين', icon: Briefcase },
-      { path: '/representatives', label: 'مناديب الأحياء', icon: MapPin },
+      { path: '/representatives', label: 'إدارة الجهات المستفيدة', icon: Building2 },
       { path: '/receiver', label: 'صفحة الاستلام والمسح', icon: QrCode },
       { path: '/delivery', label: 'إدارة وتوصيل المنازل', icon: Truck },
       { path: '/governance', label: 'الحوكمة والمؤشرات', icon: ShieldCheck },
@@ -71,10 +65,9 @@ export default function Sidebar({ isOpen, onClose }) {
     ];
   }
 
-  // Dynamic Permissions Checking
   const isPathAllowed = (path) => {
     if (!userPerms || typeof userPerms !== 'object') return true;
-    if (role === 'admin' && !userPerms.beneficiaries) return true; // Super admin default
+    if (role === 'admin' && !userPerms.beneficiaries) return true;
 
     if (path.startsWith('/beneficiaries')) return userPerms.beneficiaries?.view !== false;
     if (path.startsWith('/warehouse')) return userPerms.warehouse?.view !== false;
@@ -103,13 +96,8 @@ export default function Sidebar({ isOpen, onClose }) {
 
   return (
     <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={onClose}
-        ></div>
-      )}
+      {/* Mobile Scrim / Backdrop */}
+      <Scrim isOpen={isOpen} onClose={onClose} zIndex="z-40" className="lg:hidden" />
 
       <aside
         className={`
@@ -119,46 +107,49 @@ export default function Sidebar({ isOpen, onClose }) {
           lg:translate-x-0
           ${isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
         `}
+        style={{ width: '288px' }}
+        dir="rtl"
       >
         {/* Header */}
         <div className="p-4 border-b border-[#E5E2D9] flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1">
-            <h2 className="text-lg font-bold text-[#3F6B3A]">جمعية إكرام</h2>
-            <img
-              src="/assets/ekram-letterhead.jpeg"
-              alt="شعار إكرام"
-              className="w-20 h-10 object-contain rounded-md border border-amber-100"
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
+            <div className="w-8 h-8 rounded-xl bg-[#3F6B3A] flex items-center justify-center text-white font-extrabold text-sm">
+              إ
+            </div>
+            <div>
+              <h2 className="text-base font-extrabold text-[#3F6B3A] leading-tight">جمعية إكرام</h2>
+              <p className="text-[10px] text-[#6B7280]">لخدمة ضيوف الرحمن</p>
+            </div>
           </div>
 
           <button
             onClick={onClose}
-            className="lg:hidden p-2 rounded-lg hover:bg-[#F7F5F0] text-[#6B6B66]"
+            className="lg:hidden p-2 rounded-xl hover:bg-[#FAF8F5] text-[#111827] cursor-pointer"
+            aria-label="إغلاق القائمة"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* User Role Badge */}
-        <div className="px-4 py-2.5 bg-amber-50/60 border-b border-amber-100 flex items-center justify-between text-xs">
-          <span className="font-bold text-gray-700">نوع الحساب:</span>
-          <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] border ${
+        <div className="px-4 py-2.5 bg-[#FAF8F5] border-b border-[#E5E2D9] flex items-center justify-between text-xs">
+          <span className="font-bold text-[#4B5563]">نوع الحساب:</span>
+          <span className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${
             role === 'admin' ? 'bg-amber-100 text-amber-900 border-amber-300' :
             role === 'assistant_admin' ? 'bg-green-100 text-green-900 border-green-300' :
             'bg-blue-100 text-blue-900 border-blue-300'
           }`}>
-            {role === 'admin' ? 'المدير العام (Supervisor)' : role === 'assistant_admin' ? 'مساعد المدير (Assistant)' : 'السائق الميداني (Driver)'}
+            {role === 'admin' ? 'المدير العام' : role === 'assistant_admin' ? 'مساعد المدير' : 'السائق الميداني'}
           </span>
         </div>
 
         {/* Navigation items */}
-        <nav className="p-4 space-y-1 text-right">
+        <nav className="p-3 space-y-1 text-right">
           {filteredMenuItems.map((item, index) => (
             <div key={index}>
               {item.children ? (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-3 px-4 py-2 text-[#6B6B66] font-medium text-xs">
+                <div className="space-y-1 pt-1">
+                  <div className="flex items-center gap-2.5 px-3 py-2 text-[#6B7280] font-bold text-xs">
                     <item.icon size={16} />
                     <span>{item.label}</span>
                   </div>
@@ -167,10 +158,10 @@ export default function Sidebar({ isOpen, onClose }) {
                       key={childIndex}
                       to={child.path}
                       onClick={onClose}
-                      className={`flex items-center gap-3 px-6 py-2 rounded-xl transition-all text-xs ${
+                      className={`flex items-center gap-2.5 px-6 py-2 rounded-xl transition-all text-xs font-bold ${
                         isActive(child.path)
-                          ? 'bg-[#F5EDDA] text-[#C9A24A] font-bold border-r-4 border-[#C9A24A]'
-                          : 'text-[#6B6B66] hover:bg-[#F7F5F0] hover:text-[#111111]'
+                          ? 'bg-[#FAF8F5] text-[#C9A24A] font-extrabold border-r-4 border-[#C9A24A]'
+                          : 'text-[#4B5563] hover:bg-[#FAF8F5] hover:text-[#111827]'
                       }`}
                     >
                       <child.icon size={15} />
@@ -182,10 +173,10 @@ export default function Sidebar({ isOpen, onClose }) {
                 <NavLink
                   to={item.path}
                   onClick={onClose}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-xs font-bold ${
+                  className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl transition-all text-xs font-bold ${
                     isActive(item.path)
-                      ? 'bg-[#F5EDDA] text-[#C9A24A] font-bold border-r-4 border-[#C9A24A]'
-                      : 'text-[#6B6B66] hover:bg-[#F7F5F0] hover:text-[#111111]'
+                      ? 'bg-[#FAF8F5] text-[#C9A24A] font-extrabold border-r-4 border-[#C9A24A]'
+                      : 'text-[#4B5563] hover:bg-[#FAF8F5] hover:text-[#111827]'
                   }`}
                 >
                   <item.icon size={18} />

@@ -12,6 +12,7 @@ import {
   ExternalLink,
   ArrowRight
 } from "lucide-react";
+import ReceiptHistoryTimeline from "../../components/common/ReceiptHistoryTimeline";
 
 export default function BeneficiaryDetailsPage() {
   const { id } = useParams();
@@ -264,7 +265,6 @@ export default function BeneficiaryDetailsPage() {
                   <InfoBox label="مبلغ حساب المواطن" value={b.citizen_account_amount ? `${b.citizen_account_amount} ريال` : "0 ريال"} />
                   <InfoBox label="المعاش التقاعدي" value={b.retirement_pension ? `${b.retirement_pension} ريال` : "0 ريال"} />
                   <InfoBox label="دعم الأسرة والأقارب" value={b.family_support ? `${b.family_support} ريال` : "0 ريال"} />
-                  <InfoBox label="اسم البنك" value={b.bank_name} />
                 </div>
 
                 <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-4 rounded-2xl flex items-center justify-between shadow-md">
@@ -335,49 +335,12 @@ export default function BeneficiaryDetailsPage() {
 
             {/* TAB 5: History */}
             {activeTab === "history" && (
-              <div className="text-xs">
-                {(!b.distributions || b.distributions.length === 0) ? (
-                  <div className="p-8 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                    لم يقم المستفيد باستلام أي سلال غذائية حتى الآن.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto border border-gray-200 rounded-2xl">
-                    <table className="w-full text-xs text-right">
-                      <thead className="bg-gray-100 text-gray-700 font-bold">
-                        <tr>
-                          <th className="p-3">#</th>
-                          <th className="p-3">تاريخ الاستلام</th>
-                          <th className="p-3">نوع السلة</th>
-                          <th className="p-3">السائق المسلم</th>
-                          <th className="p-3">حالة الاستلام</th>
-                          <th className="p-3 text-center">إجراءات</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {b.distributions.map((d, i) => (
-                          <tr key={d.id || i}>
-                            <td className="p-3 text-gray-400">{i + 1}</td>
-                            <td className="p-3 font-mono text-gray-800">{cleanDate(d.delivered_at || d.created_at)}</td>
-                            <td className="p-3 font-bold text-amber-900">{d.basket_type || "سلة غذائية شاملة"}</td>
-                            <td className="p-3 text-gray-700">{d.driver_name || d.driver?.name || "السائق الرسمي"}</td>
-                            <td className="p-3 font-bold text-emerald-700">تم التسليم بنجاح ✅</td>
-                            <td className="p-3 text-center">
-                              <a
-                                href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/individual-receipt/${d.id}/pdf`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-amber-700 hover:underline font-bold"
-                              >
-                                📄 طباعة السند
-                              </a>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+              <ReceiptHistoryTimeline
+                records={b.distributions || []}
+                recipientName={fullName}
+                recipientType="beneficiary"
+                title={`سجل استلامات المستفيد: ${fullName}`}
+              />
             )}
           </div>
         </div>

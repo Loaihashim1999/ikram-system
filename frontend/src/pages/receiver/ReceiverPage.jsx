@@ -2,15 +2,47 @@ import { useState } from "react";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import QrScannerModal from "../../components/common/QrScannerModal";
-import { QrCode, Search, CheckCircle2, FileText, UserCheck, ShieldAlert, ArrowRight } from "lucide-react";
+import StatusBadge from "../../components/ui/StatusBadge";
+import { QrCode, Search, CheckCircle2, FileText, UserCheck, ShieldAlert, ArrowRight, AlertTriangle, XCircle, Clock } from "lucide-react";
 
 export default function ReceiverPage() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
+  const [codeStatus, setCodeStatus] = useState("active"); // active, used, expired, revoked
+  const [previousDeliveryDate, setPreviousDeliveryDate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(null);
   const [showScanner, setShowScanner] = useState(false);
+
+  // Check if code was marked used locally or on backend
+  const checkCodeStatus = (itemData, targetCode) => {
+    try {
+      const storedUsed = JSON.parse(localStorage.getItem("ikram_used_qr_codes") || "{}");
+      if (storedUsed[targetCode]) {
+        return {
+          status: "used",
+          deliveredAt: storedUsed[targetCode].delivered_at,
+        };
+      }
+    } catch {}
+
+    const backendStatus = String(itemData?.status || "").toLowerCase();
+    if (backendStatus === "delivered" || backendStatus === "used") {
+      return {
+        status: "used",
+        deliveredAt: itemData.delivered_at || itemData.updated_at || new Date().toISOString(),
+      };
+    }
+    if (backendStatus === "revoked" || backendStatus === "cancelled") {
+      return { status: "revoked", deliveredAt: null };
+    }
+    if (backendStatus === "expired" || (itemData.expires_at && new Date(itemData.expires_at) < new Date())) {
+      return { status: "expired", deliveredAt: null };
+    }
+
+    return { status: "active", deliveredAt: null };
+  };
 
   const handleSearch = async (scanCode) => {
     const targetCode = scanCode || code;
@@ -18,9 +50,16 @@ export default function ReceiverPage() {
     setLoading(true);
     setResult(null);
     setConfirmed(null);
+    setPreviousDeliveryDate(null);
+
     try {
       const res = await api.get(`/receiver/scan/${targetCode.trim()}`);
+      const data = res.data?.data || res.data;
       setResult(res.data);
+
+      const statusCheck = checkCodeStatus(data, targetCode.trim());
+      setCodeStatus(statusCheck.status);
+      setPreviousDeliveryDate(statusCheck.deliveredAt);
     } catch (err) {
       alert(err.response?.data?.message || "لم يتم العثور على رمز الاستلام أو الباركود.");
     } finally {
@@ -29,11 +68,29 @@ export default function ReceiverPage() {
   };
 
   const handleConfirm = async () => {
-    if (!result?.data?.barcode_code) return;
+    const barcode = result?.data?.barcode_code || code;
+    if (!barcode) return;
+
+    if (codeStatus === "used") {
+      alert("عذراً، هذا الرمز مستخدم مسبقاً ولا يمكن إعادة تسليمه.");
+      return;
+    }
+
     setConfirming(true);
     try {
-      const res = await api.post(`/receiver/confirm/${result.data.barcode_code}`);
+      const res = await api.post(`/receiver/confirm/${barcode}`);
       setConfirmed(res.data);
+      setCodeStatus("used");
+
+      // Save locally to guarantee single-use enforcement even on immediate re-scan
+      try {
+        const storedUsed = JSON.parse(localStorage.getItem("ikram_used_qr_codes") || "{}");
+        storedUsed[barcode] = {
+          delivered_at: new Date().toISOString(),
+          recipient: recipient?.full_name || recipient?.name || "مستفيد",
+        };
+        localStorage.setItem("ikram_used_qr_codes", JSON.stringify(storedUsed));
+      } catch {}
     } catch (err) {
       alert(err.response?.data?.message || "حدث خطأ أثناء تأكيد الاستلام.");
     } finally {
@@ -48,30 +105,30 @@ export default function ReceiverPage() {
     <div className="p-6 max-w-4xl mx-auto" dir="rtl">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-black text-amber-900 flex items-center justify-center gap-2">
-          <QrCode className="w-8 h-8 text-amber-600" />
-          <span>صفحة الاستلام ومسح الـ QR (Receiver Page)</span>
+        <h1 className="text-3xl font-black text-gray-800 flex items-center justify-center gap-2">
+          <QrCode className="w-8 h-8 text-primary-700" />
+          <span>صفحة التحقق والاستلام برمز QR (Single-Use Verification)</span>
         </h1>
         <p className="text-xs text-gray-500 mt-2">
-          مسح أو إدخال رمز الاستلام المكون من الباركود لتوثيق التسليم للمستفيد أو مندوب الحي وتوليد السند المعتمد
+          مسح أو إدخال رمز الاستلام المخصص لمرة واحدة فقط لتوثيق التسليم للمستفيد أو الجهة المستفيدة وتوليد السند المعتمد
         </p>
       </div>
 
       {/* Scanner & Code Search Box */}
-      <div className="bg-white rounded-3xl shadow-md border border-amber-100 p-6 mb-8 text-center">
+      <div className="bg-white rounded-3xl shadow-md border border-primary-100 p-6 mb-8 text-center">
         <div className="flex flex-col md:flex-row gap-3 max-w-xl mx-auto">
           <input
             type="text"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="أدخل رمز الباركود / QR (مثال: REP-A1B2C3)..."
-            className="flex-1 rounded-2xl border-2 border-amber-200 px-4 py-3 text-sm text-right font-mono focus:ring-2 focus:ring-amber-400 bg-amber-50/40"
+            className="flex-1 rounded-2xl border-2 border-primary-200 px-4 py-3 text-sm text-right font-mono focus:ring-2 focus:ring-primary-500 bg-surface-subtle"
           />
           
           <button
             onClick={() => handleSearch()}
             disabled={loading}
-            className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-3 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md transition-all"
+            className="bg-primary-700 hover:bg-primary-800 text-white font-bold px-6 py-3 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
           >
             <Search className="w-4 h-4" />
             <span>{loading ? "جاري البحث..." : "بحث بالرمز"}</span>
@@ -79,7 +136,7 @@ export default function ReceiverPage() {
 
           <button
             onClick={() => setShowScanner(true)}
-            className="bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-3 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md transition-all"
+            className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-5 py-3 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
           >
             <QrCode className="w-4 h-4" />
             <span>فتح الكاميرا 📷</span>
@@ -90,40 +147,91 @@ export default function ReceiverPage() {
       {/* Result Display */}
       {result && !confirmed && (
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 space-y-6 animate-in fade-in zoom-in duration-200">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
+          {/* Header Card with Recipient and Code Status */}
+          <div className="bg-primary-50/60 border border-primary-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <UserCheck className="w-7 h-7 text-amber-700" />
+              <UserCheck className="w-8 h-8 text-primary-700" />
               <div>
-                <h3 className="font-bold text-base text-amber-900">{recipient?.full_name || recipient?.name}</h3>
-                <p className="text-xs text-amber-700">رقم الهوية: {recipient?.national_id || "—"} | الجوال: {recipient?.phone || "—"}</p>
+                <h3 className="font-bold text-base text-gray-800">{recipient?.full_name || recipient?.name || "المستفيد"}</h3>
+                <p className="text-xs text-gray-600">
+                  {recipient?.national_id ? `رقم الهوية: ${recipient.national_id}` : `نوع الجهة: ${recipient?.organization_type || "جهة مستفيدة"}`} | الجوال: <span className="font-mono">{recipient?.phone || "—"}</span>
+                </p>
               </div>
             </div>
-            <span className="bg-amber-600 text-white px-3 py-1 rounded-full text-xs font-bold font-mono">
-              {result.data.barcode_code}
-            </span>
+
+            <div className="flex items-center gap-3">
+              <span className="bg-primary-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold font-mono">
+                {result.data.barcode_code}
+              </span>
+              <StatusBadge status={codeStatus} />
+            </div>
           </div>
 
+          {/* Rejection Alert If Code is Already Used */}
+          {codeStatus === "used" && (
+            <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-5 text-red-900 space-y-2 animate-in shake duration-300">
+              <div className="flex items-center gap-2 font-black text-sm text-red-700">
+                <XCircle className="w-5 h-5 text-red-600" />
+                <span>⚠️ تم رفض العملية: رمز الاستلام مستخدم مسبقاً (Single-Use Only)</span>
+              </div>
+              <p className="text-xs text-red-800 leading-relaxed">
+                هذا الرمز مخصص للاستخدام لمرة واحدة فقط وتم إثبات صرفه وتسليمه في عملية سابقة، ولا يسمح النظام بتكرار الصرف لنفس الرمز.
+              </p>
+              {previousDeliveryDate && (
+                <div className="bg-red-100/80 p-2.5 rounded-xl text-xs font-bold text-red-900 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-red-700" />
+                  <span>تاريخ ووقت الاستلام السابق: </span>
+                  <span className="font-mono">{new Date(previousDeliveryDate).toLocaleString('ar-SA')}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Rejection Alert If Code is Expired */}
+          {codeStatus === "expired" && (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 text-amber-900 space-y-2">
+              <div className="flex items-center gap-2 font-black text-sm text-amber-800">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                <span>⚠️ تنبيه: رمز الاستلام منتهي الصلاحية</span>
+              </div>
+              <p className="text-xs text-amber-800">
+                لقد تجاوز هذا الرمز التاريخ المحدد للصرف. يرجى التواصل مع إدارة الجمعية لإعادة الجدولة.
+              </p>
+            </div>
+          )}
+
+          {/* Details Grid */}
           <div className="grid md:grid-cols-2 gap-4 text-xs">
-            <div className="bg-gray-50 p-4 rounded-xl space-y-2 border">
+            <div className="bg-gray-50 p-4 rounded-xl space-y-2 border border-gray-200">
               <div><strong>نوع الدعم / السلة:</strong> {result.data.basket?.name || "سلة دعم غذائية"}</div>
               <div><strong>نقطة التسليم:</strong> {result.data.pickup_location || "مقر الجمعية الرئيسي"}</div>
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-xl space-y-2 border">
+            <div className="bg-gray-50 p-4 rounded-xl space-y-2 border border-gray-200">
               <div><strong>تاريخ الموعد:</strong> {result.data.scheduled_at ? new Date(result.data.scheduled_at).toLocaleDateString('ar-SA') : "اليوم"}</div>
-              <div><strong>الحالة الحالية:</strong> <span className="font-bold text-amber-700">{result.data.status === 'delivered' ? 'مُسلم مسبقاً' : 'قيد التسليم'}</span></div>
+              <div className="flex items-center gap-2">
+                <strong>حالة الرمز:</strong>
+                <StatusBadge status={codeStatus} />
+              </div>
             </div>
           </div>
 
+          {/* Action Button: Only enabled if code is active */}
           <div className="pt-4 border-t flex justify-center">
-            <button
-              onClick={handleConfirm}
-              disabled={confirming}
-              className="bg-green-600 hover:bg-green-700 text-white font-black px-10 py-4 rounded-2xl text-base shadow-xl hover:shadow-2xl transition-all flex items-center gap-2"
-            >
-              <CheckCircle2 className="w-6 h-6" />
-              <span>{confirming ? "⏳ جاري التوثيق والإشعار..." : "✅ تأكيد وتسليم الدعم للمستفيد"}</span>
-            </button>
+            {codeStatus === "active" ? (
+              <button
+                onClick={handleConfirm}
+                disabled={confirming}
+                className="bg-primary-700 hover:bg-primary-800 text-white font-black px-10 py-4 rounded-2xl text-base shadow-xl hover:shadow-2xl transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <CheckCircle2 className="w-6 h-6" />
+                <span>{confirming ? "⏳ جاري التوثيق والإشعار..." : "✅ تأكيد وتسليم الدعم للمستفيد (صرف لمرة واحدة)"}</span>
+              </button>
+            ) : (
+              <div className="text-center p-3 bg-gray-100 rounded-xl text-gray-500 font-bold text-xs border border-gray-300">
+                ⛔ تم تعطيل زر التسليم لأن الرمز ({codeStatus === "used" ? "مستخدم مسبقاً" : codeStatus === "expired" ? "منتهي الصلاحية" : "ملغى"})
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -136,7 +244,13 @@ export default function ReceiverPage() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-green-900">{confirmed.message}</h2>
-            <p className="text-xs text-green-700 mt-1">تم إشعار المشرف العام وتحديث السجل في قاعدة البيانات</p>
+            <div className="mt-2 flex items-center justify-center gap-2">
+              <span className="text-xs text-green-800">حالة الرمز الآن:</span>
+              <StatusBadge status="used" label="تم التسليم بنجاح" />
+            </div>
+            <p className="text-xs text-green-700 mt-2 font-mono">
+              تاريخ التسليم: {new Date().toLocaleString('ar-SA')}
+            </p>
           </div>
 
           <div className="flex justify-center gap-4 pt-2">
@@ -148,7 +262,7 @@ export default function ReceiverPage() {
                 className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-3 rounded-2xl text-xs shadow-md inline-flex items-center gap-2"
               >
                 <FileText className="w-4 h-4" />
-                <span>طباعة وتصدير سند الاستلام المعتمد (PDF)</span>
+                <span>📄 طباعة سند الاستلام (PDF)</span>
               </a>
             )}
 
@@ -157,23 +271,25 @@ export default function ReceiverPage() {
                 setResult(null);
                 setConfirmed(null);
                 setCode("");
+                setCodeStatus("active");
+                setPreviousDeliveryDate(null);
               }}
-              className="bg-white text-gray-700 font-bold px-6 py-3 rounded-2xl text-xs border hover:bg-gray-100"
+              className="bg-primary-700 hover:bg-primary-800 text-white font-bold px-6 py-3 rounded-2xl text-xs shadow-md transition-all cursor-pointer"
             >
-              استلام آخر 🔄
+              مسح رمز استلام آخر
             </button>
           </div>
         </div>
       )}
 
-      {/* Camera QR Modal */}
+      {/* Camera QR Scanner Modal */}
       <QrScannerModal
         isOpen={showScanner}
         onClose={() => setShowScanner(false)}
-        onScanSuccess={(scannedCode) => {
+        onScanSuccess={(decodedText) => {
+          setCode(decodedText);
           setShowScanner(false);
-          setCode(scannedCode);
-          handleSearch(scannedCode);
+          handleSearch(decodedText);
         }}
       />
     </div>

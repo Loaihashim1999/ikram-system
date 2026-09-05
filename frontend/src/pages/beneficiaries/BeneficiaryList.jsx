@@ -72,8 +72,7 @@ const makeInitialForm = (type = "citizen") => ({
   social_security_amount: "",
   retirement_pension: "",
   family_support: "",
-  bank_name: "",
-  iban: "",
+  housing_type: "rent",
   status: "active",
 });
 
@@ -86,6 +85,7 @@ export default function BeneficiaryList() {
   const [cityFilter, setCityFilter]     = useState("all");
   const [districtFilter, setDistrictFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [familyStatusFilter, setFamilyStatusFilter] = useState("all");
 
   const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
 
@@ -369,8 +369,9 @@ export default function BeneficiaryList() {
     const matchCity = cityFilter === "all" || b.city === cityFilter;
     const matchDistrict = districtFilter === "all" || b.district === districtFilter;
     const matchStatus = statusFilter === "all" || b.status === statusFilter;
+    const matchFamilyStatus = familyStatusFilter === "all" || b.family_status === familyStatusFilter;
 
-    return matchSearch && matchType && matchPriority && matchCity && matchDistrict && matchStatus;
+    return matchSearch && matchType && matchPriority && matchCity && matchDistrict && matchStatus && matchFamilyStatus;
   });
 
   // ─── Dispatch Handlers ───
@@ -561,6 +562,15 @@ ${qrUrl}`;
 
                 <th className="p-3">
                   <FilterableTableHeader
+                    title="نوع الأسرة"
+                    options={FAMILY_STATUS_OPTIONS}
+                    selectedValue={familyStatusFilter}
+                    onChange={setFamilyStatusFilter}
+                  />
+                </th>
+
+                <th className="p-3">
+                  <FilterableTableHeader
                     title="الحالة"
                     options={[
                       { value: "active", label: "نشط" },
@@ -615,6 +625,9 @@ ${qrUrl}`;
                          b.priority === "special_needs" ? "♿ ذوو احتياجات" :
                          b.priority === "elderly"       ? "👵 كبار السن" : b.priority || "—"}
                       </span>
+                    </td>
+                    <td className="p-3 font-semibold text-gray-700">
+                      {FAMILY_STATUS_OPTIONS.find(f => f.value === b.family_status)?.label || b.family_status || "—"}
                     </td>
                     <td className="p-3">
                       <span className={`px-2.5 py-1 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 ${
@@ -1048,25 +1061,6 @@ ${qrUrl}`;
                       </>
                     )}
 
-                    <div>
-                      <label className="block font-bold text-gray-700 mb-1">اسم البنك</label>
-                      <input
-                        value={addForm.bank_name}
-                        onChange={(e) => setAddForm({ ...addForm, bank_name: e.target.value })}
-                        placeholder="مصرف الراجحي / البنك الأهلي"
-                        className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-bold"
-                      />
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="block font-bold text-gray-700 mb-1">رقم الحساب البنكي (IBAN)</label>
-                      <input
-                        value={addForm.iban}
-                        onChange={(e) => setAddForm({ ...addForm, iban: e.target.value })}
-                        placeholder="SA0000000000000000000000"
-                        className="w-full rounded-xl border border-gray-300 p-2.5 font-mono text-right"
-                      />
-                    </div>
                   </div>
                 </div>
 

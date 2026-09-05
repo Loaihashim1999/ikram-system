@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getBeneficiary, updateBeneficiary } from '../../api/beneficiaries';
 import MainLayout from '../../components/layout/MainLayout';
+import { calculateIncomeAndClassification } from '../../utils/financialCalculations';
 import { 
   Loader2, Save, X, User, MapPin, Users, DollarSign, FileText, 
-  Plus, Trash2, Shield, CheckCircle2, ArrowRight, Upload, AlertCircle 
+  Plus, Trash2, Shield, CheckCircle2, ArrowRight, Upload, AlertCircle, Calculator 
 } from 'lucide-react';
 
 const FAMILY_STATUS_OPTIONS = [
@@ -56,8 +57,7 @@ export default function EditBeneficiaryPage() {
     family_support: "",
     status: "active",
     priority: "first_class",
-    bank_name: "",
-    iban: "",
+    monthly_rent_amount: "",
   });
 
   const [dependents, setDependents] = useState([]);
@@ -95,8 +95,7 @@ export default function EditBeneficiaryPage() {
           family_support: b.family_support || "",
           status: b.status || "active",
           priority: b.priority || "first_class",
-          bank_name: b.bank_name || "",
-          iban: b.iban || "",
+          monthly_rent_amount: b.monthly_rent_amount || (b.annual_rent_amount ? Math.round(b.annual_rent_amount / 12) : ""),
         });
 
         // Load dependents if exists
@@ -160,20 +159,25 @@ export default function EditBeneficiaryPage() {
     setForm(f => ({ ...f, family_members_count: updated.length + 1 }));
   };
 
-  // Total Income Calculator
-  const totalIncome = 
-    (parseFloat(form.monthly_salary) || 0) +
-    (parseFloat(form.social_security_amount) || 0) +
-    (parseFloat(form.citizen_account_amount) || 0) +
-    (parseFloat(form.retirement_pension) || 0) +
-    (parseFloat(form.family_support) || 0);
+  // Total & Eligible Income Calculation
+  const calcResult = useMemo(() => {
+    return calculateIncomeAndClassification({
+      beneficiaryType: form.beneficiary_type,
+      monthlySalary: form.monthly_salary,
+      socialSecurityAmount: form.social_security_amount,
+      citizenAccountAmount: form.citizen_account_amount,
+      retirementPension: form.retirement_pension,
+      familySupport: form.family_support,
+      housingType: form.housing_type,
+      annualRentAmount: form.annual_rent_amount,
+      monthlyRentAmount: form.monthly_rent_amount,
+      hasSpecialNeeds: form.has_special_needs,
+      dateOfBirth: form.date_of_birth,
+    });
+  }, [form]);
 
-  const calcCategoryLabel = () => {
-    if (form.has_special_needs) return "ذوي الاحتياجات الخاصة ♿";
-    if (totalIncome <= 3000) return "درجة أولى (مستحق سلة شهرية) 🥇";
-    if (totalIncome <= 6000) return "درجة ثانية (مستحق سلة دورية) 🥈";
-    return "درجة ثانية 🥈";
-  };
+  const totalIncome = calcResult.eligibleIncome;
+  const calcCategoryLabel = () => calcResult.categoryLabel;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -707,30 +711,29 @@ export default function EditBeneficiaryPage() {
                   />
                 </div>
 
-                <div>
-                  <label className={labelCls}>اسم البنك المعتمد</label>
-                  <input
-                    type="text"
-                    name="bank_name"
-                    value={form.bank_name}
-                    onChange={handleChange}
-                    placeholder="مثال: مصرف الراجحي"
-                    className={inputCls}
-                  />
-                </div>
+                {form.housing_type === "rent" && (
+                  <div>
+                    <label className={labelCls}>مبلغ الإيجار الشهري المقتطع (ريال)</label>
+                    <input
+                      type="number"
+                      name="monthly_rent_amount"
+                      value={form.monthly_rent_amount}
+                      onChange={handleChange}
+                      placeholder="مثال: 1000"
+                      className={inputCls + " font-mono font-bold border-amber-300"}
+                    />
+                    <span className="text-[11px] text-[#6B7280] block mt-1">يُخصم من إجمالي الدخل لتحديد الدخل المحتسب</span>
+                  </div>
+                )}
+              </div>
 
-                <div className="md:col-span-2">
-                  <label className={labelCls}>رقم الآيبان البنكي (IBAN)</label>
-                  <input
-                    type="text"
-                    name="iban"
-                    value={form.iban}
-                    onChange={handleChange}
-                    placeholder="SA0000000000000000000000"
-                    className={inputCls + " font-mono uppercase"}
-                    dir="ltr"
-                  />
+              {/* Formula & Calculation Box */}
+              <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-200 text-xs space-y-2">
+                <div className="flex items-center gap-2 font-bold text-amber-900">
+                  <Calculator size={16} />
+                  <span>معادلة الاحتساب بعد اقتطاع الإيجار:</span>
                 </div>
+                <p className="font-mono text-gray-700 bg-white p-2.5 rounded-xl border border-amber-100">{calcResult.formulaText}</p>
               </div>
 
               {/* Total Income Summary Card */}

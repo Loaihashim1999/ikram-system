@@ -1,348 +1,569 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getInventory, addInventoryItem, deleteInventoryItem, adjustStock } from '../../api/warehouse';
 import MainLayout from '../../components/layout/MainLayout';
+import Dialog from '../../components/overlays/Dialog';
+import ConfirmDialog from '../../components/overlays/ConfirmDialog';
+import StatusBadge from '../../components/ui/StatusBadge';
+import FormField from '../../components/ui/FormField';
+import { useNotifications } from '../../context/NotificationContext';
 import {
-  Package, AlertTriangle, TrendingUp, Plus, Edit, Trash2, 
-  ArrowUpCircle, ArrowDownCircle, X, Loader2, Search, RefreshCw
+  Package, AlertTriangle, TrendingUp, Plus, Edit, Trash2,
+  ArrowUpCircle, ArrowDownCircle, X, Loader2, Search, RefreshCw,
+  Calendar, Filter, Clock, CheckCircle2
 } from 'lucide-react';
 
 export default function Warehouse() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [expiryFilter, setExpiryFilter] = useState('all'); // 'all' | 'near_expiry' | 'expired' | 'valid'
+
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   // Form states
-  const [formData, setFormData] = useState({ name: '', unit: 'كرتون', current_quantity: 0, min_threshold: 10, description: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    unit: 'كرتون',
+    current_quantity: 0,
+    min_threshold: 10,
+    description: '',
+    expiration_date: '',
+    basket_number: '',
+  });
+
   const [adjustData, setAdjustData] = useState({ type: 'in', quantity: 1, reason: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { thresholdDays, checkWarehouseExpirations } = useNotifications();
+
   const fetchData = async () => {
-  setLoading(true);
-  try {
-    const response = await getInventory();
-    console.log('Inventory data:', response.data);
-    setItems(response.data.data);
-  } catch (error) {
-    console.error('Error fetching inventory:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const response = await getInventory();
+      const rawData = response.data?.data || response.data || [];
+      const arrayData = Array.isArray(rawData) ? rawData : [];
 
-  useEffect(() => { fetchData(); }, []);
+      // Enrich items with calculated expiration statuses
+      const now = new Date();
+      const enriched = arrayData.map((item) => {
+        let expiryState = 'valid';
+        let remainingDays = null;
 
- 
- const handleAddSubmit = async (e) => {
-  e.preventDefault();
-  setIsSubmitting(true);
-  try {
-    const response = await addInventoryItem({
-      ...formData,
-      current_quantity: parseInt(formData.current_quantity) || 0,
-      min_threshold: parseInt(formData.min_threshold) || 0,
-    });
-    console.log('Success:', response.data);
-    setShowAddModal(false);
-    setFormData({ name: '', unit: 'كرتون', current_quantity: 0, min_threshold: 10, description: '' });
-    fetchData();
-    alert('تم إضافة الصنف بنجاح');
-  } catch (error) {
-    console.error('Full error:', error);
-    
-    if (error.response) {
-      if (error.response.status === 422) {
-        const errors = error.response.data.errors || error.response.data.message;
-        let errorMessage = 'حدث خطأ في البيانات:\n\n';
-        if (typeof errors === 'object') {
-          Object.keys(errors).forEach(key => {
-            errorMessage += `${key}: ${errors[key].join(', ')}\n`;
-          });
-        } else {
-          errorMessage += errors;
+        if (item.status === 'distributed' || item.is_distributed) {
+          expiryState = 'distributed';
+        } else if (item.expiration_date) {
+          const exp = new Date(item.expiration_date);
+          const diff = exp.getTime() - now.getTime();
+          remainingDays = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+          if (remainingDays <= 0) {
+            expiryState = 'expired';
+          } else if (remainingDays <= thresholdDays) {
+            expiryState = 'near_expiry';
+          } else {
+            expiryState = 'valid';
+          }
         }
-        alert(errorMessage);
-      } else {
-        alert(`خطأ: ${error.response.data.message || 'حدث خطأ غير متوقع'}`);
-      }
-    } else {
-      alert('حدث خطأ في الاتصال بالخادم. تأكد أن Laravel يعمل على المنفذ 8000');
-    }
-  } finally {
-    setIsSubmitting(false);
-  }
-};
 
-const handleAdjustSubmit = async (e) => {
-  e.preventDefault();
-  setIsSubmitting(true);
-  
-  // التحقق من أن selectedItem موجود
-  if (!selectedItem || !selectedItem.id) {
-    alert('حدث خطأ: لم يتم تحديد الصنف');
-    setIsSubmitting(false);
-    return;
-  }
-  
-  try {
-    await adjustStock(selectedItem.id, {
-      ...adjustData,
-      quantity: parseInt(adjustData.quantity) || 0,
-    });
-    setShowAdjustModal(false);
-    setAdjustData({ type: 'in', quantity: 1, reason: '' });
-    setSelectedItem(null);
+        return {
+          ...item,
+          expiryState,
+          remainingDays,
+        };
+      });
+
+      setItems(enriched);
+      // Automatically send alerts to notification center
+      checkWarehouseExpirations(enriched);
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
-    alert('تم تعديل المخزون بنجاح');
-  } catch (error) {
-    console.error('Adjust error:', error);
-    alert(error.response?.data?.message || 'حدث خطأ أثناء تعديل المخزون');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  }, []);
 
-  const handleDelete = async (id) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا الصنف؟')) {
-      try {
-        await deleteInventoryItem(id);
-        fetchData();
-      } catch (error) {
-        alert('حدث خطأ أثناء الحذف');
-      }
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await addInventoryItem({
+        ...formData,
+        current_quantity: parseInt(formData.current_quantity) || 0,
+        min_threshold: parseInt(formData.min_threshold) || 0,
+      });
+      setShowAddModal(false);
+      setFormData({
+        name: '',
+        unit: 'كرتون',
+        current_quantity: 0,
+        min_threshold: 10,
+        description: '',
+        expiration_date: '',
+        basket_number: '',
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Add item error:', error);
+      alert(error.response?.data?.message || 'حدث خطأ أثناء إضافة الصنف');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const getStatusBadge = (status) => {
-    if (status === 'out_of_stock') return <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#FCE8E6] text-[#C24B3F]">نافذ</span>;
-    if (status === 'low_stock') return <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#FEF3D6] text-[#D89A2E]">منخفض</span>;
-    return <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#E6F4EC] text-[#3B8A5E]">متوفر</span>;
+  const handleAdjustSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedItem || !selectedItem.id) return;
+    setIsSubmitting(true);
+
+    try {
+      await adjustStock(selectedItem.id, {
+        ...adjustData,
+        quantity: parseInt(adjustData.quantity) || 0,
+      });
+      setShowAdjustModal(false);
+      setAdjustData({ type: 'in', quantity: 1, reason: '' });
+      setSelectedItem(null);
+      fetchData();
+    } catch (error) {
+      console.error('Adjust error:', error);
+      alert(error.response?.data?.message || 'حدث خطأ أثناء تعديل المخزون');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const filteredItems = items.filter(item => item.name.toLowerCase().includes(search.toLowerCase()));
-  
-  const stats = {
-    total: items.length,
-    low: items.filter(i => i.stock_status === 'low_stock').length,
-    out: items.filter(i => i.stock_status === 'out_of_stock').length,
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    setDeleteLoading(true);
+    try {
+      await deleteInventoryItem(itemToDelete.id);
+      setItemToDelete(null);
+      fetchData();
+    } catch (error) {
+      alert('حدث خطأ أثناء حذف الصنف');
+    } finally {
+      setDeleteLoading(false);
+    }
   };
+
+  // Filtered items
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const matchesSearch = item.name?.toLowerCase().includes(search.toLowerCase()) ||
+        item.description?.toLowerCase().includes(search.toLowerCase());
+
+      const matchesStatus = statusFilter === 'all' ||
+        (statusFilter === 'in_stock' && item.stock_status === 'in_stock') ||
+        (statusFilter === 'low_stock' && item.stock_status === 'low_stock') ||
+        (statusFilter === 'out_of_stock' && item.stock_status === 'out_of_stock') ||
+        (statusFilter === item.expiryState);
+
+      const matchesExpiry = expiryFilter === 'all' || item.expiryState === expiryFilter;
+
+      return matchesSearch && matchesStatus && matchesExpiry;
+    });
+  }, [items, search, statusFilter, expiryFilter]);
+
+  const stats = useMemo(() => {
+    return {
+      total: items.length,
+      nearExpiry: items.filter((i) => i.expiryState === 'near_expiry').length,
+      expired: items.filter((i) => i.expiryState === 'expired').length,
+      distributed: items.filter((i) => i.expiryState === 'distributed').length,
+      low: items.filter((i) => i.stock_status === 'low_stock').length,
+    };
+  }, [items]);
 
   return (
     <MainLayout>
-      <div className="max-w-7xl mx-auto" dir="rtl">
-        {/* الرأس */}
+      <div className="max-w-7xl mx-auto p-4 lg:p-6" dir="rtl">
+        {/* Top Header */}
         <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-[#546027]">إدارة المستودع</h1>
-            <p className="text-[#6B6B66] mt-1">متابعة المخزون، إضافة الأصناف، وتسجيل حركات الصرف والإضافة</p>
+            <h1 className="text-2xl font-extrabold text-[#111827] flex items-center gap-2">
+              <Package className="w-7 h-7 text-[#C9A24A]" />
+              <span>إدارة المستودع والمخزون ومتابعة الصلاحية</span>
+            </h1>
+            <p className="text-xs text-[#6B7280] mt-1">
+              متابعة كميات السلال، تواريخ الصلاحية، والتنبيهات المسبقة قبل الانتهاء بـ {thresholdDays} أيام
+            </p>
           </div>
+
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-[#C9A24A] text-white rounded-lg hover:bg-[#8A6B24] transition-colors font-medium"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#D97706] hover:bg-[#B45309] text-white rounded-xl transition-colors font-extrabold text-xs shadow-xs cursor-pointer"
           >
-            <Plus size={20} />
-            إضافة صنف جديد
+            <Plus size={16} />
+            <span>إضافة صنف / مادة للسلة</span>
           </button>
         </div>
 
-        {/* الإحصائيات */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white p-5 rounded-xl border border-[#E5E2D9] flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#F5EDDA] rounded-full flex items-center justify-center">
-              <Package size={24} className="text-[#C9A24A]" />
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-2xl border border-[#E5E2D9] flex items-center gap-3.5 shadow-xs">
+            <div className="w-11 h-11 bg-[#FAF8F5] rounded-xl flex items-center justify-center text-[#C9A24A] border border-[#E5E2D9]">
+              <Package size={22} />
             </div>
             <div>
-              <p className="text-sm text-[#6B6B66]">إجمالي الأصناف</p>
-              <p className="text-2xl font-bold text-[#111111]">{stats.total}</p>
+              <p className="text-xs text-[#6B7280]">إجمالي الأصناف</p>
+              <p className="text-xl font-extrabold text-[#111827] font-mono">{stats.total}</p>
             </div>
           </div>
-          <div className="bg-white p-5 rounded-xl border border-[#E5E2D9] flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#FEF3D6] rounded-full flex items-center justify-center">
-              <AlertTriangle size={24} className="text-[#D89A2E]" />
+
+          <div className="bg-white p-4 rounded-2xl border border-[#E5E2D9] flex items-center gap-3.5 shadow-xs">
+            <div className="w-11 h-11 bg-[#FEF3C7] rounded-xl flex items-center justify-center text-[#B45309] border border-[#FCD34D]">
+              <Clock size={22} />
             </div>
             <div>
-              <p className="text-sm text-[#6B6B66]">مخزون منخفض</p>
-              <p className="text-2xl font-bold text-[#D89A2E]">{stats.low}</p>
+              <p className="text-xs text-[#6B7280]">قاربت على الانتهاء</p>
+              <p className="text-xl font-extrabold text-[#B45309] font-mono">{stats.nearExpiry}</p>
             </div>
           </div>
-          <div className="bg-white p-5 rounded-xl border border-[#E5E2D9] flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#FCE8E6] rounded-full flex items-center justify-center">
-              <TrendingUp size={24} className="text-[#C24B3F]" />
+
+          <div className="bg-white p-4 rounded-2xl border border-[#E5E2D9] flex items-center gap-3.5 shadow-xs">
+            <div className="w-11 h-11 bg-[#FEE2E2] rounded-xl flex items-center justify-center text-[#B91C1C] border border-[#FCA5A5]">
+              <AlertTriangle size={22} />
             </div>
             <div>
-              <p className="text-sm text-[#6B6B66]">أصناف نافذة</p>
-              <p className="text-2xl font-bold text-[#C24B3F]">{stats.out}</p>
+              <p className="text-xs text-[#6B7280]">منتهية الصلاحية</p>
+              <p className="text-xl font-extrabold text-[#B91C1C] font-mono">{stats.expired}</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-[#E5E2D9] flex items-center gap-3.5 shadow-xs">
+            <div className="w-11 h-11 bg-[#E0F2FE] rounded-xl flex items-center justify-center text-[#0369A1] border border-[#7DD3FC]">
+              <CheckCircle2 size={22} />
+            </div>
+            <div>
+              <p className="text-xs text-[#6B7280]">تم توزيعها</p>
+              <p className="text-xl font-extrabold text-[#0369A1] font-mono">{stats.distributed}</p>
             </div>
           </div>
         </div>
 
-        {/* شريط البحث */}
-        <div className="bg-white p-4 rounded-xl border border-[#E5E2D9] mb-4 flex gap-3">
-          <div className="flex-1 relative">
-            <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B6B66]" />
+        {/* Filter & Search Bar */}
+        <div className="bg-white p-4 rounded-2xl border border-[#E5E2D9] mb-4 flex flex-wrap items-center gap-3 shadow-xs">
+          <div className="flex-1 min-w-[200px] relative">
+            <Search size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="ابحث عن اسم الصنف..."
-              className="w-full pr-10 pl-4 py-2.5 rounded-lg border border-[#E5E2D9] focus:border-[#C9A24A] outline-none transition-all text-right"
+              placeholder="ابحث عن اسم الصنف أو الوصف..."
+              className="w-full pr-9 pl-4 py-2 rounded-xl border border-[#E5E2D9] focus:border-[#C9A24A] outline-none text-xs text-right bg-[#FAF8F5]"
             />
           </div>
-          <button onClick={fetchData} className="px-4 py-2.5 bg-white border border-[#E5E2D9] rounded-lg hover:bg-[#F7F5F0]">
-            <RefreshCw size={18} className="text-[#6B6B66]" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={expiryFilter}
+              onChange={(e) => setExpiryFilter(e.target.value)}
+              className="px-3 py-2 bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl text-xs font-bold text-[#111827] outline-none"
+            >
+              <option value="all">كل حالات الصلاحية</option>
+              <option value="valid">صالح للاستخدام</option>
+              <option value="near_expiry">قارب على الانتهاء (≤ {thresholdDays} أيام)</option>
+              <option value="expired">منتهي الصلاحية</option>
+              <option value="distributed">تم توزيعه</option>
+            </select>
+
+            <button
+              onClick={fetchData}
+              className="p-2 bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl hover:bg-gray-100 text-[#111827] cursor-pointer"
+              title="تحديث البيانات"
+            >
+              <RefreshCw size={16} />
+            </button>
+          </div>
         </div>
 
-        {/* الجدول */}
-        <div className="bg-white rounded-xl border border-[#E5E2D9] overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 size={40} className="text-[#C9A24A] animate-spin" />
-            </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Package size={60} className="text-[#E5E2D9] mb-4" />
-              <p className="text-[#6B6B66] text-lg">لا توجد أصناف في المستودع</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-[#F7F5F0] border-b border-[#E5E2D9]">
+        {/* Table */}
+        <div className="bg-white rounded-2xl border border-[#E5E2D9] overflow-hidden shadow-xs">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-right text-xs">
+              <thead className="bg-[#FAF8F5] border-b border-[#E5E2D9] text-[#111827] font-extrabold">
+                <tr>
+                  <th className="px-4 py-3.5">الصنف</th>
+                  <th className="px-4 py-3.5">الوحدة</th>
+                  <th className="px-4 py-3.5">المخزون الحالي</th>
+                  <th className="px-4 py-3.5">الحد الأدنى</th>
+                  <th className="px-4 py-3.5">تاريخ الانتهاء</th>
+                  <th className="px-4 py-3.5">حالة الصلاحية</th>
+                  <th className="px-4 py-3.5">حالة المخزون</th>
+                  <th className="px-4 py-3.5 text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E5E2D9]">
+                {loading ? (
                   <tr>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-[#111111]">الصنف</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-[#111111]">الوحدة</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-[#111111]">المخزون الحالي</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-[#111111]">الحد الأدنى</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-[#111111]">الحالة</th>
-                    <th className="px-6 py-4 text-right text-sm font-bold text-[#111111]">الإجراءات</th>
+                    <td colSpan={8} className="py-16 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 text-[#C9A24A]">
+                        <Loader2 size={32} className="animate-spin" />
+                        <span className="text-xs font-bold text-[#6B7280]">جاري تحميل بيانات المستودع...</span>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E2D9]">
-                  {filteredItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-[#F7F5F0] transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-[#111111]">{item.name}</p>
-                        <p className="text-xs text-[#6B6B66]">{item.description || 'لا يوجد وصف'}</p>
+                ) : filteredItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-16 text-center text-[#6B7280]">
+                      <Package size={40} className="mx-auto mb-2 text-[#E5E2D9]" />
+                      <p className="font-bold text-sm text-[#111827]">لا توجد أصناف مطابقة لخيارات البحث أو الفلتر</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-[#FAF8F5] transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="font-bold text-[#111827]">{item.name}</p>
+                        <p className="text-[11px] text-[#6B7280]">{item.description || 'لا يوجد وصف'}</p>
                       </td>
-                      <td className="px-6 py-4 text-sm text-[#111111]">{item.unit}</td>
-                      <td className="px-6 py-4">
-                        <span className="text-lg font-bold text-[#111111]">{item.current_quantity}</span>
+                      <td className="px-4 py-3 text-[#4B5563]">{item.unit}</td>
+                      <td className="px-4 py-3">
+                        <span className="font-extrabold text-[#111827] font-mono text-sm">{item.current_quantity}</span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-[#6B6B66]">{item.min_threshold}</td>
-                      <td className="px-6 py-4">{getStatusBadge(item.stock_status)}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+                      <td className="px-4 py-3 text-[#6B7280] font-mono">{item.min_threshold}</td>
+                      <td className="px-4 py-3">
+                        {item.expiration_date ? (
+                          <div className="flex items-center gap-1.5 font-mono text-xs">
+                            <Calendar size={13} className="text-[#C9A24A]" />
+                            <span>{new Date(item.expiration_date).toLocaleDateString('ar-SA')}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={item.expiryState} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={item.stock_status || 'in_stock'} />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
                           <button
-                            onClick={() => { setSelectedItem(item); setShowAdjustModal(true); }}
-                            className="p-2 rounded-lg hover:bg-[#E6F4EC] text-[#3B8A5E] transition-colors"
-                            title="تعديل المخزون (إضافة/صرف)"
+                            onClick={() => {
+                              setSelectedItem(item);
+                              setShowAdjustModal(true);
+                            }}
+                            className="p-1.5 bg-[#FAF8F5] hover:bg-green-50 text-[#3F6B3A] rounded-xl border border-[#E5E2D9] transition-colors cursor-pointer"
+                            title="تعديل المخزون (صرف / توريد)"
+                            aria-label="تعديل المخزون"
                           >
-                            <ArrowUpCircle size={18} />
+                            <ArrowUpCircle size={15} />
                           </button>
                           <button
-                            onClick={() => handleDelete(item.id)}
-                            className="p-2 rounded-lg hover:bg-[#FCE8E6] text-[#C24B3F] transition-colors"
-                            title="حذف"
+                            onClick={() => setItemToDelete(item)}
+                            className="p-1.5 bg-[#FAF8F5] hover:bg-red-50 text-[#C24B3F] rounded-xl border border-[#E5E2D9] transition-colors cursor-pointer"
+                            title="حذف الصنف"
+                            aria-label="حذف الصنف"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Modal: إضافة صنف جديد */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-[#111111]">إضافة صنف جديد</h3>
-                <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-[#F7F5F0] rounded-lg"><X size={20} /></button>
-              </div>
-              <form onSubmit={handleAddSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#111111] mb-1">اسم الصنف *</label>
-                  <input required type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2.5 rounded-lg border border-[#E5E2D9] focus:border-[#C9A24A] outline-none text-right" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[#111111] mb-1">الوحدة *</label>
-                    <select value={formData.unit} onChange={(e) => setFormData({...formData, unit: e.target.value})} className="w-full px-4 py-2.5 rounded-lg border border-[#E5E2D9] focus:border-[#C9A24A] outline-none text-right">
-                      <option value="كرتون">كرتون</option>
-                      <option value="حبة">حبة</option>
-                      <option value="كيلو">كيلو</option>
-                      <option value="سلة">سلة</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#111111] mb-1">الكمية الابتدائية *</label>
-                    <input required type="number" min="0" value={formData.current_quantity} onChange={(e) => setFormData({...formData, current_quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 0})} className="w-full px-4 py-2.5 rounded-lg border border-[#E5E2D9] focus:border-[#C9A24A] outline-none text-right" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#111111] mb-1">الحد الأدنى للتنبيه *</label>
-                  <input required type="number" min="0" value={formData.min_threshold} onChange={(e) => setFormData({...formData, min_threshold: e.target.value === '' ? '' : parseInt(e.target.value) || 0})} className="w-full px-4 py-2.5 rounded-lg border border-[#E5E2D9] focus:border-[#C9A24A] outline-none text-right" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#111111] mb-1">وصف الصنف</label>
-                  <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full px-4 py-2.5 rounded-lg border border-[#E5E2D9] focus:border-[#C9A24A] outline-none text-right" rows="2"></textarea>
-                </div>
-                <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-[#C9A24A] text-white rounded-lg hover:bg-[#8A6B24] font-medium flex items-center justify-center gap-2">
-                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
-                  {isSubmitting ? 'جاري الحفظ...' : 'حفظ الصنف'}
-                </button>
-              </form>
+        {/* ─── ADD ITEM MODAL ─── */}
+        <Dialog
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          title="إضافة صنف جديد للسلة والمستودع"
+          subtitle="تسجيل بيانات المادة، الكمية، والحد الأدنى وتاريخ انتهاء الصلاحية"
+          icon={Package}
+          maxWidth="max-w-xl"
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-200"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleAddSubmit}
+                disabled={isSubmitting}
+                className="px-5 py-2 bg-[#D97706] hover:bg-[#B45309] text-white font-extrabold rounded-xl text-xs shadow-xs"
+              >
+                {isSubmitting ? "جاري الإضافة..." : "حفظ الصنف وتوثيق الصلاحية"}
+              </button>
             </div>
-          </div>
-        )}
+          }
+        >
+          <form className="space-y-3.5" dir="rtl">
+            <FormField label="اسم الصنف / المادة" name="name" required>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs text-right"
+                placeholder="مثال: أرز بسمتي 5 كجم"
+              />
+            </FormField>
 
-        {/* Modal: تعديل المخزون (إضافة / صرف) */}
-        {showAdjustModal && selectedItem && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-[#111111]">تعديل مخزون: {selectedItem.name}</h3>
-                <button onClick={() => setShowAdjustModal(false)} className="p-1 hover:bg-[#F7F5F0] rounded-lg"><X size={20} /></button>
-              </div>
-              <div className="bg-[#F7F5F0] p-3 rounded-lg mb-4 flex justify-between text-sm">
-                <span className="text-[#6B6B66]">المخزون الحالي:</span>
-                <span className="font-bold text-[#111111]">{selectedItem.current_quantity} {selectedItem.unit}</span>
-              </div>
-              <form onSubmit={handleAdjustSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[#111111] mb-1">نوع الحركة *</label>
-                    <select value={adjustData.type} onChange={(e) => setAdjustData({...adjustData, type: e.target.value})} className="w-full px-4 py-2.5 rounded-lg border border-[#E5E2D9] focus:border-[#C9A24A] outline-none text-right">
-                      <option value="in">إضافة للمخزون (وارد)</option>
-                      <option value="out">صرف من المخزون (صادر)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#111111] mb-1">الكمية *</label>
-                    <input required type="number" min="1" value={adjustData.quantity} onChange={(e) => setAdjustData({...adjustData, quantity: e.target.value === '' ? '' : parseInt(e.target.value) || 0})} className="w-full px-4 py-2.5 rounded-lg border border-[#E5E2D9] focus:border-[#C9A24A] outline-none text-right" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#111111] mb-1">سبب الحركة *</label>
-                  <input required type="text" value={adjustData.reason} onChange={(e) => setAdjustData({...adjustData, reason: e.target.value})} placeholder="مثال: استلام دفعة جديدة، توزيع على مستفيدين" className="w-full px-4 py-2.5 rounded-lg border border-[#E5E2D9] focus:border-[#C9A24A] outline-none text-right" />
-                </div>
-                <button type="submit" disabled={isSubmitting} className={`w-full py-3 text-white rounded-lg font-medium flex items-center justify-center gap-2 ${adjustData.type === 'in' ? 'bg-[#3B8A5E] hover:bg-[#2d6a48]' : 'bg-[#C24B3F] hover:bg-[#A03A30]'}`}>
-                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : (adjustData.type === 'in' ? <ArrowUpCircle size={18} /> : <ArrowDownCircle size={18} />)}
-                  {isSubmitting ? 'جاري التنفيذ...' : (adjustData.type === 'in' ? 'تأكيد الإضافة' : 'تأكيد الصرف')}
-                </button>
-              </form>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="الوحدة" name="unit" required>
+                <select
+                  value={formData.unit}
+                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs text-right bg-white"
+                >
+                  <option value="كرتون">كرتون</option>
+                  <option value="كيس">كيس</option>
+                  <option value="حبة">حبة</option>
+                  <option value="علبة">علبة</option>
+                  <option value="كيلو">كيلو</option>
+                  <option value="طرد">طرد</option>
+                </select>
+              </FormField>
+
+              <FormField label="الكمية الابتدائية" name="current_quantity" required>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.current_quantity}
+                  onChange={(e) => setFormData({ ...formData, current_quantity: e.target.value })}
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs text-right font-mono"
+                />
+              </FormField>
             </div>
-          </div>
-        )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="حد التنبيه الأدنى للمخزون" name="min_threshold" required>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.min_threshold}
+                  onChange={(e) => setFormData({ ...formData, min_threshold: e.target.value })}
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs text-right font-mono"
+                />
+              </FormField>
+
+              <FormField
+                label="تاريخ انتهاء الصلاحية *"
+                name="expiration_date"
+                required
+                helperText={`يُرسل تنبيه تلقائي قبل ${thresholdDays} أيام من هذا التاريخ.`}
+              >
+                <input
+                  type="date"
+                  value={formData.expiration_date}
+                  onChange={(e) => setFormData({ ...formData, expiration_date: e.target.value })}
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs text-right font-mono bg-white"
+                />
+              </FormField>
+            </div>
+
+            <FormField label="الوصف والملاحظات" name="description">
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={2}
+                className="w-full px-3.5 py-2 rounded-xl border border-[#E5E2D9] text-xs text-right"
+                placeholder="تفاصيل التخزين، المورد، أو السلة التابعة..."
+              />
+            </FormField>
+          </form>
+        </Dialog>
+
+        {/* ─── ADJUST STOCK MODAL ─── */}
+        <Dialog
+          isOpen={showAdjustModal}
+          onClose={() => setShowAdjustModal(false)}
+          title={`تعديل كمية المخزون (${selectedItem?.name})`}
+          subtitle="تسجيل حركة توريد إضافية أو صرف استهلاكي"
+          icon={ArrowUpCircle}
+          maxWidth="max-w-md"
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setShowAdjustModal(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-200"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleAdjustSubmit}
+                disabled={isSubmitting}
+                className="px-5 py-2 bg-[#3F6B3A] hover:bg-[#31542D] text-white font-extrabold rounded-xl text-xs shadow-xs"
+              >
+                {isSubmitting ? "جاري التعديل..." : "تأكيد حركة المخزون"}
+              </button>
+            </div>
+          }
+        >
+          <form className="space-y-3" dir="rtl">
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="نوع الحركة" name="type" required>
+                <select
+                  value={adjustData.type}
+                  onChange={(e) => setAdjustData({ ...adjustData, type: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs font-bold bg-white"
+                >
+                  <option value="in">➕ توريد / إضافة (+) </option>
+                  <option value="out">➖ صرف / إنقاص (-)</option>
+                </select>
+              </FormField>
+
+              <FormField label="الكمية" name="quantity" required>
+                <input
+                  type="number"
+                  min="1"
+                  value={adjustData.quantity}
+                  onChange={(e) => setAdjustData({ ...adjustData, quantity: e.target.value })}
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs font-mono text-right"
+                />
+              </FormField>
+            </div>
+
+            <FormField label="سبب التعديل" name="reason" required>
+              <input
+                type="text"
+                value={adjustData.reason}
+                onChange={(e) => setAdjustData({ ...adjustData, reason: e.target.value })}
+                required
+                placeholder="مثال: وصول شحنة تبرعات جديدة / تجهيز سلال ميدانية"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs text-right"
+              />
+            </FormField>
+          </form>
+        </Dialog>
+
+        {/* ─── CONFIRM DELETE DIALOG ─── */}
+        <ConfirmDialog
+          isOpen={!!itemToDelete}
+          onClose={() => setItemToDelete(null)}
+          onConfirm={handleConfirmDelete}
+          title={`حذف الصنف (${itemToDelete?.name})`}
+          message={`هل أنت متأكد من رغبتك في حذف هذا الصنف من سجلات المستودع؟ لا يمكن التراجع عن هذه الخطوة.`}
+          confirmLabel="حذف نهائياً"
+          cancelLabel="إلغاء"
+          loading={deleteLoading}
+        />
       </div>
     </MainLayout>
   );
