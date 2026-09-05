@@ -58,8 +58,9 @@ export default function AuditPage() {
           }`}
         >
           <MapPin className="w-4 h-4" />
-          <span>سندات مناديب الأحياء ({data.representatives.length})</span>
+          <span>سندات الجهات المستفيدة ({data.representatives.length})</span>
         </button>
+
 
         <button
           onClick={() => setTab("movements")}
@@ -165,10 +166,10 @@ export default function AuditPage() {
               <thead className="bg-amber-50/70 text-amber-900 border-b">
                 <tr>
                   <th className="p-3">#</th>
-                  <th className="p-3 font-bold">اسم مندوب الحي</th>
-                  <th className="p-3 font-bold">الحي السكني</th>
-                  <th className="p-3 font-bold">رقم الهوية</th>
-                  <th className="p-3 font-bold">عدد أسر الحي</th>
+                  <th className="p-3 font-bold">اسم الجهة المستفيدة</th>
+                  <th className="p-3 font-bold">الحي / المنطقة</th>
+                  <th className="p-3 font-bold">رقم الترخيص / الهوية</th>
+                  <th className="p-3 font-bold">عدد المستفيدين / الأسر</th>
                   <th className="p-3 font-bold">تصدير سند التوزيع المعتمد (PDF)</th>
                 </tr>
               </thead>
@@ -176,10 +177,10 @@ export default function AuditPage() {
                 {data.representatives.map((r, idx) => (
                   <tr key={r.id || idx} className="border-b hover:bg-gray-50">
                     <td className="p-3 text-gray-400">{idx + 1}</td>
-                    <td className="p-3 font-bold text-gray-800">{r.full_name}</td>
-                    <td className="p-3 font-bold text-amber-900">{r.district_name}</td>
-                    <td className="p-3 font-mono">{r.national_id || "—"}</td>
-                    <td className="p-3 font-bold text-green-700">{r.beneficiaries_count} أسرة</td>
+                    <td className="p-3 font-bold text-gray-800">{r.organization_name || r.name || r.full_name}</td>
+                    <td className="p-3 font-bold text-amber-900">{r.district || r.district_name || r.city || "—"}</td>
+                    <td className="p-3 font-mono">{r.license_number || r.national_id || "—"}</td>
+                    <td className="p-3 font-bold text-green-700">{r.beneficiaries_count || r.beneficiariesCount || 0} مستفيد</td>
                     <td className="p-3">
                       <a
                         href={`${API_BASE}/api/documents/rep-receipt/${r.id}/pdf`}
@@ -188,8 +189,9 @@ export default function AuditPage() {
                         className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1.5 shadow-sm"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        <span>تصدير سند تسليم المندوب بالخط الهوائي (PDF)</span>
+                        <span>تصدير سند تسليم الجهة بالخط الهوائي (PDF)</span>
                       </a>
+
                     </td>
                   </tr>
                 ))}

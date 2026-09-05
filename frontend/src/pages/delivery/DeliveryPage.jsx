@@ -8,7 +8,8 @@ import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
 import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
 import { Eye, Edit3, Trash2, RefreshCw, X, FileText, Download, UserCheck, ShieldAlert, Award, FileArchive, Users, Plus, Send, Truck, Package, Calendar, QrCode, CheckCircle2, XCircle } from "lucide-react";
 
-const DISPATCH_STEPS = ["اختيار المستفيدين / المناديب", "اختيار السائق المعتمد", "اختيار سلة الدعم", "تحديد الموعد", "مراجعة وإرسال"];
+const DISPATCH_STEPS = ["اختيار المستفيدين / الجهات المستفيدة", "اختيار السائق المعتمد", "اختيار سلة الدعم", "تحديد الموعد", "مراجعة وإرسال"];
+
 
 export default function DeliveryPage() {
   const [activeTab, setActiveTab] = useState("special_needs"); // 'special_needs' | 'representatives'
@@ -315,7 +316,7 @@ ${qrUrl}`;
             <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
               <span>🚚</span> إدارة التوصيل المنازل
             </h1>
-            <p className="text-xs text-gray-500 mt-1">إدارة عمليات التوصيل المباشرة لكبار السن وذوي الاحتياجات الخاصة وتوزيعات مناديب الأحياء وتعيين السائقين</p>
+            <p className="text-xs text-gray-500 mt-1">إدارة عمليات التوصيل المباشرة لكبار السن وذوي الاحتياجات الخاصة وتوزيعات الجهات المستفيدة والشريكة وتعيين السائقين</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -326,7 +327,7 @@ ${qrUrl}`;
                 className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
               >
                 <Send className="w-4 h-4" />
-                <span>🚀 تقديم وتوجيه دعم التوصيل (كبار السن / ذوو الاحتياجات / المناديب)</span>
+                <span>🚀 تقديم وتوجيه دعم التوصيل (كبار السن / ذوو الاحتياجات / الجهات المستفيدة)</span>
               </button>
             ) : (
               <div className="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-4 py-2 rounded-2xl text-xs flex items-center gap-2 shadow-2xs">
@@ -354,10 +355,11 @@ ${qrUrl}`;
                     : "text-gray-600 hover:text-gray-900"
                 }`}
               >
-                🏘️ توزيعات مناديب الأحياء
+                🏢 توزيعات الجهات المستفيدة
               </button>
             </div>
           </div>
+
         </div>
 
         {/* Global Search Input */}
@@ -558,15 +560,15 @@ ${qrUrl}`;
           </div>
         )}
 
-        {/* TAB 2: District Reps */}
+        {/* TAB 2: Beneficiary Organizations */}
         {activeTab === "representatives" && (
           <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-base font-bold text-amber-900 flex items-center gap-2">
-                <span>🏘️</span> توزيعات وقائمة مناديب الأحياء
+                <span>🏢</span> توزيعات وقائمة الجهات المستفيدة والشريكة
               </h2>
               <span className="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-bold">
-                عدد المناديب: {filteredRepresentatives.length}
+                عدد الجهات: {filteredRepresentatives.length}
               </span>
             </div>
 
@@ -575,8 +577,8 @@ ${qrUrl}`;
                 <thead className="bg-amber-50/80 text-amber-950 sticky top-0 border-b">
                   <tr>
                     <th className="p-3">#</th>
-                    <th className="p-3 font-bold">اسم المندوب كامل</th>
-                    <th className="p-3 font-bold">رقم الهوية / الإقامة</th>
+                    <th className="p-3 font-bold">اسم الجهة المستفيدة</th>
+                    <th className="p-3 font-bold">رقم الترخيص / السجل</th>
                     <th className="p-3 font-bold">رقم الهاتف</th>
                     <th className="p-3 font-bold">
                       <FilterableTableHeader
@@ -588,13 +590,13 @@ ${qrUrl}`;
                     </th>
                     <th className="p-3 font-bold">
                       <FilterableTableHeader
-                        title="الحي السكني"
+                        title="الحي / العنوان"
                         options={uniqueDistricts}
                         selectedValue={districtFilter}
                         onChange={setDistrictFilter}
                       />
                     </th>
-                    <th className="p-3 font-bold">النوع</th>
+                    <th className="p-3 font-bold">نوع الجهة</th>
                     <th className="p-3 font-bold">
                       <FilterableTableHeader
                         title="الحالة"
@@ -606,11 +608,12 @@ ${qrUrl}`;
                         onChange={setStatusFilter}
                       />
                     </th>
-                    <th className="p-3 font-bold text-center">عدد الأسر</th>
+                    <th className="p-3 font-bold text-center">عدد المستفيدين</th>
                     <th className="p-3 font-bold text-center">عدد الاستلام</th>
                     <th className="p-3 font-bold text-center">إجراءات</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {loading && (
                     <tr>
@@ -625,13 +628,13 @@ ${qrUrl}`;
                     return (
                       <tr key={r.id || idx} className="border-b hover:bg-gray-50 transition-colors">
                         <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
-                        <td className="p-3 font-extrabold text-gray-900">{r.full_name}</td>
-                        <td className="p-3 font-mono font-bold text-gray-700">{r.national_id || "—"}</td>
+                        <td className="p-3 font-extrabold text-gray-900">{r.organization_name || r.name || r.full_name}</td>
+                        <td className="p-3 font-mono font-bold text-gray-700">{r.license_number || r.commercial_registration || r.national_id || "—"}</td>
                         <td className="p-3 font-mono text-gray-600" dir="ltr">{r.phone}</td>
                         <td className="p-3 font-bold text-gray-700">{r.city || "مكة المكرمة"}</td>
-                        <td className="p-3 text-gray-700 font-bold">{r.district_name}</td>
+                        <td className="p-3 text-gray-700 font-bold">{r.district || r.district_name || "—"}</td>
                         <td className="p-3">
-                          <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">مواطن</span>
+                          <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">{r.organization_type || "جهة شريكة"}</span>
                         </td>
                         <td className="p-3">
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${!isSuspended ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
@@ -639,7 +642,7 @@ ${qrUrl}`;
                           </span>
                         </td>
                         <td className="p-3 text-center font-bold text-amber-900">
-                          <span className="bg-amber-100/80 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 mx-auto w-fit" title="عدد الأسر التابعة">
+                          <span className="bg-amber-100/80 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 mx-auto w-fit" title="عدد المستفيدين التابعين">
                             <Users className="w-3.5 h-3.5 text-amber-700" />
                             <span>{r.beneficiaries_count || 0}</span>
                           </span>
@@ -648,7 +651,7 @@ ${qrUrl}`;
                           <button
                             onClick={() => setScrimRecipient({ ...r, recipient_type: "representative" })}
                             className="bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 px-2.5 py-1 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 mx-auto transition-all cursor-pointer shadow-2xs"
-                            title="سجل استلامات المندوب"
+                            title="سجل استلامات الجهة"
                           >
                             <Package className="w-3.5 h-3.5 text-amber-700" />
                             <span>{r.distributions_count || 0}</span>
@@ -659,7 +662,7 @@ ${qrUrl}`;
                             <button
                               onClick={() => setViewRep(r)}
                               className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer"
-                              title="عرض البيانات والوثائق الشاملة"
+                              title="عرض بيانات الجهة المستفيدة والوثائق"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
@@ -669,17 +672,17 @@ ${qrUrl}`;
                                   onClick={() => {
                                     setEditRepModal(r);
                                     setEditRepForm({
-                                      full_name: r.full_name || "",
+                                      full_name: r.full_name || r.name || "",
                                       phone: r.phone || "",
-                                      national_id: r.national_id || "",
+                                      national_id: r.license_number || r.national_id || "",
                                       city: r.city || "مكة المكرمة",
-                                      district_name: r.district_name || "",
+                                      district_name: r.district || r.district_name || "",
                                       beneficiaries_count: r.beneficiaries_count || 0,
                                       status: r.status || "active",
                                     });
                                   }}
                                   className="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 cursor-pointer"
-                                  title="تعديل بيانات المندوب"
+                                  title="تعديل بيانات الجهة"
                                 >
                                   <Edit3 className="w-4 h-4" />
                                 </button>
@@ -693,7 +696,7 @@ ${qrUrl}`;
                                 <button
                                   onClick={() => handleDeleteRep(r)}
                                   className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer"
-                                  title="حذف المندوب"
+                                  title="حذف الجهة"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -702,6 +705,7 @@ ${qrUrl}`;
                           </div>
                         </td>
                       </tr>
+
                     );
                   })}
                 </tbody>
@@ -755,14 +759,14 @@ ${qrUrl}`;
           </div>
         )}
 
-        {/* ─── Rep Full Details & Documents Modal ─── */}
+        {/* ─── Rep / Organization Full Details & Documents Modal ─── */}
         {viewRep && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4" dir="rtl">
             <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-amber-100">
               <div className="flex justify-between items-center border-b pb-3">
                 <h3 className="font-extrabold text-amber-900 text-base flex items-center gap-2">
                   <Eye className="w-5 h-5 text-amber-600" />
-                  <span>البيانات الشاملة لمندوب الحي والوثائق المرفقة الأربعة</span>
+                  <span>البيانات الشاملة للجهة المستفيدة والوثائق الرسمية</span>
                 </h3>
                 <button onClick={() => setViewRep(null)} className="text-gray-500 hover:bg-gray-100 p-1 rounded-full cursor-pointer">
                   <X className="w-5 h-5" />
@@ -771,28 +775,28 @@ ${qrUrl}`;
 
               <div className="grid grid-cols-2 gap-4 text-xs mb-4">
                 <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
-                  <span className="text-gray-500 font-bold">اسم المندوب:</span>
-                  <p className="font-extrabold text-gray-900 mt-1">{viewRep.full_name}</p>
+                  <span className="text-gray-500 font-bold">اسم الجهة المستفيدة:</span>
+                  <p className="font-extrabold text-gray-900 mt-1">{viewRep.organization_name || viewRep.name || viewRep.full_name}</p>
                 </div>
                 <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
                   <span className="text-gray-500 font-bold">الحي والمدينة:</span>
-                  <p className="font-bold text-gray-800 mt-1">{viewRep.city || "مكة"} - {viewRep.district_name}</p>
+                  <p className="font-bold text-gray-800 mt-1">{viewRep.city || "مكة المكرمة"} - {viewRep.district || viewRep.district_name || "—"}</p>
                 </div>
               </div>
 
-              {/* Rep 4 Documents Section */}
+              {/* Rep / Organization Documents Section */}
               <div className="border-t pt-3 space-y-2">
-                <h4 className="font-extrabold text-xs text-amber-900">الوثائق الرسمية الأربعة المرفقة:</h4>
+                <h4 className="font-extrabold text-xs text-amber-900">الوثائق الرسمية المرفقة:</h4>
                 {!isDriver ? (
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
-                      <span>🪪 صورة هوية المندوب</span>
-                      {viewRep.id_document_image_url ? (
-                        <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.id_document_image_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
+                      <span>🪪 الترخيص / السجل التجاري</span>
+                      {viewRep.id_document_image_url || viewRep.license_document_url ? (
+                        <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.license_document_url || viewRep.id_document_image_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
                       ) : <span className="text-gray-400">غير مرفق</span>}
                     </div>
                     <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
-                      <span>📜 خطاب اعتماد العمدة</span>
+                      <span>📜 خطاب التفويض / الاعتماد</span>
                       {viewRep.support_letter_url ? (
                         <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.support_letter_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
                       ) : <span className="text-gray-400">غير مرفق</span>}
@@ -804,7 +808,7 @@ ${qrUrl}`;
                       ) : <span className="text-gray-400">غير مرفق</span>}
                     </div>
                     <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
-                      <span>📦 هويات الأسر (ZIP)</span>
+                      <span>📦 قوائم المستفيدين التابعين</span>
                       {viewRep.dependents_ids_zip_url ? (
                         <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.dependents_ids_zip_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">تنزيل</a>
                       ) : <span className="text-gray-400">غير مرفق</span>}
@@ -827,7 +831,7 @@ ${qrUrl}`;
               <div className="flex justify-between items-center border-b pb-3 mb-4">
                 <h3 className="font-extrabold text-amber-900 text-lg flex items-center gap-2">
                   <Send className="w-5 h-5 text-amber-600" />
-                  <span>🚀 تقديم وتوجيه دعم التوصيل المباشر لكبار السن وذوي الاحتياجات والمناديب</span>
+                  <span>🚀 تقديم وتوجيه دعم التوصيل المباشر لكبار السن وذوي الاحتياجات والجهات المستفيدة</span>
                 </h3>
                 <button onClick={() => setShowDispatchModal(false)} className="text-gray-500 hover:bg-gray-100 p-1 rounded-full cursor-pointer">
                   <X className="w-5 h-5" />
@@ -861,7 +865,7 @@ ${qrUrl}`;
               {dispatchStep === 0 && (
                 <div className="space-y-4 text-xs">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-gray-700">اختر قائمة المستفيدين أو المناديب لتوجيه التوصيل:</span>
+                    <span className="font-bold text-gray-700">اختر قائمة المستفيدين أو الجهات المستفيدة لتوجيه التوصيل:</span>
                     <div className="flex bg-gray-100 p-1 rounded-xl">
                       <button
                         type="button"
@@ -875,10 +879,11 @@ ${qrUrl}`;
                         onClick={() => setRecipientMode("representatives")}
                         className={`px-3 py-1 rounded-lg font-bold cursor-pointer ${recipientMode === "representatives" ? "bg-amber-600 text-white" : "text-gray-600"}`}
                       >
-                        🏘️ مناديب الأحياء ({representatives.length})
+                        🏢 الجهات المستفيدة ({representatives.length})
                       </button>
                     </div>
                   </div>
+
 
                   <input
                     value={dispatchSearchQ}
@@ -924,14 +929,14 @@ ${qrUrl}`;
                         <thead className="bg-amber-50 text-amber-900 border-b sticky top-0">
                           <tr>
                             <th className="p-2 w-8">#</th>
-                            <th className="p-2">اسم المندوب</th>
+                            <th className="p-2">اسم الجهة المستفيدة</th>
                             <th className="p-2">رقم الجوال</th>
-                            <th className="p-2">الحي السكني</th>
-                            <th className="p-2 text-center">عدد الأسر</th>
+                            <th className="p-2">الحي / العنوان</th>
+                            <th className="p-2 text-center">عدد المستفيدين</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {representatives.filter(r => !dispatchSearchQ || (r.full_name || "").includes(dispatchSearchQ)).map((r) => (
+                          {representatives.filter(r => !dispatchSearchQ || (r.organization_name || r.name || r.full_name || "").includes(dispatchSearchQ)).map((r) => (
                             <tr
                               key={r.id}
                               onClick={() => toggleSelectRepDispatch(r.id)}
@@ -940,10 +945,10 @@ ${qrUrl}`;
                               <td className="p-2">
                                 <input type="checkbox" checked={selectedReps.has(r.id)} readOnly className="rounded text-amber-600" />
                               </td>
-                              <td className="p-2 font-bold">{r.full_name}</td>
+                              <td className="p-2 font-bold">{r.organization_name || r.name || r.full_name}</td>
                               <td className="p-2 font-mono">{r.phone}</td>
-                              <td className="p-2">{r.city || "مكة"} - {r.district_name}</td>
-                              <td className="p-2 text-center font-bold text-amber-900">{r.beneficiaries_count || 0} أسرة</td>
+                              <td className="p-2">{r.city || "مكة المكرمة"} - {r.district || r.district_name || "—"}</td>
+                              <td className="p-2 text-center font-bold text-amber-900">{r.beneficiaries_count || 0} مستفيد</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1028,7 +1033,7 @@ ${qrUrl}`;
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-center">
                     <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200">
                       <div className="text-2xl font-extrabold text-amber-900">{activeDispatchCount}</div>
-                      <div className="text-[11px] text-gray-600 font-bold mt-1">عدد المستفيدين / المناديب المحددين</div>
+                      <div className="text-[11px] text-gray-600 font-bold mt-1">عدد المستفيدين / الجهات المحددة</div>
                     </div>
 
                     <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200">
@@ -1050,8 +1055,8 @@ ${qrUrl}`;
                     <ul className="space-y-1">
                       {(recipientMode === "beneficiaries" ? selectedBensList : selectedRepsList).map((item, idx) => (
                         <li key={item.id || idx} className="bg-white p-2 rounded-lg border flex justify-between items-center text-[11px]">
-                          <span className="font-bold text-gray-800">{idx + 1}. {item.full_name || item.name}</span>
-                          <span className="font-mono text-gray-600">📱 {item.phone || "—"} | 📍 {item.city || "مكة"} - {item.district || item.district_name || "—"}</span>
+                          <span className="font-bold text-gray-800">{idx + 1}. {item.organization_name || item.name || item.full_name}</span>
+                          <span className="font-mono text-gray-600">📱 {item.phone || "—"} | 📍 {item.city || "مكة المكرمة"} - {item.district || item.district_name || "—"}</span>
                         </li>
                       ))}
                     </ul>
@@ -1101,16 +1106,17 @@ ${qrUrl}`;
                     {((dispatchResult.distributions || dispatchResult.repDistributions) || []).map((dist, idx) => {
                       const recipient = recipientMode === "beneficiaries"
                         ? selectedBensList.find((b) => b.id === dist.beneficiary_id) || { full_name: "مستفيد " + (idx + 1) }
-                        : selectedRepsList.find((r) => r.id === dist.rep_id) || { full_name: "مندوب " + (idx + 1) };
+                        : selectedRepsList.find((r) => r.id === dist.rep_id) || { full_name: "جهة مستفيدة " + (idx + 1) };
                       const code = dist.barcode_code || dist.qr_code || "IKRAM-SUPPORT";
 
-                      const name = recipient?.full_name || recipient?.name || "المستفيد/المندوب";
-                      const natId = recipient?.national_id || "—";
+                      const name = recipient?.organization_name || recipient?.name || recipient?.full_name || "المستفيد/الجهة";
+                      const natId = recipient?.license_number || recipient?.national_id || "—";
                       const date = scheduledAt || new Date().toISOString().split("T")[0];
                       const loc = pickupLocation || "توصيل للمنزل عبر السائق";
                       const driverName = selectedDriverObj?.full_name || selectedDriverObj?.name || "سائق الجمعية المعتمد";
                       const driverPhone = selectedDriverObj?.phone || "غير متوفر";
                       const basketName = selectedBasketObj?.name || "سلة دعم مخصصة";
+
 
                       const textMsg = `مرحباً ${name}،
 تسر جمعية إكرام الجود إفادتكم بتأكيد موعد وتفاصيل التوصيل:

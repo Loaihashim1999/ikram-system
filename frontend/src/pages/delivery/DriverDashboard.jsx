@@ -106,7 +106,7 @@ export default function DriverDashboard() {
               <Truck className="w-7 h-7 text-amber-400" />
               <span>لوحة سائق التوصيل المباشر</span>
             </h1>
-            <p className="text-xs text-amber-200 mt-1">عرض المستفيدين والمناديب المسندين إليك فقط وتأكيد الاستلام عبر كود الـ QR</p>
+            <p className="text-xs text-amber-200 mt-1">عرض المستفيدين والجهات المستفيدة المسندة إليك فقط وتأكيد الاستلام عبر كود الـ QR</p>
           </div>
 
           {/* Driver Switcher Selector */}
@@ -147,9 +147,10 @@ export default function DriverDashboard() {
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            🏘️ قائمة مناديب الأحياء ({repDeliveries.length})
+            🏢 قائمة الجهات المستفيدة ({repDeliveries.length})
           </button>
         </div>
+
 
         {/* TAB 1: Beneficiary Deliveries */}
         {activeTab === "special_needs" && (
@@ -231,11 +232,11 @@ export default function DriverDashboard() {
           </div>
         )}
 
-        {/* TAB 2: Representative Deliveries */}
+        {/* TAB 2: Beneficiary Organizations Deliveries */}
         {activeTab === "representatives" && (
           <div className="space-y-4">
             {loading && (
-              <div className="bg-white p-8 rounded-2xl text-center text-gray-400">جاري تحميل توزيعات المناديب...</div>
+              <div className="bg-white p-8 rounded-2xl text-center text-gray-400">جاري تحميل توزيعات الجهات المستفيدة...</div>
             )}
 
             {!loading && repDeliveries.map((rd, idx) => {
@@ -247,17 +248,17 @@ export default function DriverDashboard() {
                   <div className="space-y-1.5 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full text-xs font-bold">
-                        مندوب حي
+                        جهة مستفيدة / شريكة
                       </span>
-                      <h3 className="text-base font-bold text-gray-800">{r.full_name || "مندوب الحي"}</h3>
+                      <h3 className="text-base font-bold text-gray-800">{r.organization_name || r.name || r.full_name || "الجهة المستفيدة"}</h3>
                     </div>
 
                     <div className="flex items-center gap-3 text-xs text-gray-600 font-bold">
                       <span className="flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5 text-amber-600" />
-                        {r.city || "مكة المكرمة"} - {r.district_name || "الفيصلية"}
+                        {r.city || "مكة المكرمة"} - {r.district || r.district_name || "—"}
                       </span>
-                      <span className="text-amber-800 font-bold">👥 الأسر التابعة: {r.beneficiaries_count || 0} أسرة</span>
+                      <span className="text-amber-800 font-bold">👥 المستفيدون التابعون: {r.beneficiaries_count || 0} مستفيد</span>
                     </div>
 
                     <div className="text-xs font-semibold text-amber-900 flex items-center gap-3">
@@ -296,11 +297,12 @@ export default function DriverDashboard() {
 
             {!loading && repDeliveries.length === 0 && (
               <div className="bg-white p-10 rounded-2xl text-center text-gray-400">
-                لا توجد طلبات توصيل مناديب مسندة لهذا السائق حالياً.
+                لا توجد طلبات توصيل جهات مستفيدة مسندة لهذا السائق حالياً.
               </div>
             )}
           </div>
         )}
+
       </div>
     </MainLayout>
   );

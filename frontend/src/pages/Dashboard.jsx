@@ -79,13 +79,14 @@ export default function Dashboard() {
       path: '/staff',
     },
     {
-      title: 'مناديب الأحياء',
-      description: 'إدارة مناديب الأحياء والتوثيق',
+      title: 'إدارة الجهات المستفيدة',
+      description: 'إدارة الجهات المستفيدة والشريكة والتوثيق',
       icon: MapPin,
       color: '#D89A2E',
       bgColor: '#FEF3D6',
       path: '/representatives',
     },
+
     {
       title: 'الإحصائيات',
       description: 'عرض تقارير وإحصائيات شاملة',
