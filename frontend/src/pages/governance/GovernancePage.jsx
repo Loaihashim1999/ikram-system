@@ -1,739 +1,1062 @@
 import { useState, useEffect, useMemo } from "react";
-import api from "../../api/axios";
-import MainLayout from "../../components/layout/MainLayout";
 import * as XLSX from "xlsx";
+import MainLayout from "../../components/layout/MainLayout";
+import Toast from "../../components/ui/Toast";
+import { getAnalytics } from "../../api/dailyBeneficiaries";
 import {
-  ShieldCheck, BarChart3, TrendingUp, Users, Package, FileSpreadsheet,
-  Download, Activity, Calendar, Search, Filter, CheckCircle2, Clock,
-  Building2, UserCheck, AlertTriangle, ArrowUpDown
+  ShieldCheck,
+  BarChart3,
+  TrendingUp,
+  Users,
+  Package,
+  FileSpreadsheet,
+  Download,
+  Calendar,
+  Filter,
+  CheckCircle2,
+  Clock,
+  Building2,
+  UserCheck,
+  AlertTriangle,
+  ArrowUpDown,
+  Printer,
+  Truck,
+  Briefcase,
+  MapPin,
+  Layers,
+  ChevronLeft,
+  Search,
 } from "lucide-react";
 
 export default function GovernancePage() {
-  const [stats, setStats] = useState(null);
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState("monthly"); // daily, weekly, monthly, all
-  const [activeView, setActiveView] = useState("overview"); // overview, audit
+  // Date Filtering State
+  const [periodType, setPeriodType] = useState("weekly"); // daily, weekly, monthly, yearly, custom
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(
+    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  );
+  const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // Audit log filters
-  const [auditSearch, setAuditSearch] = useState("");
-  const [auditTypeFilter, setAuditTypeFilter] = useState("all");
-  const [auditStartDate, setAuditStartDate] = useState("");
-  const [auditEndDate, setAuditEndDate] = useState("");
+  // Analytics Data & Loading
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Active View Tab in Governance Dashboard
+  // 'overview' | 'beneficiaries' | 'daily' | 'staff' | 'organizations' | 'neighborhoods' | 'inventory' | 'delivery'
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Search filter inside sub-tables
+  const [tableSearch, setTableSearch] = useState("");
+
+  // Toast
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        period_type: periodType,
+        date: periodType === "daily" ? selectedDate : undefined,
+        start_date: periodType === "weekly" || periodType === "custom" ? startDate : undefined,
+        end_date: periodType === "weekly" || periodType === "custom" ? endDate : undefined,
+        month: periodType === "monthly" ? selectedMonth : undefined,
+        year: periodType === "monthly" || periodType === "yearly" ? selectedYear : undefined,
+      };
+
+      const res = await getAnalytics(params);
+      if (res.data?.success) {
+        setAnalytics(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ show: true, message: "فشل في تحميل بيانات الحوكمة والتحليلات", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    loadGovernanceData();
-  }, []);
+    fetchAnalytics();
+  }, [periodType, selectedDate, startDate, endDate, selectedMonth, selectedYear]);
 
-  const loadGovernanceData = () => {
-    setLoading(true);
-    Promise.all([
-      api.get("/beneficiaries").catch(() => ({ data: { data: [] } })),
-      api.get("/distributions").catch(() => ({ data: { data: [] } })),
-      api.get("/neighborhood-reps").catch(() => ({ data: { data: [] } })),
-      api.get("/inventory").catch(() => ({ data: { data: [] } })),
-      api.get("/staff").catch(() => ({ data: { data: [] } })),
-      api.get("/audit").catch(() => ({ data: { data: {} } })),
-    ]).then(([bRes, dRes, rRes, iRes, sRes, aRes]) => {
-      const beneficiaries = Array.isArray(bRes.data?.data) ? bRes.data.data : bRes.data?.data?.data || [];
-      const distributions = Array.isArray(dRes.data?.data) ? dRes.data.data : dRes.data?.data?.data || [];
-      const reps = Array.isArray(rRes.data?.data) ? rRes.data.data : rRes.data?.data?.data || [];
-      const inventory = Array.isArray(iRes.data?.data) ? iRes.data.data : iRes.data?.data?.data || [];
-      const staff = Array.isArray(sRes.data?.data) ? sRes.data.data : sRes.data?.data?.data || [];
-      const auditData = aRes.data?.data || {};
-
-      // Synthesize comprehensive audit events from audit endpoint and recent actions
-      const logs = [];
-      if (Array.isArray(auditData.audit_logs) && auditData.audit_logs.length > 0) {
-        logs.push(...auditData.audit_logs);
-      }
-      if (Array.isArray(distributions)) {
-        distributions.slice(0, 25).forEach(d => {
-          logs.push({
-            id: `dist-${d.id}`,
-            user: d.driver_name || d.user_name || "مشرف التوزيع",
-            action_type: "توزيع سلة",
-            description: `توزيع سلة ${d.basket_type || "غذائية"} للمستفيد (${d.beneficiary_name || d.beneficiary_id || "مستفيد"})`,
-            date: d.created_at || d.delivery_date || new Date().toISOString(),
-            status: d.status === "delivered" ? "مكتمل" : "قيد التنفيذ",
-          });
-        });
-      }
-      if (Array.isArray(inventory)) {
-        inventory.slice(0, 10).forEach(inv => {
-          logs.push({
-            id: `inv-${inv.id}`,
-            user: "أمين المستودع",
-            action_type: "جرد مستودع",
-            description: `متابعة رصيد الصنف (${inv.name}) - الرصيد الحالي: ${inv.current_quantity ?? inv.stock_quantity ?? 0}`,
-            date: inv.updated_at || new Date().toISOString(),
-            status: "مكتمل",
-          });
-        });
-      }
-      if (Array.isArray(beneficiaries)) {
-        beneficiaries.slice(0, 15).forEach(b => {
-          logs.push({
-            id: `ben-${b.id}`,
-            user: "الباحث الاجتماعي",
-            action_type: "تحديث مستفيد",
-            description: `تسجيل / تحديث بيانات المستفيد (${b.full_name}) - أولوية: ${b.priority || "درجة أولى"}`,
-            date: b.created_at || new Date().toISOString(),
-            status: "مكتمل",
-          });
-        });
-      }
-
-      logs.sort((a, b) => new Date(b.date) - new Date(a.date));
-      setAuditLogs(logs);
-
-      setStats({
-        beneficiaries,
-        distributions,
-        reps,
-        inventory,
-        staff,
-      });
-    }).finally(() => setLoading(false));
-  };
-
-  // Filter metrics based on period (daily, weekly, monthly, all)
-  const metrics = useMemo(() => {
-    if (!stats) return null;
-    const now = new Date();
-    const isWithinPeriod = (dateStr) => {
-      if (!dateStr || period === "all") return true;
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return true;
-      const diffHours = (now - d) / (1000 * 60 * 60);
-      if (period === "daily") return diffHours <= 24;
-      if (period === "weekly") return diffHours <= 24 * 7;
-      if (period === "monthly") return diffHours <= 24 * 30;
-      return true;
-    };
-
-    const bList = stats.beneficiaries || [];
-    const dList = (stats.distributions || []).filter(d => isWithinPeriod(d.created_at || d.delivery_date));
-    const rList = stats.reps || [];
-    const iList = stats.inventory || [];
-
-    const firstClass = bList.filter(b => b.priority === 'first_class').length;
-    const secondClass = bList.filter(b => b.priority === 'second_class').length;
-    const specialNeeds = bList.filter(b => b.has_special_needs || b.priority === 'special_needs').length;
-    const elderly = bList.filter(b => b.priority === 'elderly' || (b.date_of_birth && now.getFullYear() - new Date(b.date_of_birth).getFullYear() >= 60)).length;
-    const employeeCat = bList.filter(b => b.priority === 'employee').length;
-
-    const totalDependents = bList.reduce((acc, b) => acc + (b.dependents?.length || b.family_members_count || 0), 0);
-    const deliveredCount = dList.filter(d => d.status === 'delivered').length;
-    const totalInventoryStock = iList.reduce((acc, i) => acc + (i.current_quantity || i.stock_quantity || 0), 0);
-
-    return {
-      beneficiariesCount: bList.length,
-      firstClass, secondClass, specialNeeds, elderly, employeeCat,
-      repsCount: rList.length,
-      staffCount: stats.staff?.length || 0,
-      totalDependents,
-      distributionsCount: dList.length,
-      deliveredCount,
-      totalInventoryStock,
-      inventory: iList,
-      reps: rList,
-      distributions: dList,
-    };
-  }, [stats, period]);
-
-  // Filtered Audit Logs
-  const filteredAuditLogs = useMemo(() => {
-    return auditLogs.filter(log => {
-      const q = auditSearch.toLowerCase();
-      const matchSearch = !q ||
-        (log.user || "").toLowerCase().includes(q) ||
-        (log.description || "").toLowerCase().includes(q) ||
-        (log.action_type || "").toLowerCase().includes(q);
-
-      const matchType = auditTypeFilter === "all" || log.action_type === auditTypeFilter;
-
-      let matchDate = true;
-      if (auditStartDate) {
-        matchDate = matchDate && new Date(log.date) >= new Date(auditStartDate);
-      }
-      if (auditEndDate) {
-        const end = new Date(auditEndDate);
-        end.setHours(23, 59, 59, 999);
-        matchDate = matchDate && new Date(log.date) <= end;
-      }
-
-      return matchSearch && matchType && matchDate;
-    });
-  }, [auditLogs, auditSearch, auditTypeFilter, auditStartDate, auditEndDate]);
-
-  // Export to Excel
+  // Handle Export to Excel
   const handleExportExcel = () => {
+    if (!analytics) return;
+
     const wb = XLSX.utils.book_new();
 
-    // Sheet 1: KPIs
+    // 1. Sheet: KPIs Summary
     const kpiData = [
-      { "المؤشر": "إجمالي المستفيدين", "القيمة": metrics?.beneficiariesCount || 0, "الفترة": period },
-      { "المؤشر": "السلال المسلمة", "القيمة": metrics?.deliveredCount || 0, "الفترة": period },
-      { "المؤشر": "إجمالي عمليات التوزيع", "القيمة": metrics?.distributionsCount || 0, "الفترة": period },
-      { "المؤشر": "الجهات المستفيدة النشطة", "القيمة": metrics?.repsCount || 0, "الفترة": period },
-      { "المؤشر": "إجمالي أفراد الأسر المعالة", "القيمة": metrics?.totalDependents || 0, "الفترة": period },
-      { "المؤشر": "رصيد مواد المستودع", "القيمة": metrics?.totalInventoryStock || 0, "الفترة": period },
+      { "المؤشر": "إجمالي المستفيدين المسجلين (عام + يومي)", "القيمة": analytics.kpis?.grand_total_beneficiaries || 0 },
+      { "المؤشر": "إجمالي المستفيدين الذين استلموا مساعدات", "القيمة": analytics.kpis?.grand_total_served || 0 },
+      { "المؤشر": "إجمالي السلال الموزعة بالكامل", "القيمة": analytics.kpis?.grand_total_baskets || 0 },
+      { "المؤشر": "المستفيدون العامون", "القيمة": analytics.beneficiaries?.total || 0 },
+      { "المؤشر": "المستفيدون العامون الذين استلموا", "القيمة": analytics.beneficiaries?.received_count || 0 },
+      { "المؤشر": "المستفيدون العامون الذين لم يستلموا", "القيمة": analytics.beneficiaries?.not_received_count || 0 },
+      { "المؤشر": "المستفيدون اليوميون", "القيمة": analytics.daily_beneficiaries?.total || 0 },
+      { "المؤشر": "المستفيدون اليوميون الذين استلموا", "القيمة": analytics.daily_beneficiaries?.received_count || 0 },
+      { "المؤشر": "عمليات الاستلام اليومي", "القيمة": analytics.daily_beneficiaries?.transactions_count || 0 },
+      { "المؤشر": "سلال المستفيدين اليوميين", "القيمة": analytics.daily_beneficiaries?.baskets_distributed || 0 },
+      { "المؤشر": "عدد الأسر المستفيدة", "القيمة": analytics.beneficiaries?.families_count || 0 },
+      { "المؤشر": "عدد الأفراد المستفيدين", "القيمة": analytics.beneficiaries?.individuals_count || 0 },
     ];
-    const wsKpis = XLSX.utils.json_to_sheet(kpiData);
-    XLSX.utils.book_append_sheet(wb, wsKpis, "مؤشرات_الحوكمة");
+    const wsKpi = XLSX.utils.json_to_sheet(kpiData);
+    wsKpi["!dir"] = "rtl";
+    XLSX.utils.book_append_sheet(wb, wsKpi, "المؤشرات الإجمالية");
 
-    // Sheet 2: Audit Logs
-    const auditData = filteredAuditLogs.map((log, idx) => ({
-      "#": idx + 1,
-      "المستخدم": log.user,
-      "نوع العملية": log.action_type,
-      "الوصف": log.description,
-      "التاريخ": new Date(log.date).toLocaleString('ar-SA'),
-      "الحالة": log.status,
-    }));
-    const wsAudit = XLSX.utils.json_to_sheet(auditData);
-    XLSX.utils.book_append_sheet(wb, wsAudit, "سجل_التدقيق");
+    // 2. Sheet: Neighborhoods
+    if (analytics.neighborhoods?.list?.length > 0) {
+      const nhRows = analytics.neighborhoods.list.map((nh, i) => ({
+        "#": i + 1,
+        "الحي السكني": nh.neighborhood,
+        "المستفيدون العامون": nh.general_beneficiaries,
+        "المستفيدون اليوميون": nh.daily_beneficiaries,
+        "إجمالي المستفيدين": nh.total_beneficiaries,
+        "الأسر المتعففة": nh.families_count,
+        "السلال الموزعة": nh.baskets_distributed,
+        "الجهات الشريكة": nh.organizations_count,
+      }));
+      const wsNh = XLSX.utils.json_to_sheet(nhRows);
+      wsNh["!dir"] = "rtl";
+      XLSX.utils.book_append_sheet(wb, wsNh, "تحليلات الأحياء");
+    }
 
-    XLSX.writeFile(wb, `تقرير_الحوكمة_جمعية_إكرام_${period}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    // 3. Sheet: Organizations
+    if (analytics.organizations?.list?.length > 0) {
+      const orgRows = analytics.organizations.list.map((org, i) => ({
+        "#": i + 1,
+        "اسم الجهة / المندوب": org.organization_name,
+        "الحي": org.neighborhood,
+        "الجوال": org.phone,
+        "المستفيدون التابعون": org.beneficiaries_count,
+        "الأسر التابعة": org.families_count,
+        "السلال المستلمة": org.baskets_received,
+      }));
+      const wsOrg = XLSX.utils.json_to_sheet(orgRows);
+      wsOrg["!dir"] = "rtl";
+      XLSX.utils.book_append_sheet(wb, wsOrg, "الجهات ومندوبو الأحياء");
+    }
+
+    // 4. Sheet: Drivers
+    if (analytics.delivery?.drivers?.length > 0) {
+      const drvRows = analytics.delivery.drivers.map((drv, i) => ({
+        "#": i + 1,
+        "اسم السائق": drv.name,
+        "الجوال": drv.phone,
+        "إجمالي التوصيلات": drv.total_deliveries,
+        "التوصيلات المكتملة": drv.completed_deliveries,
+        "المستفيدون المخدومون": drv.beneficiaries_served,
+        "نسبة النجاح": `${drv.success_rate}%`,
+      }));
+      const wsDrv = XLSX.utils.json_to_sheet(drvRows);
+      wsDrv["!dir"] = "rtl";
+      XLSX.utils.book_append_sheet(wb, wsDrv, "أداء التوصيل والسائقين");
+    }
+
+    XLSX.writeFile(wb, `تقرير_الحوكمة_والتحليلات_${analytics.period?.start_date}_${analytics.period?.end_date}.xlsx`);
+    setToast({ show: true, message: "تم تصدير ملف الإكسل الشامل بنجاح", type: "success" });
   };
 
+  // PDF Export URLs
+  const pdfComprehensiveUrl = useMemo(() => {
+    const params = new URLSearchParams({
+      period_type: periodType,
+      start_date: startDate,
+      end_date: endDate,
+      date: selectedDate,
+      month: selectedMonth,
+      year: selectedYear,
+    });
+    return `http://127.0.0.1:8000/api/reports/comprehensive/pdf?${params.toString()}`;
+  }, [periodType, startDate, endDate, selectedDate, selectedMonth, selectedYear]);
+
+  const pdfDailyUrl = useMemo(() => {
+    return `http://127.0.0.1:8000/api/reports/daily/pdf?date=${selectedDate}`;
+  }, [selectedDate]);
+
   return (
-    <MainLayout>
-    <div className="p-6 max-w-7xl mx-auto" dir="rtl">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <ShieldCheck className="w-7 h-7 text-primary-700" />
-            <span>لوحة الحوكمة ومؤشرات الأداء التشغيلي (Governance Dashboard)</span>
-          </h1>
-          <p className="text-xs text-gray-500 mt-1">
-            قياس أداء التوزيع، توزيع الفئات، ومؤشرات المخزون وسجل تدقيق العمليات (خالية تماماً من البيانات المالية)
-          </p>
+    <MainLayout title="الحوكمة والتحليلات الشاملة">
+      <div className="space-y-6">
+        {/* Top Control Bar: Date Range Selector & Export Actions */}
+        <div className="bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl p-5 shadow-sm space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="p-2.5 bg-[#3F6B3A]/10 text-[#3F6B3A] rounded-xl">
+                <ShieldCheck className="w-6 h-6" />
+              </span>
+              <div>
+                <h1 className="text-xl font-bold text-slate-800">منظومة الحوكمة والتحليلات الشاملة</h1>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  رصد أداء العمليات والتوزيع، المستفيدين العامين واليوميين، المخزون، واللوجستيات
+                </p>
+              </div>
+            </div>
+
+            {/* Export Reports Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleExportExcel}
+                className="flex items-center gap-2 px-3.5 py-2 bg-white border border-[#C9A24A]/40 text-[#8C6C26] hover:bg-[#F5EDDA] rounded-lg text-xs font-bold transition-colors shadow-xs"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-[#8C6C26]" />
+                تصدير إكسل (Excel)
+              </button>
+
+              <a
+                href={pdfDailyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 px-3.5 py-2 bg-white border border-[#3F6B3A]/40 text-[#3F6B3A] hover:bg-[#EBF4EA] rounded-lg text-xs font-bold transition-colors shadow-xs"
+              >
+                <Printer className="w-4 h-4 text-[#3F6B3A]" />
+                التقرير اليومي (PDF)
+              </a>
+
+              <a
+                href={pdfComprehensiveUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 px-4 py-2 bg-[#3F6B3A] hover:bg-[#345830] text-white rounded-lg text-xs font-bold shadow transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                التقرير الشامل (PDF)
+              </a>
+            </div>
+          </div>
+
+          {/* Date Range Controls */}
+          <div className="pt-3 border-t border-[#E5E2D9] flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-1.5 bg-white p-1 rounded-lg border border-[#E5E2D9] text-xs">
+              <button
+                onClick={() => setPeriodType("daily")}
+                className={`px-3 py-1.5 rounded-md font-bold transition-colors ${
+                  periodType === "daily" ? "bg-[#3F6B3A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                يومي
+              </button>
+              <button
+                onClick={() => setPeriodType("weekly")}
+                className={`px-3 py-1.5 rounded-md font-bold transition-colors ${
+                  periodType === "weekly" ? "bg-[#3F6B3A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                أسبوعي
+              </button>
+              <button
+                onClick={() => setPeriodType("monthly")}
+                className={`px-3 py-1.5 rounded-md font-bold transition-colors ${
+                  periodType === "monthly" ? "bg-[#3F6B3A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                شهري
+              </button>
+              <button
+                onClick={() => setPeriodType("yearly")}
+                className={`px-3 py-1.5 rounded-md font-bold transition-colors ${
+                  periodType === "yearly" ? "bg-[#3F6B3A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                سنوي
+              </button>
+              <button
+                onClick={() => setPeriodType("custom")}
+                className={`px-3 py-1.5 rounded-md font-bold transition-colors ${
+                  periodType === "custom" ? "bg-[#3F6B3A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                نطاق مخصص
+              </button>
+            </div>
+
+            {/* Dynamic Date Inputs based on periodType */}
+            <div className="flex items-center gap-2 text-xs">
+              {periodType === "daily" && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500">حدد اليوم:</span>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="px-3 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  />
+                </div>
+              )}
+
+              {(periodType === "weekly" || periodType === "custom") && (
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500">من:</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="px-2.5 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs"
+                  />
+                  <span className="text-slate-500">إلى:</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="px-2.5 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs"
+                  />
+                </div>
+              )}
+
+              {periodType === "monthly" && (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    className="px-3 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                      <option key={m} value={m}>شهر {m}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="px-3 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs"
+                  >
+                    {[2025, 2026, 2027].map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {periodType === "yearly" && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500">السنة المالية:</span>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="px-3 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs font-bold"
+                  >
+                    {[2025, 2026, 2027].map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <span className="hidden sm:inline-block px-3 py-1.5 bg-[#F5EDDA] text-[#8C6C26] rounded-lg font-bold">
+                {analytics?.period?.label || "الفترة النشطة"}
+              </span>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Export Excel */}
+        {/* Dashboard Navigation Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-[#E5E2D9] text-xs font-bold">
           <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm transition-all cursor-pointer"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>تصدير Excel (XLSX)</span>
-          </button>
-
-          {/* Export PDF */}
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 bg-amber-700 hover:bg-amber-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm transition-all cursor-pointer"
-          >
-            <Download className="w-4 h-4" />
-            <span>طباعة وتصدير (PDF)</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Control Bar: Periodic Indicator Selector & View Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 bg-white p-4 rounded-2xl border border-border-light shadow-sm">
-        {/* Period Selector */}
-        <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl">
-          <button
-            onClick={() => setPeriod("daily")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              period === "daily" ? "bg-primary-700 text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            📅 يومي
-          </button>
-          <button
-            onClick={() => setPeriod("weekly")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              period === "weekly" ? "bg-primary-700 text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            📊 أسبوعي
-          </button>
-          <button
-            onClick={() => setPeriod("monthly")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              period === "monthly" ? "bg-primary-700 text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            📈 شهري
-          </button>
-          <button
-            onClick={() => setPeriod("all")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              period === "all" ? "bg-primary-700 text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            🌟 الكل
-          </button>
-        </div>
-
-        {/* View Tabs */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveView("overview")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeView === "overview"
-                ? "bg-primary-50 text-primary-800 border border-primary-300"
-                : "text-gray-600 hover:bg-gray-50 border border-transparent"
+            onClick={() => setActiveTab("overview")}
+            className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
+              activeTab === "overview"
+                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
             <BarChart3 className="w-4 h-4" />
-            <span>مؤشرات الأداء والرسوم البيانية</span>
+            نظرة عامة والمؤشرات
           </button>
+
           <button
-            onClick={() => setActiveView("audit")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeView === "audit"
-                ? "bg-primary-50 text-primary-800 border border-primary-300"
-                : "text-gray-600 hover:bg-gray-50 border border-transparent"
+            onClick={() => setActiveTab("beneficiaries")}
+            className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
+              activeTab === "beneficiaries"
+                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
-            <Activity className="w-4 h-4" />
-            <span>سجل تدقيق الأنشطة والعمليات ({filteredAuditLogs.length})</span>
+            <Users className="w-4 h-4" />
+            تحليلات المستفيدين العامين
+          </button>
+
+          <button
+            onClick={() => setActiveTab("daily")}
+            className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
+              activeTab === "daily"
+                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                : "border-transparent text-slate-600 hover:text-slate-800"
+            }`}
+          >
+            <UserCheck className="w-4 h-4" />
+            تحليلات المستفيدين اليوميين
+          </button>
+
+          <button
+            onClick={() => setActiveTab("inventory")}
+            className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
+              activeTab === "inventory"
+                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                : "border-transparent text-slate-600 hover:text-slate-800"
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            مقارنة المخزون والصلاحيات
+          </button>
+
+          <button
+            onClick={() => setActiveTab("neighborhoods")}
+            className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
+              activeTab === "neighborhoods"
+                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                : "border-transparent text-slate-600 hover:text-slate-800"
+            }`}
+          >
+            <MapPin className="w-4 h-4" />
+            مصفوفة الأحياء السكنية
+          </button>
+
+          <button
+            onClick={() => setActiveTab("organizations")}
+            className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
+              activeTab === "organizations"
+                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                : "border-transparent text-slate-600 hover:text-slate-800"
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            الجهات والمنظمات
+          </button>
+
+          <button
+            onClick={() => setActiveTab("delivery")}
+            className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
+              activeTab === "delivery"
+                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                : "border-transparent text-slate-600 hover:text-slate-800"
+            }`}
+          >
+            <Truck className="w-4 h-4" />
+            التوصيل واللوجستيات
+          </button>
+
+          <button
+            onClick={() => setActiveTab("staff")}
+            className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
+              activeTab === "staff"
+                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                : "border-transparent text-slate-600 hover:text-slate-800"
+            }`}
+          >
+            <Briefcase className="w-4 h-4" />
+            دعم الموظفين
           </button>
         </div>
-      </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard
-          title="إجمالي المستفيدين المسجلين"
-          value={metrics?.beneficiariesCount || 0}
-          sub="مواطنون ومقيمون"
-          color="border-amber-500 text-amber-900"
-        />
-        <KpiCard
-          title="إجمالي السلال المسلمة"
-          value={metrics?.deliveredCount || 0}
-          sub={`من أصل ${metrics?.distributionsCount || 0} عملية في الفترة`}
-          color="border-primary-600 text-primary-900"
-        />
-        <KpiCard
-          title="الجهات المستفيدة المسجلة"
-          value={metrics?.repsCount || 0}
-          sub="جمعيات شريكة ومساجد ومراكز"
-          color="border-purple-500 text-purple-900"
-        />
-        <KpiCard
-          title="إجمالي أفراد المعالين"
-          value={metrics?.totalDependents || 0}
-          sub="أفراد مخدومون بالأسر"
-          color="border-blue-500 text-blue-900"
-        />
-      </div>
-
-      {/* Main Content: Overview vs Activity Audit Log */}
-      {activeView === "overview" ? (
-        <>
-          {/* Charts Section */}
-          <div className="grid lg:grid-cols-2 gap-6 mb-6">
-            {/* 1. Bar Chart - الفئات الاستحقاقية */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="font-bold text-sm text-gray-800 mb-4 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-primary-700" />
-                <span>1. توزيع المستفيدين حسب الفئات الاستحقاقية</span>
-              </h3>
-              <div className="space-y-3 text-xs pt-2">
-                <BarItem label="🥇 درجة أولى (الأشد حاجة)" count={metrics?.firstClass || 0} total={metrics?.beneficiariesCount} color="bg-primary-700" />
-                <BarItem label="🥈 درجة ثانية (الدخل المتوسط)" count={metrics?.secondClass || 0} total={metrics?.beneficiariesCount} color="bg-primary-500" />
-                <BarItem label="♿ ذوو الاحتياجات الخاصة" count={metrics?.specialNeeds || 0} total={metrics?.beneficiariesCount} color="bg-purple-600" />
-                <BarItem label="👵 كبار السن (60+ سنة)" count={metrics?.elderly || 0} total={metrics?.beneficiariesCount} color="bg-green-600" />
-                <BarItem label="💼 موظفو الجمعية" count={metrics?.employeeCat || 0} total={metrics?.beneficiariesCount} color="bg-blue-600" />
-              </div>
-            </div>
-
-            {/* 2. الرسم الخطي (Line Chart) - نمو التوزيع والتسليم في الفترة */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="font-bold text-sm text-gray-800 mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-                <span>2. نمو التوزيع والتسليم ({period === "daily" ? "اليومي" : period === "weekly" ? "الأسبوعي" : "الشهري"})</span>
-              </h3>
-              <SmoothLineChart distributions={metrics?.distributions || []} />
-            </div>
-
-            {/* 3. Time Series Chart - حركة مواد ومخزون المستودع */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="font-bold text-sm text-gray-800 mb-4 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-purple-600" />
-                <span>3. رصيد ومواد المستودع الرئيسية</span>
-              </h3>
-              <div className="space-y-3 text-xs">
-                {metrics?.inventory?.slice(0, 5).map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <span className="font-bold text-gray-800">{item.name}</span>
-                    <div className="flex items-center gap-4 font-mono">
-                      <span className="text-green-700 font-bold">المتاح: {item.current_quantity ?? item.stock_quantity ?? 0}</span>
-                      <span className="text-gray-400">|</span>
-                      <span className="text-amber-700">الحد الأدنى: {item.min_threshold ?? item.low_stock_threshold ?? 5}</span>
+        {loading ? (
+          <div className="py-20 text-center text-slate-400">
+            <div className="w-10 h-10 border-4 border-[#3F6B3A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            جاري تجميع وحساب المؤشرات الإحصائية المعتمدة...
+          </div>
+        ) : !analytics ? (
+          <div className="py-20 text-center text-slate-400">لا تتوفر بيانات للفترة المحددة.</div>
+        ) : (
+          <>
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {/* VIEW 1: OVERVIEW TAB                                              */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === "overview" && (
+              <div className="space-y-6">
+                {/* Grand Summary KPIs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white border border-[#E5E2D9] rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 font-semibold">إجمالي المستفيدين المسجلين</span>
+                      <span className="p-2 bg-[#3F6B3A]/10 text-[#3F6B3A] rounded-lg">
+                        <Users className="w-5 h-5" />
+                      </span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-800 mt-2">
+                      {analytics.kpis?.grand_total_beneficiaries || 0}
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1 flex justify-between">
+                      <span>عام: {analytics.beneficiaries?.total || 0}</span>
+                      <span>يومي: {analytics.daily_beneficiaries?.total || 0}</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            {/* 4. Scatter Plot - انتشار الجهات المستفيدة */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="font-bold text-sm text-gray-800 mb-4 flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-blue-600" />
-                <span>4. انتشار أعداد الأسر المستفيدة حسب النطاق الجغرافي</span>
-              </h3>
-              <div className="h-44 border border-dashed border-gray-200 rounded-xl relative p-4 flex items-center justify-around">
-                {metrics?.reps?.slice(0, 6).map((r, i) => (
-                  <div key={i} className="flex flex-col items-center gap-1">
-                    <div className="w-9 h-9 rounded-full bg-primary-700 text-white font-bold text-xs flex items-center justify-center shadow-md">
-                      {r.beneficiaries_count || r.linked_beneficiaries_count || 0}
+                  <div className="bg-white border border-[#E5E2D9] rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 font-semibold">المستفيدون المستلمون في الفترة</span>
+                      <span className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </span>
                     </div>
-                    <span className="text-[10px] font-bold text-gray-600">{r.district_name || r.city || "نطاق"}</span>
+                    <div className="text-2xl font-bold text-blue-700 mt-2">
+                      {analytics.kpis?.grand_total_served || 0}
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1 flex justify-between">
+                      <span>عام: {analytics.beneficiaries?.received_count || 0}</span>
+                      <span>يومي: {analytics.daily_beneficiaries?.received_count || 0}</span>
+                    </div>
                   </div>
-                ))}
-                {(!metrics?.reps || metrics.reps.length === 0) && (
-                  <p className="text-gray-400 text-xs">لا توجد جهات مستفيدة لعرض انتشار الأسر.</p>
-                )}
-              </div>
-            </div>
-          </div>
 
-          {/* Detailed Reps Table */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="font-bold text-sm text-gray-800 mb-3 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-primary-700" />
-              <span>مؤشرات الجهات المستفيدة والمؤسسات الشريكة</span>
-            </h3>
-            <div className="overflow-x-auto border border-gray-200 rounded-xl text-xs">
-              <table className="w-full text-right">
-                <thead className="bg-primary-50 text-primary-900 border-b">
-                  <tr>
-                    <th className="p-3">#</th>
-                    <th className="p-3 font-bold">اسم الجهة المستفيدة</th>
-                    <th className="p-3 font-bold">نوع الجهة</th>
-                    <th className="p-3 font-bold">النطاق والحي</th>
-                    <th className="p-3 font-bold">الأسر التابعة</th>
-                    <th className="p-3 font-bold">حالة التوثيق</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {metrics?.reps?.map((r, idx) => (
-                    <tr key={r.id || idx} className="border-b hover:bg-gray-50">
-                      <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
-                      <td className="p-3 font-bold text-gray-800">{r.organization_name || r.full_name}</td>
-                      <td className="p-3">
-                        <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full text-[11px] font-bold">
-                          {r.organization_type || "جهة خيرية"}
-                        </span>
-                      </td>
-                      <td className="p-3 text-primary-900 font-bold">{r.district_name || "عام"}</td>
-                      <td className="p-3 font-bold text-green-700">{r.beneficiaries_count || r.linked_beneficiaries_count || 0} أسرة</td>
-                      <td className="p-3">
-                        <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-bold text-[11px] inline-flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-green-600" />
-                          <span>معتمد رسمياً</span>
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      ) : (
-        /* Activity Audit Log Tab */
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
-            <div>
-              <h3 className="font-bold text-base text-gray-800 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-primary-700" />
-                <span>سجل تدقيق الأنشطة والعمليات التشغيلية (Activity Audit Log)</span>
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">
-                سجل إلكتروني رقابي يوثق كافة التحركات، التوزيعات، والتعديلات على النظام
-              </p>
-            </div>
+                  <div className="bg-white border border-[#E5E2D9] rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 font-semibold">إجمالي السلال الموزعة</span>
+                      <span className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                        <Package className="w-5 h-5" />
+                      </span>
+                    </div>
+                    <div className="text-2xl font-bold text-amber-700 mt-2">
+                      {analytics.kpis?.grand_total_baskets || 0}
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1 flex justify-between">
+                      <span>توزيع عام: {analytics.beneficiaries?.baskets_distributed || 0}</span>
+                      <span>يومي: {analytics.daily_beneficiaries?.baskets_distributed || 0}</span>
+                    </div>
+                  </div>
 
-            <button
-              onClick={handleExportExcel}
-              className="bg-primary-50 text-primary-800 border border-primary-300 hover:bg-primary-100 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>تصدير السجل إلى Excel</span>
-            </button>
-          </div>
+                  <div className="bg-white border border-[#E5E2D9] rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 font-semibold">عمليات الاستلام اليومي</span>
+                      <span className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                        <TrendingUp className="w-5 h-5" />
+                      </span>
+                    </div>
+                    <div className="text-2xl font-bold text-emerald-800 mt-2">
+                      {analytics.daily_beneficiaries?.transactions_count || 0}
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1">
+                      سند استلام فوري موثق
+                    </div>
+                  </div>
+                </div>
 
-          {/* Audit Log Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-surface-subtle p-3 rounded-xl border border-border-light">
-            <div>
-              <label className="block text-[11px] font-bold text-gray-600 mb-1">بحث بالنص أو المستخدم</label>
-              <div className="relative">
-                <input
-                  value={auditSearch}
-                  onChange={(e) => setAuditSearch(e.target.value)}
-                  placeholder="ابحث..."
-                  className="w-full rounded-lg border border-gray-300 p-2 text-xs text-right pr-8 bg-white"
-                />
-                <Search className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-2.5" />
-              </div>
-            </div>
+                {/* Two Column Grid: Categories Breakdown & Neighborhood Highlights */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Categories Breakdown */}
+                  <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm p-5 space-y-4">
+                    <h3 className="font-bold text-slate-800 text-sm flex items-center justify-between pb-3 border-b">
+                      <span className="flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-[#3F6B3A]" />
+                        توزيع المستفيدين العامين حسب الفئات
+                      </span>
+                      <span className="text-xs text-slate-400">إجمالي الفئات</span>
+                    </h3>
 
-            <div>
-              <label className="block text-[11px] font-bold text-gray-600 mb-1">نوع العملية</label>
-              <select
-                value={auditTypeFilter}
-                onChange={(e) => setAuditTypeFilter(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 p-2 text-xs bg-white text-gray-700 font-bold"
-              >
-                <option value="all">كل أنواع العمليات</option>
-                <option value="توزيع سلة">توزيع سلة</option>
-                <option value="جرد مستودع">جرد مستودع</option>
-                <option value="تحديث مستفيد">تحديث مستفيد</option>
-                <option value="تسجيل دخول">تسجيل دخول</option>
-                <option value="توجيه دعم">توجيه دعم</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-gray-600 mb-1">من تاريخ</label>
-              <input
-                type="date"
-                value={auditStartDate}
-                onChange={(e) => setAuditStartDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 p-2 text-xs bg-white font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-gray-600 mb-1">إلى تاريخ</label>
-              <input
-                type="date"
-                value={auditEndDate}
-                onChange={(e) => setAuditEndDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 p-2 text-xs bg-white font-mono"
-              />
-            </div>
-          </div>
-
-          {/* Audit Logs Table */}
-          <div className="overflow-x-auto border border-gray-200 rounded-xl text-xs">
-            <table className="w-full text-right">
-              <thead className="bg-primary-50 text-primary-900 border-b">
-                <tr>
-                  <th className="p-3">#</th>
-                  <th className="p-3 font-bold">المستخدم المنفذ</th>
-                  <th className="p-3 font-bold">نوع العملية</th>
-                  <th className="p-3 font-bold">التاريخ والوقت</th>
-                  <th className="p-3 font-bold">تفاصيل العملية</th>
-                  <th className="p-3 font-bold text-center">الحالة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAuditLogs.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-8 text-center text-gray-400">
-                      لا توجد سجلات تطابق معايير البحث والفلترة
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAuditLogs.map((log, idx) => (
-                    <tr key={log.id || idx} className="border-b hover:bg-primary-50/20 transition-colors">
-                      <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
-                      <td className="p-3 font-bold text-gray-800">
-                        <div className="flex items-center gap-1.5">
-                          <UserCheck className="w-3.5 h-3.5 text-primary-600" />
-                          <span>{log.user}</span>
+                    <div className="space-y-3">
+                      {analytics.beneficiaries?.categories?.map((cat) => (
+                        <div key={cat.id} className="space-y-1 text-xs">
+                          <div className="flex justify-between font-semibold">
+                            <span className="text-slate-700">{cat.name}</span>
+                            <span className="text-slate-500">
+                              {cat.total_beneficiaries} مستفيد (استلم منهم:{" "}
+                              <strong className="text-[#3F6B3A]">{cat.received_count}</strong>)
+                            </span>
+                          </div>
+                          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-[#3F6B3A] rounded-full transition-all"
+                              style={{
+                                width: `${
+                                  cat.total_beneficiaries > 0
+                                    ? Math.min(100, Math.round((cat.received_count / cat.total_beneficiaries) * 100))
+                                    : 0
+                                }%`,
+                              }}
+                            />
+                          </div>
                         </div>
-                      </td>
-                      <td className="p-3">
-                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                          log.action_type === 'توزيع سلة' ? 'bg-green-100 text-green-800' :
-                          log.action_type === 'جرد مستودع' ? 'bg-purple-100 text-purple-800' :
-                          log.action_type === 'تحديث مستفيد' ? 'bg-blue-100 text-blue-800' :
-                          'bg-amber-100 text-amber-900'
-                        }`}>
-                          {log.action_type}
-                        </span>
-                      </td>
-                      <td className="p-3 font-mono text-gray-600 text-[11px]" dir="ltr">
-                        {new Date(log.date).toLocaleString('ar-SA')}
-                      </td>
-                      <td className="p-3 text-gray-700 font-medium">{log.description}</td>
-                      <td className="p-3 text-center">
-                        <span className="bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-md font-bold text-[10px]">
-                          {log.status || "مكتمل"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-    </MainLayout>
-  );
-}
-
-function KpiCard({ title, value, sub, color }) {
-  return (
-    <div className={`bg-white rounded-2xl border-t-4 p-5 shadow-sm border-gray-100 ${color}`}>
-      <div className="text-xs font-semibold text-gray-500">{title}</div>
-      <div className="text-2xl font-black mt-2">{value}</div>
-      <div className="text-[11px] text-gray-400 mt-1">{sub}</div>
-    </div>
-  );
-}
-
-function BarItem({ label, count, total = 1, color }) {
-  const pct = Math.round((count / (total || 1)) * 100);
-  return (
-    <div>
-      <div className="flex justify-between font-bold mb-1">
-        <span className="text-gray-700">{label}</span>
-        <span className="text-amber-900">{count} مستفيد ({pct}%)</span>
-      </div>
-      <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
-        <div style={{ width: `${Math.min(100, pct)}%` }} className={`h-full ${color}`}></div>
-      </div>
-    </div>
-  );
-}
-
-function SmoothLineChart({ distributions = [] }) {
-  const monthsNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-  
-  const currentMonthIdx = new Date().getMonth();
-  const last6Months = [];
-  for (let i = 5; i >= 0; i--) {
-    const mIdx = (currentMonthIdx - i + 12) % 12;
-    last6Months.push({
-      name: monthsNames[mIdx],
-      monthNum: mIdx,
-      count: 0
-    });
-  }
-
-  if (Array.isArray(distributions) && distributions.length > 0) {
-    distributions.forEach((d) => {
-      const dateStr = d.created_at || d.delivery_date || d.date;
-      if (dateStr) {
-        const dMonth = new Date(dateStr).getMonth();
-        const found = last6Months.find((m) => m.monthNum === dMonth);
-        if (found) found.count += 1;
-      }
-    });
-  }
-
-  const totalCount = last6Months.reduce((acc, m) => acc + m.count, 0);
-
-  const dataPoints = last6Months.map((m) => {
-    return { name: m.name, val: m.count };
-  });
-
-  const maxVal = Math.max(...dataPoints.map((d) => d.val), 10);
-  const chartHeight = 130;
-  const chartWidth = 400;
-
-  const points = dataPoints.map((dp, i) => {
-    const x = (i / (dataPoints.length - 1)) * (chartWidth - 40) + 20;
-    const y = chartHeight - (dp.val / maxVal) * (chartHeight - 30) - 15;
-    return { x, y, name: dp.name, val: dp.val };
-  });
-
-  const pathD = points.reduce((acc, point, i, a) => {
-    if (i === 0) return `M ${point.x},${point.y}`;
-    const prev = a[i - 1];
-    const cx = (prev.x + point.x) / 2;
-    return `${acc} C ${cx},${prev.y} ${cx},${point.y} ${point.x},${point.y}`;
-  }, "");
-
-  const areaD = `${pathD} L ${points[points.length - 1].x},${chartHeight} L ${points[0].x},${chartHeight} Z`;
-
-  return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-3 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-gradient-to-r from-amber-500 to-green-500 inline-block"></span>
-          <span className="font-bold text-gray-700">معدل التوزيع والتسليم الشهري</span>
-        </div>
-        <span className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 text-[11px] ${totalCount > 0 ? 'text-green-700 bg-green-50' : 'text-gray-500 bg-gray-100'}`}>
-          <TrendingUp className="w-3.5 h-3.5" />
-          <span>{totalCount > 0 ? '+24.5% نمو شهري' : '0% نمو (لا توجد بيانات)'}</span>
-        </span>
-      </div>
-
-      {totalCount === 0 ? (
-        <div className="h-44 bg-gradient-to-b from-gray-50/50 to-white rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center p-6">
-          <TrendingUp className="w-10 h-10 text-gray-300 mb-2" />
-          <p className="text-sm font-bold text-gray-700">لا توجد بيانات توزيعات مسجلة حتى الآن</p>
-          <p className="text-xs text-gray-400 mt-1">سيتم رسم المنحنى الخطي تلقائياً عند إضافة وتسليم أول سلة غذائية في النظام</p>
-        </div>
-      ) : (
-        <div className="relative w-full bg-gradient-to-b from-gray-50/50 to-white rounded-xl p-3 border border-gray-100 flex flex-col justify-between">
-          <div className="relative w-full h-32">
-            <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full overflow-visible">
-              <defs>
-                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#C9A24A" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#C9A24A" stopOpacity="0.0" />
-                </linearGradient>
-                <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#D89A2E" />
-                  <stop offset="50%" stopColor="#C9A24A" />
-                  <stop offset="100%" stopColor="#7C8D42" />
-                </linearGradient>
-              </defs>
-
-              {[0.25, 0.5, 0.75].map((ratio, idx) => (
-                <line
-                  key={idx}
-                  x1="0"
-                  y1={chartHeight * ratio}
-                  x2={chartWidth}
-                  y2={chartHeight * ratio}
-                  stroke="#F0EFEA"
-                  strokeDasharray="4 4"
-                  strokeWidth="1"
-                />
-              ))}
-
-              <path d={areaD} fill="url(#areaGradient)" />
-              <path d={pathD} fill="none" stroke="url(#lineGradient)" strokeWidth="3.5" strokeLinecap="round" />
-
-              {points.map((p, idx) => (
-                <g key={idx} className="group cursor-pointer">
-                  <circle
-                    cx={p.x}
-                    cy={p.y}
-                    r="5"
-                    fill="#ffffff"
-                    stroke="#7C8D42"
-                    strokeWidth="3"
-                    className="transition-all duration-200 group-hover:r-7 group-hover:fill-[#C9A24A]"
-                  />
-                  <foreignObject x={p.x - 30} y={p.y - 34} width="60" height="26" className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    <div className="bg-gray-900 text-white text-[10px] font-bold py-0.5 px-1.5 rounded shadow text-center">
-                      {p.val} سلة
+                      ))}
                     </div>
-                  </foreignObject>
-                </g>
-              ))}
-            </svg>
-          </div>
+                  </div>
 
-          <div className="flex justify-between items-center text-[11px] font-bold text-gray-500 px-2 pt-2 border-t border-gray-100">
-            {dataPoints.map((dp, idx) => (
-              <span key={idx} className="hover:text-amber-700 transition-colors">
-                {dp.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+                  {/* Daily Beneficiaries Baskets Breakdown */}
+                  <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm p-5 space-y-4">
+                    <h3 className="font-bold text-slate-800 text-sm flex items-center justify-between pb-3 border-b">
+                      <span className="flex items-center gap-2">
+                        <Package className="w-4 h-4 text-[#C9A24A]" />
+                        سلال المستفيدين اليوميين المصروفة في الفترة
+                      </span>
+                      <span className="text-xs text-slate-400">حسب نوع السلة</span>
+                    </h3>
+
+                    <div className="space-y-3">
+                      {analytics.daily_beneficiaries?.by_basket_type?.length === 0 ? (
+                        <p className="text-center py-8 text-xs text-slate-400">
+                          لا توجد سلال يومية مصروفة خلال هذه الفترة.
+                        </p>
+                      ) : (
+                        analytics.daily_beneficiaries?.by_basket_type?.map((b) => (
+                          <div key={b.basket_type_name} className="p-3 bg-slate-50 rounded-lg flex items-center justify-between text-xs">
+                            <div>
+                              <strong className="text-slate-800 block">{b.basket_type_name}</strong>
+                              <span className="text-[11px] text-slate-400 mt-0.5 block">
+                                عدد مرات التسليم: {b.transactions_count}
+                              </span>
+                            </div>
+                            <span className="px-3 py-1 bg-[#EBF4EA] text-[#2E5A27] rounded-full font-bold text-xs">
+                              {b.total_quantity} سلة
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expiry Tracking Alert Bar */}
+                {analytics.inventory?.expiry_alerts?.expired_count > 0 || analytics.inventory?.expiry_alerts?.in_7_days_count > 0 ? (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-xs space-y-1">
+                      <strong className="text-amber-800 font-bold block">
+                        تنبيهات سلامة وجودة المخزون الغذائي:
+                      </strong>
+                      <p className="text-slate-700">
+                        يوجد <strong>{analytics.inventory.expiry_alerts.expired_count}</strong> أصناف منتهية الصلاحية بمستودع اليوميين، و{" "}
+                        <strong>{analytics.inventory.expiry_alerts.in_7_days_count}</strong> أصناف تنتهي صلاحيتها خلال الـ 7 أيام القادمة. يرجى مراجعة تبويب "مقارنة المخزون والصلاحيات".
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {/* VIEW 2: BENEFICIARIES TAB                                         */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === "beneficiaries" && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <div className="bg-white border p-4 rounded-xl shadow-sm text-center">
+                    <span className="text-xs text-slate-500 block">إجمالي المستفيدين المسجلين</span>
+                    <strong className="text-2xl font-bold text-slate-800">{analytics.beneficiaries?.total || 0}</strong>
+                  </div>
+                  <div className="bg-white border p-4 rounded-xl shadow-sm text-center">
+                    <span className="text-xs text-slate-500 block">استلموا مساعدات في الفترة</span>
+                    <strong className="text-2xl font-bold text-emerald-700">{analytics.beneficiaries?.received_count || 0}</strong>
+                  </div>
+                  <div className="bg-white border p-4 rounded-xl shadow-sm text-center">
+                    <span className="text-xs text-slate-500 block">لم يستلموا في الفترة</span>
+                    <strong className="text-2xl font-bold text-amber-700">{analytics.beneficiaries?.not_received_count || 0}</strong>
+                  </div>
+                  <div className="bg-white border p-4 rounded-xl shadow-sm text-center">
+                    <span className="text-xs text-slate-500 block">عدد الأسر المتعففة</span>
+                    <strong className="text-2xl font-bold text-blue-700">{analytics.beneficiaries?.families_count || 0}</strong>
+                  </div>
+                </div>
+
+                <div className="bg-white border rounded-xl shadow-sm p-5 space-y-4">
+                  <h3 className="font-bold text-slate-800 text-sm pb-2 border-b">
+                    توزيع المستفيدين العامين ونسب الاستلام حسب الفئات
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-700 font-bold border-b">
+                          <th className="py-2.5 px-3">الفئة المستهدفة</th>
+                          <th className="py-2.5 px-3 text-center">إجمالي المسجلين</th>
+                          <th className="py-2.5 px-3 text-center">الذين استلموا</th>
+                          <th className="py-2.5 px-3 text-center">الذين لم يستلموا</th>
+                          <th className="py-2.5 px-3 text-center">نسبة التغطية</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {analytics.beneficiaries?.categories?.map((cat) => {
+                          const coverage = cat.total_beneficiaries > 0 ? Math.round((cat.received_count / cat.total_beneficiaries) * 100) : 0;
+                          return (
+                            <tr key={cat.id} className="hover:bg-slate-50">
+                              <td className="py-2.5 px-3 font-bold text-slate-800">{cat.name}</td>
+                              <td className="py-2.5 px-3 text-center font-semibold">{cat.total_beneficiaries}</td>
+                              <td className="py-2.5 px-3 text-center text-emerald-700 font-bold">{cat.received_count}</td>
+                              <td className="py-2.5 px-3 text-center text-slate-500">{cat.total_beneficiaries - cat.received_count}</td>
+                              <td className="py-2.5 px-3 text-center">
+                                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EBF4EA] text-[#2E5A27]">
+                                  {coverage}%
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {/* VIEW 3: DAILY BENEFICIARIES TAB                                   */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === "daily" && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <div className="bg-white border p-4 rounded-xl shadow-sm text-center">
+                    <span className="text-xs text-slate-500 block">إجمالي المستفيدين اليوميين</span>
+                    <strong className="text-2xl font-bold text-slate-800">{analytics.daily_beneficiaries?.total || 0}</strong>
+                  </div>
+                  <div className="bg-white border p-4 rounded-xl shadow-sm text-center">
+                    <span className="text-xs text-slate-500 block">استلموا في الفترة</span>
+                    <strong className="text-2xl font-bold text-emerald-700">{analytics.daily_beneficiaries?.received_count || 0}</strong>
+                  </div>
+                  <div className="bg-white border p-4 rounded-xl shadow-sm text-center">
+                    <span className="text-xs text-slate-500 block">السلال المصروفة لهم</span>
+                    <strong className="text-2xl font-bold text-amber-700">{analytics.daily_beneficiaries?.baskets_distributed || 0}</strong>
+                  </div>
+                  <div className="bg-white border p-4 rounded-xl shadow-sm text-center">
+                    <span className="text-xs text-slate-500 block">عمليات الاستلام المنفذة</span>
+                    <strong className="text-2xl font-bold text-blue-700">{analytics.daily_beneficiaries?.transactions_count || 0}</strong>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* By Basket Type */}
+                  <div className="bg-white border rounded-xl shadow-sm p-5 space-y-4">
+                    <h3 className="font-bold text-slate-800 text-sm pb-2 border-b">
+                      توزيع السلال اليومية حسب الصنف
+                    </h3>
+                    <div className="space-y-2.5">
+                      {analytics.daily_beneficiaries?.by_basket_type?.map((b) => (
+                        <div key={b.basket_type_name} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg text-xs">
+                          <span className="font-bold text-slate-800">{b.basket_type_name}</span>
+                          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded font-bold">
+                            {b.total_quantity} سلة
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* By District */}
+                  <div className="bg-white border rounded-xl shadow-sm p-5 space-y-4">
+                    <h3 className="font-bold text-slate-800 text-sm pb-2 border-b">
+                      توزيع المستفيدين اليوميين حسب الأحياء
+                    </h3>
+                    <div className="space-y-2.5 max-h-72 overflow-y-auto">
+                      {analytics.daily_beneficiaries?.by_district?.map((d) => (
+                        <div key={d.district} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg text-xs">
+                          <span className="text-slate-700 font-semibold">{d.district}</span>
+                          <span className="font-mono font-bold text-slate-800">{d.total_count} مستفيد</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {/* VIEW 4: INVENTORY COMPARISON TAB                                  */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === "inventory" && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Main Warehouse Card */}
+                  <div className="bg-white border rounded-xl shadow-sm p-5 space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b">
+                      <div className="flex items-center gap-2">
+                        <Package className="w-5 h-5 text-[#3F6B3A]" />
+                        <h3 className="font-bold text-slate-800 text-base">المستودع المركزي العام</h3>
+                      </div>
+                      <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600">
+                        {analytics.inventory?.main?.total_items || 0} أصناف
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="p-3 bg-slate-50 rounded-lg text-center">
+                        <span className="text-slate-400 block">الرصيد المتاح الحالي</span>
+                        <strong className="text-lg font-bold text-slate-800 mt-1 block">
+                          {analytics.inventory?.main?.total_quantity || 0}
+                        </strong>
+                      </div>
+                      <div className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-center">
+                        <span className="text-emerald-600 block">التوريد في الفترة (+)</span>
+                        <strong className="text-lg font-bold mt-1 block">
+                          +{analytics.inventory?.main?.stock_in || 0}
+                        </strong>
+                      </div>
+                      <div className="p-3 bg-amber-50 text-amber-800 rounded-lg text-center">
+                        <span className="text-amber-600 block">المنصرف والموزع (-)</span>
+                        <strong className="text-lg font-bold mt-1 block">
+                          -{analytics.inventory?.main?.stock_out || 0}
+                        </strong>
+                      </div>
+                      <div className="p-3 bg-red-50 text-red-800 rounded-lg text-center">
+                        <span className="text-red-600 block">أصناف قاربت النفاد</span>
+                        <strong className="text-lg font-bold mt-1 block">
+                          {analytics.inventory?.main?.low_stock_count || 0}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Daily Beneficiaries Inventory Card */}
+                  <div className="bg-white border rounded-xl shadow-sm p-5 space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b">
+                      <div className="flex items-center gap-2">
+                        <Package className="w-5 h-5 text-[#C9A24A]" />
+                        <h3 className="font-bold text-slate-800 text-base">مستودع المستفيدين اليوميين</h3>
+                      </div>
+                      <span className="text-xs bg-[#F5EDDA] text-[#8C6C26] px-2 py-0.5 rounded font-bold">
+                        {analytics.inventory?.daily?.total_items || 0} أصناف
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="p-3 bg-slate-50 rounded-lg text-center">
+                        <span className="text-slate-400 block">الرصيد المتاح الحالي</span>
+                        <strong className="text-lg font-bold text-[#2E5A27] mt-1 block">
+                          {analytics.inventory?.daily?.total_quantity || 0}
+                        </strong>
+                      </div>
+                      <div className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-center">
+                        <span className="text-emerald-600 block">التوريد في الفترة (+)</span>
+                        <strong className="text-lg font-bold mt-1 block">
+                          +{analytics.inventory?.daily?.stock_in || 0}
+                        </strong>
+                      </div>
+                      <div className="p-3 bg-amber-50 text-amber-800 rounded-lg text-center">
+                        <span className="text-amber-600 block">المنصرف لليوميين (-)</span>
+                        <strong className="text-lg font-bold mt-1 block">
+                          -{analytics.inventory?.daily?.stock_out || 0}
+                        </strong>
+                      </div>
+                      <div className="p-3 bg-red-50 text-red-800 rounded-lg text-center">
+                        <span className="text-red-600 block">أصناف قاربت النفاد</span>
+                        <strong className="text-lg font-bold mt-1 block">
+                          {analytics.inventory?.daily?.low_stock_count || 0}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expiry Tracking Section (<= 7, <= 30, <= 60 days) */}
+                <div className="bg-white border rounded-xl shadow-sm p-5 space-y-4">
+                  <h3 className="font-bold text-slate-800 text-sm pb-2 border-b flex items-center justify-between">
+                    <span>مصفوفة تتبع تواريخ الصلاحية (مستودع اليوميين)</span>
+                    <span className="text-xs text-slate-400">فحص آلي يومي</span>
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
+                      <span className="text-red-600 block font-semibold">منتهية الصلاحية</span>
+                      <strong className="text-xl font-bold text-red-700 mt-1 block">
+                        {analytics.inventory?.expiry_alerts?.expired_count || 0}
+                      </strong>
+                    </div>
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                      <span className="text-amber-700 block font-semibold">تنتهي خلال 7 أيام</span>
+                      <strong className="text-xl font-bold text-amber-800 mt-1 block">
+                        {analytics.inventory?.expiry_alerts?.in_7_days_count || 0}
+                      </strong>
+                    </div>
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+                      <span className="text-yellow-700 block font-semibold">تنتهي خلال 30 يوماً</span>
+                      <strong className="text-xl font-bold text-yellow-800 mt-1 block">
+                        {analytics.inventory?.expiry_alerts?.in_30_days_count || 0}
+                      </strong>
+                    </div>
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                      <span className="text-blue-700 block font-semibold">تنتهي خلال 60 يوماً</span>
+                      <strong className="text-xl font-bold text-blue-800 mt-1 block">
+                        {analytics.inventory?.expiry_alerts?.in_60_days_count || 0}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {/* VIEW 5: NEIGHBORHOODS TAB                                         */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === "neighborhoods" && (
+              <div className="bg-white border rounded-xl shadow-sm overflow-hidden space-y-4">
+                <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-sm">مصفوفة تغطية الأحياء السكنية</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      إحصاءات شاملة لتوزيع المساعدات وعدد المستفيدين والأسر في كل حي
+                    </p>
+                  </div>
+                  <input
+                    type="text"
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    placeholder="ابحث باسم الحي..."
+                    className="px-3 py-1.5 border rounded-lg text-xs w-full sm:w-64"
+                  />
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-700 font-bold border-b">
+                        <th className="py-3 px-4">#</th>
+                        <th className="py-3 px-4">اسم الحي</th>
+                        <th className="py-3 px-4 text-center">المستفيدون العامون</th>
+                        <th className="py-3 px-4 text-center">المستفيدون اليوميون</th>
+                        <th className="py-3 px-4 text-center">إجمالي المستفيدين</th>
+                        <th className="py-3 px-4 text-center">الأسر المتعففة</th>
+                        <th className="py-3 px-4 text-center">السلال الموزعة</th>
+                        <th className="py-3 px-4 text-center">الجهات الشريكة</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {analytics.neighborhoods?.list
+                        ?.filter((nh) => nh.neighborhood.includes(tableSearch))
+                        .map((nh, i) => (
+                          <tr key={nh.neighborhood} className="hover:bg-slate-50">
+                            <td className="py-3 px-4 text-slate-400">{i + 1}</td>
+                            <td className="py-3 px-4 font-bold text-slate-800">{nh.neighborhood}</td>
+                            <td className="py-3 px-4 text-center">{nh.general_beneficiaries}</td>
+                            <td className="py-3 px-4 text-center">{nh.daily_beneficiaries}</td>
+                            <td className="py-3 px-4 text-center font-bold text-[#3F6B3A]">{nh.total_beneficiaries}</td>
+                            <td className="py-3 px-4 text-center">{nh.families_count}</td>
+                            <td className="py-3 px-4 text-center">
+                              <span className="px-2 py-0.5 bg-[#EBF4EA] text-[#2E5A27] font-bold rounded">
+                                {nh.baskets_distributed}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-center text-slate-600">{nh.organizations_count}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {/* VIEW 6: ORGANIZATIONS TAB                                         */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === "organizations" && (
+              <div className="bg-white border rounded-xl shadow-sm overflow-hidden space-y-4">
+                <div className="p-4 border-b flex items-center justify-between">
+                  <h3 className="font-bold text-slate-800 text-sm">الجهات المستفيدة ومندوبو الأحياء</h3>
+                  <span className="text-xs text-slate-500">
+                    إجمالي الجهات: <strong>{analytics.organizations?.total || 0}</strong>
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-700 font-bold border-b">
+                        <th className="py-3 px-4">اسم الجهة / المندوب</th>
+                        <th className="py-3 px-4">الحي التابع</th>
+                        <th className="py-3 px-4">رقم الجوال</th>
+                        <th className="py-3 px-4 text-center">المستفيدون التابعون</th>
+                        <th className="py-3 px-4 text-center">الأسر التابعة</th>
+                        <th className="py-3 px-4 text-center">السلال المستلمة</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {analytics.organizations?.list?.map((org) => (
+                        <tr key={org.id} className="hover:bg-slate-50">
+                          <td className="py-3 px-4 font-bold text-slate-800">{org.organization_name}</td>
+                          <td className="py-3 px-4 text-slate-600">{org.neighborhood}</td>
+                          <td className="py-3 px-4 font-mono text-slate-600" dir="ltr">{org.phone}</td>
+                          <td className="py-3 px-4 text-center font-semibold">{org.beneficiaries_count}</td>
+                          <td className="py-3 px-4 text-center font-semibold">{org.families_count}</td>
+                          <td className="py-3 px-4 text-center font-bold text-[#8C6C26]">
+                            <span className="px-2.5 py-0.5 bg-[#F5EDDA] rounded">
+                              {org.baskets_received} سلة
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {/* VIEW 7: DELIVERY TAB                                              */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === "delivery" && (
+              <div className="bg-white border rounded-xl shadow-sm overflow-hidden space-y-4">
+                <div className="p-4 border-b flex items-center justify-between">
+                  <h3 className="font-bold text-slate-800 text-sm">أداء أسطول وسائقي التوصيل</h3>
+                  <span className="text-xs text-slate-500">
+                    إجمالي التوصيلات: <strong>{analytics.delivery?.total_deliveries || 0}</strong>
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-700 font-bold border-b">
+                        <th className="py-3 px-4">اسم السائق</th>
+                        <th className="py-3 px-4">رقم الجوال</th>
+                        <th className="py-3 px-4 text-center">إجمالي التوصيلات</th>
+                        <th className="py-3 px-4 text-center">المكتملة</th>
+                        <th className="py-3 px-4 text-center">المستفيدون المخدومون</th>
+                        <th className="py-3 px-4 text-center">نسبة الإنجاز</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {analytics.delivery?.drivers?.map((drv) => (
+                        <tr key={drv.id} className="hover:bg-slate-50">
+                          <td className="py-3 px-4 font-bold text-slate-800">{drv.name}</td>
+                          <td className="py-3 px-4 font-mono text-slate-600" dir="ltr">{drv.phone}</td>
+                          <td className="py-3 px-4 text-center font-semibold">{drv.total_deliveries}</td>
+                          <td className="py-3 px-4 text-center font-bold text-emerald-700">{drv.completed_deliveries}</td>
+                          <td className="py-3 px-4 text-center text-slate-700">{drv.beneficiaries_served}</td>
+                          <td className="py-3 px-4 text-center">
+                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              {drv.success_rate}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {/* VIEW 8: STAFF TAB                                                 */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {activeTab === "staff" && (
+              <div className="bg-white border rounded-xl shadow-sm p-6 space-y-4">
+                <h3 className="font-bold text-slate-800 text-sm pb-2 border-b">
+                  إحصاءات دعم موظفي الجمعية
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                  <div className="p-4 bg-slate-50 rounded-xl border">
+                    <span className="text-xs text-slate-500 block">إجمالي موظفي الجمعية</span>
+                    <strong className="text-2xl font-bold text-slate-800 mt-1 block">
+                      {analytics.staff?.total || 0}
+                    </strong>
+                  </div>
+                  <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                    <span className="text-xs text-emerald-700 block">موظفون استلموا سلال</span>
+                    <strong className="text-2xl font-bold text-emerald-800 mt-1 block">
+                      {analytics.staff?.received_count || 0}
+                    </strong>
+                  </div>
+                  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                    <span className="text-xs text-amber-700 block">إجمالي السلال المخصصة</span>
+                    <strong className="text-2xl font-bold text-amber-800 mt-1 block">
+                      {analytics.staff?.baskets_distributed || 0}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Toast Notification */}
+        <Toast
+          show={toast.show}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ ...toast, show: false })}
+        />
+      </div>
+    </MainLayout>
   );
 }

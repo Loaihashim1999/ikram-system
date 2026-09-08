@@ -1,10 +1,14 @@
 <?php
 
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Beneficiaries\BeneficiaryController;
 use App\Http\Controllers\Beneficiaries\CategoryController;
+use App\Http\Controllers\DailyBeneficiaryController;
+use App\Http\Controllers\DailyInventoryController;
+use App\Http\Controllers\DailyReceivingController;
 use App\Http\Controllers\DistributionController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\NeighborhoodRepController;
@@ -52,6 +56,9 @@ Route::get('/documents/receipt/{id}/pdf', [PdfExportController::class, 'exportIn
 Route::get('/documents/total-delivery/{id}/pdf', [PdfExportController::class, 'exportTotalDelivery']);
 Route::get('/documents/rep-receipt/{id}/pdf', [PdfExportController::class, 'exportRepresentativeReceipt']);
 Route::get('/documents/staff-receipt/{id}/pdf', [PdfExportController::class, 'exportStaffReceipt']);
+Route::get('/documents/daily-receiving/{id}/pdf', [PdfExportController::class, 'exportDailyReceivingVoucher']);
+Route::get('/reports/daily/pdf', [PdfExportController::class, 'exportDailyReport']);
+Route::get('/reports/comprehensive/pdf', [PdfExportController::class, 'exportWeeklyComprehensiveReport']);
 Route::get('/neighborhood-reps/{id}/export-excel', [NeighborhoodRepController::class, 'exportLinkedBeneficiariesExcel']);
 
 // ─── المسارات المحمية ──────────────────────────────────────────────────────
@@ -125,4 +132,23 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── إعدادات النظام ─────────────────────────────────────────
     Route::get('/settings', [SettingsController::class, 'index']);
     Route::post('/settings', [SettingsController::class, 'update']);
+
+    // ── المستفيدون اليوميون ─────────────────────────────────────────
+    Route::get('/daily-beneficiaries/check-national-id/{nationalId}', [DailyBeneficiaryController::class, 'checkNationalId']);
+    Route::get('/daily-beneficiaries/{id}/receiving-history', [DailyBeneficiaryController::class, 'receivingHistory']);
+    Route::post('/daily-beneficiaries/{id}/documents', [DailyBeneficiaryController::class, 'uploadDocument']);
+    Route::delete('/daily-beneficiaries/documents/{docId}', [DailyBeneficiaryController::class, 'deleteDocument']);
+    Route::apiResource('daily-beneficiaries', DailyBeneficiaryController::class);
+
+    // ── مستودع المستفيدين اليوميين ─────────────────────────────────
+    Route::get('/daily-inventory/movements', [DailyInventoryController::class, 'movements']);
+    Route::post('/daily-inventory/{id}/adjust', [DailyInventoryController::class, 'adjustStock']);
+    Route::apiResource('daily-inventory', DailyInventoryController::class);
+
+    // ── تسليم واستلام المستفيدين اليوميين ──────────────────────────
+    Route::apiResource('daily-receiving', DailyReceivingController::class)->only(['index', 'store', 'show']);
+
+    // ── الحوكمة والتحليلات الشاملة ─────────────────────────────────
+    Route::get('/analytics', [AnalyticsController::class, 'index']);
+    Route::get('/governance/analytics', [AnalyticsController::class, 'index']);
 });

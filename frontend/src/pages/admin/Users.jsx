@@ -17,6 +17,7 @@ const FAILED_ATTEMPTS_KEY = 'ikram_failed_login_attempts';
 // System Modules Definition for Permissions Matrix
 export const SYSTEM_MODULES = [
   { key: "beneficiaries", name: "المستفيدون (مواطنون ومقيمون)", desc: "عرض وإضافة وتعديل وحذف ملفات المستفيدين" },
+  { key: "daily_beneficiaries", name: "المستفيدون اليوميون والمستودع اليومي", desc: "إدارة المستفيدين اليوميين وسندات الاستلام ومستودع اليوميين" },
   { key: "warehouse", name: "المستودع والمخزون والتنبيهات", desc: "متابعة أرصدة السلال والمواد وتنبيهات انتهاء الصلاحية" },
   { key: "staff", name: "موظفو الجمعية", desc: "إدارة بيانات الموظفين والتابعين وسجل المستندات" },
   { key: "representatives", name: "الجهات المستفيدة", desc: "إدارة الجهات المستفيدة والمؤسسات وتخصيص الدعم" },

@@ -3,14 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Beneficiary;
+use App\Models\DailyInventoryMovement;
+use App\Models\DailyReceivingTransaction;
 use App\Models\Distribution;
 use App\Models\NeighborhoodRep;
 use App\Models\Staff;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Mpdf\Mpdf;
 
 class PdfExportController extends Controller
 {
-    private function createMpdf(): Mpdf
+    private function createMpdf(string $orientation = 'P'): Mpdf
     {
         $tempDir = storage_path('app/mpdf');
         if (!file_exists($tempDir)) {
@@ -20,9 +24,9 @@ class PdfExportController extends Controller
         return new Mpdf([
             'mode' => 'utf-8',
             'format' => 'A4',
-            'orientation' => 'P',
-            'margin_top' => 58,
-            'margin_bottom' => 32,
+            'orientation' => $orientation,
+            'margin_top' => $orientation === 'L' ? 18 : 58,
+            'margin_bottom' => $orientation === 'L' ? 18 : 32,
             'margin_left' => 12,
             'margin_right' => 12,
             'autoScriptToLang' => true,
@@ -183,6 +187,130 @@ class PdfExportController extends Controller
             $html = view('pdf.staff_receipt', [
                 'staff' => $staff,
                 'distributions' => $staff->distributions,
+            ])->render();
+
+            return response($html . '<script>window.onload = function() { window.print(); };</script>', 200, [
+                'Content-Type' => 'text/html; charset=utf-8',
+            ]);
+        }
+    }
+
+    /**
+     * Export Daily Receiving Voucher (سند استلام مساعدة للمستفيد اليومي)
+     */
+    public function exportDailyReceivingVoucher($transactionId)
+    {
+        $transaction = DailyReceivingTransaction::with([
+            'beneficiary',
+            'inventoryItem',
+            'authorizedUser',
+        ])->findOrFail($transactionId);
+
+        try {
+            $html = view('pdf.daily_receiving_voucher', [
+                'transaction' => $transaction,
+            ])->render();
+
+            $mpdf = $this->createMpdf('P');
+            $mpdf->WriteHTML($html);
+
+            return response($mpdf->Output('', 'S'), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => "inline; filename=\"سند_استلام_يومي_{$transaction->document_number}.pdf\"",
+            ]);
+        } catch (\Throwable $e) {
+            $html = view('pdf.daily_receiving_voucher', [
+                'transaction' => $transaction,
+            ])->render();
+
+            return response($html . '<script>window.onload = function() { window.print(); };</script>', 200, [
+                'Content-Type' => 'text/html; charset=utf-8',
+            ]);
+        }
+    }
+
+    /**
+     * Export Daily Official Report (التقرير اليومي لعمليات التوزيع والمساعدات)
+     */
+    public function exportDailyReport(Request $request)
+    {
+        $dateStr = $request->get('date', Carbon::today()->toDateString());
+        $date = Carbon::parse($dateStr);
+
+        $dailyReceivingList = DailyReceivingTransaction::with(['beneficiary', 'inventoryItem', 'authorizedUser'])
+            ->whereDate('receiving_date', $date)
+            ->latest('receiving_date')
+            ->get();
+
+        $dailyMovements = DailyInventoryMovement::with(['item', 'user'])
+            ->whereDate('created_at', $date)
+            ->latest()
+            ->get();
+
+        $dailyReceivingCount = $dailyReceivingList->count();
+        $dailyBasketsCount = $dailyReceivingList->sum('quantity');
+        $generalDeliveriesCount = Distribution::whereDate('scheduled_at', $date)->count();
+
+        try {
+            $html = view('pdf.daily_report', [
+                'date' => $dateStr,
+                'dailyReceivingList' => $dailyReceivingList,
+                'dailyMovements' => $dailyMovements,
+                'dailyReceivingCount' => $dailyReceivingCount,
+                'dailyBasketsCount' => $dailyBasketsCount,
+                'generalDeliveriesCount' => $generalDeliveriesCount,
+            ])->render();
+
+            $mpdf = $this->createMpdf('L');
+            $mpdf->WriteHTML($html);
+
+            return response($mpdf->Output('', 'S'), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => "inline; filename=\"التقرير_اليومي_{$dateStr}.pdf\"",
+            ]);
+        } catch (\Throwable $e) {
+            $html = view('pdf.daily_report', [
+                'date' => $dateStr,
+                'dailyReceivingList' => $dailyReceivingList,
+                'dailyMovements' => $dailyMovements,
+                'dailyReceivingCount' => $dailyReceivingCount,
+                'dailyBasketsCount' => $dailyBasketsCount,
+                'generalDeliveriesCount' => $generalDeliveriesCount,
+            ])->render();
+
+            return response($html . '<script>window.onload = function() { window.print(); };</script>', 200, [
+                'Content-Type' => 'text/html; charset=utf-8',
+            ]);
+        }
+    }
+
+    /**
+     * Export Weekly / Custom Range Comprehensive Report (التقرير الإحصائي الشامل)
+     */
+    public function exportWeeklyComprehensiveReport(Request $request)
+    {
+        // Use AnalyticsController logic to get complete aggregated metrics
+        $analyticsCtrl = app(AnalyticsController::class);
+        $analyticsResponse = $analyticsCtrl->index($request);
+        $analytics = $analyticsResponse->getData(true);
+
+        try {
+            $html = view('pdf.weekly_comprehensive_report', [
+                'analytics' => $analytics,
+            ])->render();
+
+            $mpdf = $this->createMpdf('L');
+            $mpdf->WriteHTML($html);
+
+            $periodLabel = $analytics['period']['start_date'] . '_to_' . $analytics['period']['end_date'];
+
+            return response($mpdf->Output('', 'S'), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => "inline; filename=\"التقرير_الشامل_{$periodLabel}.pdf\"",
+            ]);
+        } catch (\Throwable $e) {
+            $html = view('pdf.weekly_comprehensive_report', [
+                'analytics' => $analytics,
             ])->render();
 
             return response($html . '<script>window.onload = function() { window.print(); };</script>', 200, [

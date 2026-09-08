@@ -14,6 +14,7 @@ import {
   Shield,
   ScrollText,
   QrCode,
+  UserCheck,
   X,
 } from 'lucide-react';
 
@@ -38,6 +39,15 @@ export default function Sidebar({ isOpen, onClose }) {
       { path: '/dashboard', label: 'لوحة التحكم', icon: Home },
       { path: '/receiver', label: 'صفحة الاستلام والمسح', icon: QrCode },
       { path: '/beneficiaries', label: 'إدارة وقوائم المستفيدين', icon: Users },
+      {
+        label: 'المستفيدون اليوميون',
+        icon: UserCheck,
+        children: [
+          { path: '/daily-beneficiaries', label: 'سجل المستفيدين اليوميين', icon: Users },
+          { path: '/daily-beneficiaries/receiving', label: 'تسليم ومساعدات اليوميين', icon: Package },
+          { path: '/daily-beneficiaries/inventory', label: 'مستودع المستفيدين اليوميين', icon: Building2 },
+        ],
+      },
       { path: '/warehouse', label: 'المستودع والمخزون', icon: Package },
       { path: '/staff', label: 'إدارة وقوائم الموظفين', icon: Briefcase },
       { path: '/representatives', label: 'إدارة الجهات المستفيدة', icon: Building2 },
@@ -48,6 +58,15 @@ export default function Sidebar({ isOpen, onClose }) {
     menuItems = [
       { path: '/dashboard', label: 'لوحة التحكم', icon: Home },
       { path: '/beneficiaries', label: 'إدارة وقوائم المستفيدين', icon: Users },
+      {
+        label: 'المستفيدون اليوميون',
+        icon: UserCheck,
+        children: [
+          { path: '/daily-beneficiaries', label: 'سجل المستفيدين اليوميين', icon: Users },
+          { path: '/daily-beneficiaries/receiving', label: 'تسليم ومساعدات اليوميين', icon: Package },
+          { path: '/daily-beneficiaries/inventory', label: 'مستودع المستفيدين اليوميين', icon: Building2 },
+        ],
+      },
       { path: '/warehouse', label: 'المستودع والمخزون', icon: Package },
       { path: '/staff', label: 'إدارة وقوائم الموظفين', icon: Briefcase },
       { path: '/representatives', label: 'إدارة الجهات المستفيدة', icon: Building2 },
@@ -71,6 +90,7 @@ export default function Sidebar({ isOpen, onClose }) {
     if (role === 'admin' && !userPerms.beneficiaries) return true;
 
     if (path.startsWith('/beneficiaries')) return userPerms.beneficiaries?.view !== false;
+    if (path.startsWith('/daily-beneficiaries')) return userPerms.daily_beneficiaries?.view !== false;
     if (path.startsWith('/warehouse')) return userPerms.warehouse?.view !== false;
     if (path.startsWith('/staff')) return userPerms.staff?.view !== false;
     if (path.startsWith('/representatives')) return userPerms.representatives?.view !== false;
