@@ -31,7 +31,22 @@ class BeneficiaryTest extends TestCase
             'family_support' => 200.00,
         ]);
 
-        $this->assertEquals(4000.00, (float) $beneficiary->total_income);
+        // Citizen formula: monthly_salary (2000) + social_security (1000) + citizen_account (500) + retirement_pension (300) = 3800
+        $this->assertEquals(3800.00, (float) $beneficiary->total_income);
+
+        $resident = Beneficiary::create([
+            'beneficiary_type' => 'resident',
+            'full_name' => 'كمال سليم',
+            'national_id' => '2012345678',
+            'phone' => '0501234599',
+            'category_id' => $category->id,
+            'monthly_salary' => 2000.00,
+            'family_support' => 500.00,
+            'social_security_amount' => 1000.00, // Should not be added for resident
+        ]);
+
+        // Resident formula: monthly_salary (2000) + family_support (500) = 2500
+        $this->assertEquals(2500.00, (float) $resident->total_income);
     }
 
     public function test_updates_total_income_when_financials_change(): void

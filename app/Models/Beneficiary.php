@@ -24,11 +24,11 @@ class Beneficiary extends Model
         'working_members_count', 'non_working_children_count',
         'father_status', 'mother_status', 'owns_house',
         // سكن ومالية
-        'housing_type', 'annual_rent_amount',
+        'housing_type', 'annual_rent_amount', 'monthly_rent',
         'income_sources', 'monthly_salary',
         'social_security_amount', 'citizen_account_amount',
         'retirement_pension', 'family_support', 'bank_name', 'iban_encrypted',
-        'total_income',
+        'total_income', 'net_income',
         // موظف
         'is_employee', 'job_title', 'job_sector', 'national_address_image_url',
         // صور ووثائق
@@ -55,24 +55,25 @@ class Beneficiary extends Model
         'retirement_pension' => 'decimal:2',
         'family_support' => 'decimal:2',
         'annual_rent_amount' => 'decimal:2',
+        'monthly_rent' => 'decimal:2',
         'income_sources' => 'array',
         'ocr_extracted_data' => 'array',
         'total_income' => 'decimal:2',
+        'net_income' => 'decimal:2',
     ];
 
-    // ─── Auto-compute total_income on save ──────────────────────────────────
+    // ─── Auto-compute total_income, monthly_rent & net_income on save ────────
 
     protected static function boot(): void
     {
         parent::boot();
 
         $compute = function (self $b) {
-            $b->total_income =
-                (float) ($b->monthly_salary ?? 0) +
-                (float) ($b->citizen_account_amount ?? 0) +
-                (float) ($b->social_security_amount ?? 0) +
-                (float) ($b->retirement_pension ?? 0) +
-                (float) ($b->family_support ?? 0);
+            $calcService = app(\App\Services\FinancialCalculationService::class);
+            $res = $calcService->calculate($b->attributesToArray());
+            $b->total_income = $res['total_income'];
+            $b->monthly_rent = $res['monthly_rent'];
+            $b->net_income = $res['net_income'];
         };
 
         static::creating($compute);

@@ -4,10 +4,14 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    outDir: '../public',
+    emptyOutDir: false,
+  },
   server: {
     proxy: {
       '/api': {
-        target: 'https://ikram-system.onrender.com',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         secure: false,
       },

@@ -23,9 +23,12 @@ case "$APP_KEY" in
     ;;
 esac
 
-echo "Running Laravel Migrations & Seeders..."
+echo "Running Laravel Migrations..."
 php /var/www/html/artisan migrate --force
-php /var/www/html/artisan db:seed --class=DatabaseSeeder --force
+if [ "$RUN_SEEDS" = "true" ]; then
+  echo "Running Database Seeders..."
+  php /var/www/html/artisan db:seed --class=DatabaseSeeder --force
+fi
 
 echo "Clearing Caches..."
 php /var/www/html/artisan config:clear || true

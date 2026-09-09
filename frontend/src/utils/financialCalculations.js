@@ -39,25 +39,37 @@ export function calculateIncomeAndClassification({
     elderlyMinAge: 60,
   },
 }) {
-  const salary = parseFloat(monthlySalary) || 0;
-  const social = parseFloat(socialSecurityAmount) || 0;
-  const citizen = parseFloat(citizenAccountAmount) || 0;
-  const pension = parseFloat(retirementPension) || 0;
-  const support = parseFloat(familySupport) || 0;
+  // Safe non-negative parsing
+  const salary = Math.max(0, parseFloat(monthlySalary) || 0);
+  const social = Math.max(0, parseFloat(socialSecurityAmount) || 0);
+  const citizen = Math.max(0, parseFloat(citizenAccountAmount) || 0);
+  const pension = Math.max(0, parseFloat(retirementPension) || 0);
+  const support = Math.max(0, parseFloat(familySupport) || 0);
 
-  const totalGrossIncome = salary + social + citizen + pension + support;
+  // إجمالي الدخل بحسب صفة المستفيد
+  let totalGrossIncome = 0;
+  if (beneficiaryType === 'resident') {
+    // المقيم: الراتب + دعم الأسرة
+    totalGrossIncome = salary + support;
+  } else {
+    // المواطن: الراتب + التقاعد + حساب المواطن + الضمان الاجتماعي
+    totalGrossIncome = salary + social + citizen + pension;
+  }
+  totalGrossIncome = Math.round(totalGrossIncome * 100) / 100;
 
-  // Determine rent deduction
+  // احتساب الإيجار الشهري (تحويل السنوي إلى شهري)
   let monthlyRent = 0;
   if (housingType === 'rent') {
-    if (parseFloat(monthlyRentAmount) > 0) {
-      monthlyRent = parseFloat(monthlyRentAmount);
-    } else if (parseFloat(annualRentAmount) > 0) {
+    if (parseFloat(annualRentAmount) > 0) {
       monthlyRent = Math.round((parseFloat(annualRentAmount) / 12) * 100) / 100;
+    } else if (parseFloat(monthlyRentAmount) > 0) {
+      monthlyRent = Math.round(parseFloat(monthlyRentAmount) * 100) / 100;
     }
   }
 
-  const eligibleIncome = Math.max(0, totalGrossIncome - monthlyRent);
+  // صافي الدخل المتاح بعد خصم الإيجار
+  const netAvailableIncome = Math.max(0, Math.round((totalGrossIncome - monthlyRent) * 100) / 100);
+  const eligibleIncome = netAvailableIncome;
 
   // Age calculation
   let age = null;
@@ -125,8 +137,10 @@ export function calculateIncomeAndClassification({
 
   return {
     totalGrossIncome,
+    totalIncome: totalGrossIncome,
     monthlyRent,
     eligibleIncome,
+    netAvailableIncome: eligibleIncome,
     category,
     subCategory,
     categoryLabel,

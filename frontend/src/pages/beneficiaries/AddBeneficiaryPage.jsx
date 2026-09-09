@@ -132,6 +132,26 @@ export default function AddBeneficiaryPage() {
 
   const handleChange = (e) => {
     const { name, value, type: t, checked } = e.target;
+    if (name === "annual_rent_amount") {
+      const annual = Math.max(0, parseFloat(value) || 0);
+      const monthly = annual > 0 ? Math.round((annual / 12) * 100) / 100 : "";
+      setForm((f) => ({
+        ...f,
+        annual_rent_amount: value,
+        monthly_rent_amount: monthly,
+      }));
+      return;
+    }
+    if (name === "monthly_rent_amount") {
+      const monthly = Math.max(0, parseFloat(value) || 0);
+      const annual = monthly > 0 ? Math.round(monthly * 12 * 100) / 100 : "";
+      setForm((f) => ({
+        ...f,
+        monthly_rent_amount: value,
+        annual_rent_amount: annual,
+      }));
+      return;
+    }
     setForm((f) => ({ ...f, [name]: t === "checkbox" ? checked : value }));
   };
 
@@ -256,6 +276,7 @@ export default function AddBeneficiaryPage() {
       total_income: calcResult.eligibleIncome, // Calculated income after rent deduction
       gross_income: calcResult.totalGrossIncome,
       monthly_rent: calcResult.monthlyRent,
+      net_income: calcResult.eligibleIncome,
       priority: form.manual_override && form.priority ? form.priority : calcResult.priority,
       category: form.manual_override && form.priority ? form.priority : calcResult.category,
     };
@@ -530,6 +551,13 @@ export default function AddBeneficiaryPage() {
                         />
                         <span className={cls.helper}>إذا لم يتوفر إيجار شهري، يُقسم السنوي على 12.</span>
                       </div>
+
+                      <div className="col-span-full bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs flex items-center justify-between font-bold text-amber-900">
+                        <span>احتساب خصم السكن:</span>
+                        <span className="font-mono">
+                          الإيجار السنوي: {(parseFloat(form.annual_rent_amount) || (parseFloat(form.monthly_rent_amount) ? Math.round(parseFloat(form.monthly_rent_amount) * 12) : 0)).toLocaleString()} ريال ← الإيجار الشهري المحتسب: {(parseFloat(form.monthly_rent_amount) || (parseFloat(form.annual_rent_amount) ? Math.round((parseFloat(form.annual_rent_amount) / 12) * 100) / 100 : 0)).toLocaleString()} ريال
+                        </span>
+                      </div>
                     </>
                   )}
                 </div>
@@ -660,17 +688,17 @@ export default function AddBeneficiaryPage() {
 
                 <div className="grid sm:grid-cols-3 gap-3 pt-1">
                   <div className="bg-white p-3 rounded-xl border border-[#E5E2D9]">
-                    <span className="text-[11px] text-[#6B7280] block">إجمالي الدخل الكلي</span>
+                    <span className="text-[11px] text-[#6B7280] block font-bold">إجمالي الدخل الشهري</span>
                     <strong className="text-sm font-mono text-[#111827]">{calcResult.totalGrossIncome.toLocaleString()} ريال</strong>
                   </div>
 
                   <div className="bg-white p-3 rounded-xl border border-[#E5E2D9]">
-                    <span className="text-[11px] text-[#6B7280] block">مقتطع الإيجار الشهري</span>
-                    <strong className="text-sm font-mono text-[#C24B3F]">-{calcResult.monthlyRent.toLocaleString()} ريال</strong>
+                    <span className="text-[11px] text-[#6B7280] block font-bold">الإيجار الشهري</span>
+                    <strong className="text-sm font-mono text-[#C24B3F]">{calcResult.monthlyRent.toLocaleString()} ريال</strong>
                   </div>
 
-                  <div className="bg-white p-3 rounded-xl border border-[#C9A24A]">
-                    <span className="text-[11px] text-[#C9A24A] font-bold block">الدخل المحتسب للتصنيف</span>
+                  <div className="bg-white p-3 rounded-xl border border-[#3F6B3A]">
+                    <span className="text-[11px] text-[#3F6B3A] font-bold block">صافي الدخل بعد الإيجار</span>
                     <strong className="text-sm font-mono text-[#3F6B3A]">{calcResult.eligibleIncome.toLocaleString()} ريال</strong>
                   </div>
                 </div>

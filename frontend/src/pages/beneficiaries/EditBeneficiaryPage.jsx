@@ -132,6 +132,26 @@ export default function EditBeneficiaryPage() {
 
   const handleChange = (e) => {
     const { name, value, type: t, checked } = e.target;
+    if (name === "annual_rent_amount") {
+      const annual = Math.max(0, parseFloat(value) || 0);
+      const monthly = annual > 0 ? Math.round((annual / 12) * 100) / 100 : "";
+      setForm((f) => ({
+        ...f,
+        annual_rent_amount: value,
+        monthly_rent_amount: monthly,
+      }));
+      return;
+    }
+    if (name === "monthly_rent_amount") {
+      const monthly = Math.max(0, parseFloat(value) || 0);
+      const annual = monthly > 0 ? Math.round(monthly * 12 * 100) / 100 : "";
+      setForm((f) => ({
+        ...f,
+        monthly_rent_amount: value,
+        annual_rent_amount: annual,
+      }));
+      return;
+    }
     setForm((f) => ({ ...f, [name]: t === "checkbox" ? checked : value }));
   };
 
@@ -187,12 +207,19 @@ export default function EditBeneficiaryPage() {
 
     try {
       const fd = new FormData();
-      Object.keys(form).forEach((key) => {
-        if (form[key] !== null && form[key] !== undefined) {
-          if (typeof form[key] === "boolean") {
-            fd.append(key, form[key] ? "1" : "0");
+      const payload = {
+        ...form,
+        total_income: calcResult.eligibleIncome,
+        gross_income: calcResult.totalGrossIncome,
+        monthly_rent: calcResult.monthlyRent,
+        net_income: calcResult.eligibleIncome,
+      };
+      Object.keys(payload).forEach((key) => {
+        if (payload[key] !== null && payload[key] !== undefined) {
+          if (typeof payload[key] === "boolean") {
+            fd.append(key, payload[key] ? "1" : "0");
           } else {
-            fd.append(key, form[key]);
+            fd.append(key, payload[key]);
           }
         }
       });
@@ -533,17 +560,38 @@ export default function EditBeneficiaryPage() {
                 </div>
 
                 {form.housing_type === "rent" && (
-                  <div>
-                    <label className={labelCls}>قيمة الإيجار السنوي (ريال)</label>
-                    <input
-                      type="number"
-                      name="annual_rent_amount"
-                      value={form.annual_rent_amount}
-                      onChange={handleChange}
-                      placeholder="مثال: 18000"
-                      className={inputCls}
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <label className={labelCls}>قيمة الإيجار السنوي (ريال)</label>
+                      <input
+                        type="number"
+                        name="annual_rent_amount"
+                        value={form.annual_rent_amount}
+                        onChange={handleChange}
+                        placeholder="مثال: 18000"
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelCls}>أو مبلغ الإيجار الشهري (ريال)</label>
+                      <input
+                        type="number"
+                        name="monthly_rent_amount"
+                        value={form.monthly_rent_amount}
+                        onChange={handleChange}
+                        placeholder="مثال: 1500"
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div className="col-span-full bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs flex items-center justify-between font-bold text-amber-900">
+                      <span>احتساب خصم السكن:</span>
+                      <span className="font-mono">
+                        الإيجار السنوي: {(parseFloat(form.annual_rent_amount) || (parseFloat(form.monthly_rent_amount) ? Math.round(parseFloat(form.monthly_rent_amount) * 12) : 0)).toLocaleString()} ريال ← الإيجار الشهري المحتسب: {(parseFloat(form.monthly_rent_amount) || (parseFloat(form.annual_rent_amount) ? Math.round((parseFloat(form.annual_rent_amount) / 12) * 100) / 100 : 0)).toLocaleString()} ريال
+                      </span>
+                    </div>
+                  </>
                 )}
 
                 <div>
@@ -734,10 +782,28 @@ export default function EditBeneficiaryPage() {
                 <p className="font-mono text-gray-700 bg-white p-2.5 rounded-xl border border-amber-100">{calcResult.formulaText}</p>
               </div>
 
+              {/* Financial Summary Cards */}
+              <div className="grid sm:grid-cols-3 gap-3 pt-2">
+                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs">
+                  <span className="text-xs text-gray-500 block font-bold mb-1">إجمالي الدخل الشهري</span>
+                  <strong className="text-base font-mono text-gray-900">{calcResult.totalGrossIncome.toLocaleString()} ريال</strong>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs">
+                  <span className="text-xs text-gray-500 block font-bold mb-1">الإيجار الشهري</span>
+                  <strong className="text-base font-mono text-red-600">{calcResult.monthlyRent.toLocaleString()} ريال</strong>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border-2 border-emerald-500 shadow-2xs">
+                  <span className="text-xs text-emerald-700 font-bold block mb-1">صافي الدخل بعد الإيجار</span>
+                  <strong className="text-base font-mono text-emerald-700">{calcResult.eligibleIncome.toLocaleString()} ريال</strong>
+                </div>
+              </div>
+
               {/* Total Income Summary Card */}
               <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-5 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-md">
                 <div>
-                  <span className="text-xs font-bold block opacity-90 mb-1">إجمالي الدخل الشهري المحسوب بالنظام:</span>
+                  <span className="text-xs font-bold block opacity-90 mb-1">صافي الدخل المعتمد للأهلية والتصنيف:</span>
                   <span className="text-2xl font-black font-mono">
                     {totalIncome.toLocaleString()} ريال سعودي
                   </span>

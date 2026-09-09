@@ -91,28 +91,42 @@ class BeneficiaryController extends Controller
                 $validated['created_by'] = $request->user()?->id ?? User::first()?->id;
             }
 
-            $priority = $validated['priority'] ?? $this->classifyPriority($validated);
-            $validated['priority'] = $priority;
+            // احتساب البيانات المالية والتصنيف الاستحقاقي عبر FinancialCalculationService
+            $calcService = app(\App\Services\FinancialCalculationService::class);
+            $financials = $calcService->calculate($validated);
 
-            if (empty($validated['category_id'])) {
-                $validated['category_id'] = $this->getCategoryIdForPriority($priority);
-            }
+            $validated['total_income'] = $financials['total_income'];
+            $validated['monthly_rent'] = $financials['monthly_rent'];
+            $validated['net_income'] = $financials['net_income'];
+            $validated['priority'] = $validated['priority'] ?? $financials['priority'];
+            $validated['category_id'] = $validated['category_id'] ?? $financials['category_id'];
 
             $validated = array_merge($validated, $this->handleUploads($request));
 
-            $beneficiary = Beneficiary::create($validated);
+            // حفظ المستفيد والتابعين داخل معاملة قاعدة بيانات متكاملة
+            $beneficiary = DB::transaction(function () use ($validated, $request) {
+                $b = Beneficiary::create($validated);
+                $this->storeDependentsFromRequest($request, $b);
+                return $b;
+            });
 
-            $this->storeDependentsFromRequest($request, $beneficiary);
+            // تسجيل العملية في سجل التدقيق
+            \Log::info("تم تسجيل مستفيد جديد بنجاح: {$beneficiary->full_name} ({$beneficiary->national_id})", [
+                'beneficiary_id' => $beneficiary->id,
+                'created_by' => $validated['created_by'],
+                'priority' => $beneficiary->priority,
+                'net_income' => $beneficiary->net_income,
+            ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'تمت إضافة المستفيد بنجاح.',
+                'message' => 'تمت إضافة وحفظ المستفيد والبيانات الأسرية بنجاح.',
                 'data' => $beneficiary->load('dependents'),
             ], 201);
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'خطأ في التحقق من البيانات',
+                'message' => 'خطأ في التحقق من البيانات المطلوبة',
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
@@ -123,7 +137,7 @@ class BeneficiaryController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء حفظ البيانات',
+                'message' => 'حدث خطأ أثناء حفظ البيانات: '.$e->getMessage(),
                 'error' => config('app.debug') ? $e->getMessage() : 'خطأ في الخادم',
             ], 500);
         }
@@ -238,21 +252,39 @@ class BeneficiaryController extends Controller
 
             $validated = array_merge($validated, $this->handleUploads($request, $beneficiary));
 
-            if (empty($validated['priority'])) {
-                $merged = array_merge($beneficiary->toArray(), $validated);
-                $validated['priority'] = $this->classifyPriority($merged);
-            }
+            // احتساب البيانات المالية والتصنيف الاستحقاقي
+            $mergedForCalc = array_merge($beneficiary->toArray(), $validated);
+            $calcService = app(\App\Services\FinancialCalculationService::class);
+            $financials = $calcService->calculate($mergedForCalc);
 
-            if (empty($validated['category_id'])) {
-                $validated['category_id'] = $this->getCategoryIdForPriority($validated['priority']);
-            }
+            $validated['total_income'] = $financials['total_income'];
+            $validated['monthly_rent'] = $financials['monthly_rent'];
+            $validated['net_income'] = $financials['net_income'];
+            $validated['priority'] = $validated['priority'] ?? $financials['priority'];
+            $validated['category_id'] = $validated['category_id'] ?? $financials['category_id'];
 
-            $beneficiary->update($validated);
+            DB::transaction(function () use ($beneficiary, $validated, $request) {
+                $beneficiary->update($validated);
 
-            if ($request->has('dependents') && is_array($request->input('dependents'))) {
-                $beneficiary->dependents()->delete();
-                $this->storeDependentsFromRequest($request, $beneficiary);
-            }
+                if ($request->has('dependents') && is_array($request->input('dependents'))) {
+                    $newDependents = array_filter($request->input('dependents'), fn ($d) => ! empty($d['name']));
+                    // Only update/replace if valid dependents list is passed
+                    $beneficiary->dependents()->delete();
+                    foreach ($newDependents as $dep) {
+                        $beneficiary->dependents()->create([
+                            'name' => $dep['name'],
+                            'relationship' => $dep['relationship'] ?? null,
+                            'date_of_birth' => $dep['date_of_birth'] ?? null,
+                        ]);
+                    }
+                }
+            });
+
+            \Log::info("تم تعديل بيانات المستفيد بنجاح: {$beneficiary->full_name} ({$beneficiary->national_id})", [
+                'beneficiary_id' => $beneficiary->id,
+                'priority' => $beneficiary->priority,
+                'net_income' => $beneficiary->net_income,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -602,6 +634,7 @@ class BeneficiaryController extends Controller
     private function rules(?string $ignoreId = null): array
     {
         return [
+            // ─── البيانات الأساسية الإلزامية (Basic Information) ───
             'full_name' => 'required|string|max:150',
             'national_id' => [
                 'required',
@@ -610,7 +643,29 @@ class BeneficiaryController extends Controller
                 $ignoreId ? Rule::unique('beneficiaries', 'national_id')->ignore($ignoreId) : 'unique:beneficiaries,national_id',
             ],
             'phone' => 'required|string|max:20',
-            'beneficiary_type' => 'nullable|in:citizen,resident',
+            'beneficiary_type' => 'required|in:citizen,resident',
+            'city' => 'required|string|max:100',
+            'district' => 'required|string|max:100',
+            'street' => 'required|string|max:150',
+            'nationality' => 'required_if:beneficiary_type,resident|nullable|string|max:100',
+            'date_of_birth' => 'nullable|string',
+            'place_of_birth' => 'nullable|string|max:100',
+            'profession' => 'nullable|string|max:100',
+            
+            // ─── بيانات الأسرة والسكن الإلزامية (Family Information) ───
+            'family_status' => 'required|string|max:50',
+            'family_members_count' => 'required|integer|min:1',
+            'housing_type' => 'required|in:rent,own,charitable_housing',
+            'annual_rent_amount' => 'required_if:housing_type,rent|nullable|numeric|min:0',
+            'monthly_rent' => 'nullable|numeric|min:0',
+            'wives_count' => 'nullable|integer|min:0|max:4',
+            'working_members_count' => 'nullable|integer|min:0',
+            'non_working_children_count' => 'nullable|integer|min:0',
+            'father_status' => 'nullable|string',
+            'mother_status' => 'nullable|string',
+            'owns_house' => 'nullable|boolean',
+
+            // ─── الفئة والحالة ───
             'status' => 'nullable|in:active,suspended,under_review',
             'priority' => 'nullable|in:first_class,second_class,special_needs,elderly,employee',
             'category_id' => 'nullable|uuid',
@@ -618,27 +673,8 @@ class BeneficiaryController extends Controller
             'is_special_needs' => 'nullable|boolean',
             'is_elderly' => 'nullable|boolean',
             'is_employee' => 'nullable|boolean',
-            'date_of_birth' => 'nullable|string',
-            'place_of_birth' => 'nullable|string|max:100',
-            'nationality' => 'nullable|string|max:100',
-            'profession' => 'nullable|string|max:100',
-            // العنوان
-            'city' => 'nullable|string|max:100',
-            'district' => 'nullable|string|max:100',
-            'street' => 'nullable|string|max:150',
-            // بيانات الأسرة
-            'family_status' => 'nullable|string',
-            'family_members_count' => 'nullable|integer|min:0',
-            'wives_count' => 'nullable|integer|min:0|max:4',
-            'working_members_count' => 'nullable|integer|min:0',
-            'non_working_children_count' => 'nullable|integer|min:0',
-            'father_status' => 'nullable|string',
-            'mother_status' => 'nullable|string',
-            'owns_house' => 'nullable|boolean',
-            // السكن
-            'housing_type' => 'nullable|string',
-            'annual_rent_amount' => 'nullable|numeric|min:0',
-            // المالية
+
+            // ─── البيانات المالية (Financial Information) ───
             'income_sources' => 'nullable|array',
             'monthly_salary' => 'nullable|numeric|min:0',
             'citizen_account_amount' => 'nullable|numeric|min:0',
@@ -647,12 +683,14 @@ class BeneficiaryController extends Controller
             'family_support' => 'nullable|numeric|min:0',
             'bank_name' => 'nullable|string|max:100',
             'iban' => 'nullable|string|max:34',
-            // المعالون
+
+            // ─── المعالون وأفراد الأسرة ───
             'dependents' => 'nullable|array',
             'dependents.*.name' => 'required|string|max:255',
             'dependents.*.relationship' => 'nullable|string|max:100',
             'dependents.*.date_of_birth' => 'nullable|date',
-            // الملفات المرفوعة
+
+            // ─── الملفات المرفوعة ───
             'national_id_image' => 'nullable|file|image|max:5120',
             'residence_id_image' => 'nullable|file|image|max:5120',
             'citizen_account_image' => 'nullable|file|image|max:5120',
@@ -668,10 +706,31 @@ class BeneficiaryController extends Controller
     private function messages(): array
     {
         return [
-            'full_name.required' => 'اسم المستفيد مطلوب.',
-            'national_id.required' => 'رقم الهوية مطلوب.',
-            'national_id.unique' => 'رقم الهوية مسجل مسبقاً في النظام.',
-            'phone.required' => 'رقم الهاتف مطلوب.',
+            // البيانات الأساسية
+            'full_name.required' => 'اسم المستفيد الكامل مطلوب.',
+            'national_id.required' => 'رقم الهوية الوطنية أو الإقامة مطلوب.',
+            'national_id.unique' => 'رقم الهوية/الإقامة مسجل مسبقاً في النظام.',
+            'phone.required' => 'رقم الجوال مطلوب للتواصل.',
+            'beneficiary_type.required' => 'يرجى تحديد صفة المستفيد (مواطن / مقيم).',
+            'beneficiary_type.in' => 'صفة المستفيد يجب أن تكون مواطن أو مقيم.',
+            'city.required' => 'المدينة مطلوبة.',
+            'district.required' => 'الحي السكني مطلوب.',
+            'street.required' => 'الشارع أو العنوان التفصيلي مطلوب.',
+            'nationality.required_if' => 'الجنسية مطلوبة للمستفيد المقيم.',
+
+            // بيانات الأسرة والسكن
+            'family_status.required' => 'الحالة الأسرية مطلوبة.',
+            'family_members_count.required' => 'عدد أفراد الأسرة مطلوب.',
+            'family_members_count.min' => 'عدد أفراد الأسرة يجب أن يكون 1 على الأقل.',
+            'housing_type.required' => 'يرجى تحديد نوع السكن.',
+            'housing_type.in' => 'نوع السكن المحدد غير صالح.',
+            'annual_rent_amount.required_if' => 'قيمة الإيجار السنوي مطلوبة عند اختيار نوع السكن إيجار.',
+            'annual_rent_amount.min' => 'قيمة الإيجار لا يمكن أن تكون بالسالب.',
+            'monthly_salary.min' => 'الراتب الشهري لا يمكن أن يكون قيمة سالبة.',
+            'citizen_account_amount.min' => 'مبلغ حساب المواطن لا يمكن أن يكون سالباً.',
+            'social_security_amount.min' => 'مبلغ الضمان الاجتماعي لا يمكن أن يكون سالباً.',
+            'retirement_pension.min' => 'معاش التقاعد لا يمكن أن يكون سالباً.',
+            'family_support.min' => 'دعم الأسرة لا يمكن أن يكون سالباً.',
         ];
     }
 

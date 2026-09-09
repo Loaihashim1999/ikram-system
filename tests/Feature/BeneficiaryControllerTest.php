@@ -65,6 +65,10 @@ class BeneficiaryControllerTest extends TestCase
             'monthly_salary' => 2500,
             'city' => 'الرياض',
             'district' => 'الملز',
+            'street' => 'شارع الستين',
+            'family_status' => 'poor',
+            'family_members_count' => 4,
+            'housing_type' => 'own',
         ];
 
         $response = $this->postJson('/api/beneficiaries', $payload);
@@ -72,13 +76,34 @@ class BeneficiaryControllerTest extends TestCase
         $response->assertStatus(201)
             ->assertJson([
                 'success' => true,
-                'message' => 'تمت إضافة المستفيد بنجاح.',
+                'message' => 'تمت إضافة وحفظ المستفيد والبيانات الأسرية بنجاح.',
             ]);
 
         $this->assertDatabaseHas('beneficiaries', [
             'national_id' => '1000000002',
             'full_name' => 'عبدالله خالد',
         ]);
+    }
+
+    public function test_validation_fails_when_mandatory_fields_are_missing(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        // Missing full_name, phone, street, family_status, family_members_count, housing_type
+        $response = $this->postJson('/api/beneficiaries', [
+            'beneficiary_type' => 'citizen',
+            'national_id' => '1000000099',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'full_name',
+                'phone',
+                'street',
+                'family_status',
+                'family_members_count',
+                'housing_type',
+            ]);
     }
 
     public function test_check_national_id_returns_availability(): void

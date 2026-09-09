@@ -6,6 +6,7 @@ import Button from "../../components/ui/Button";
 import Toast from "../../components/ui/Toast";
 import { getAnalytics } from "../../api/dailyBeneficiaries";
 import { getDocumentPdfUrl } from "../../utils/documentUrl";
+import { ColumnChart, LineChart, FunnelChart, PieChart } from "./GovernanceCharts";
 import {
   ShieldCheck,
   BarChart3,
@@ -583,6 +584,48 @@ export default function GovernancePage() {
                     <div className="text-[11px] text-slate-400 mt-1">
                       سند استلام فوري موثق
                     </div>
+                  </div>
+                </div>
+
+                {/* ══════════════════════════════════════════════════════════════ */}
+                {/* 4 GOVERNANCE CHARTS SECTION (REAL DATA)                       */}
+                {/* ══════════════════════════════════════════════════════════════ */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-[#3F6B3A]" />
+                      مخططات الحوكمة والتحليلات البيانية المعتمدة (بيانات فعلية من النظام)
+                    </h3>
+                    <span className="text-xs text-slate-400">
+                      محدثة وفق النطاق: {analytics.period?.label}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* 1. Column Chart: فئات الاستحقاق */}
+                    <ColumnChart
+                      data={analytics.charts?.column_chart?.data}
+                      title={analytics.charts?.column_chart?.title}
+                    />
+
+                    {/* 2. Line Chart: التطور الزمني للتسجيل والمساعدات */}
+                    <LineChart
+                      data={analytics.charts?.line_chart?.data}
+                      title={analytics.charts?.line_chart?.title}
+                    />
+
+                    {/* 3. Funnel Chart: مسار مراحل الاستحقاق والدعم */}
+                    <FunnelChart
+                      stages={analytics.charts?.funnel_chart?.stages}
+                      title={analytics.charts?.funnel_chart?.title}
+                    />
+
+                    {/* 4. Pie Chart: التوزيع النسبي (مواطن/مقيم وبنية الأسرة) */}
+                    <PieChart
+                      data={analytics.charts?.pie_chart?.data}
+                      secondaryData={analytics.charts?.pie_chart?.secondary_data}
+                      title={analytics.charts?.pie_chart?.title}
+                    />
                   </div>
                 </div>
 

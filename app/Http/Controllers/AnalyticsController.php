@@ -304,6 +304,104 @@ class AnalyticsController extends Controller
         $grandTotalServed = $beneficiariesReceivedCount + $dailyBeneficiariesReceivedCount;
         $grandTotalBaskets = $basketsDistributedGeneral + $dailyBasketsDistributed + $basketsDistributedToStaff;
 
+        // ══════════════════════════════════════════════════════════════════════
+        // 9. بيانات الرسوم البيانية للوحة الحوكمة (Governance Dashboard Charts)
+        // ══════════════════════════════════════════════════════════════════════
+
+        // أ) المخطط العمودي: إجمالي المستفيدين حسب فئات الاستحقاق (Column Chart)
+        $columnChartData = Category::withCount(['beneficiaries'])->get()->map(function ($cat) {
+            return [
+                'label' => $cat->name,
+                'count' => (int) $cat->beneficiaries_count,
+            ];
+        })->filter(fn ($item) => $item['count'] > 0)->values();
+
+        if ($columnChartData->isEmpty()) {
+            $columnChartData = collect([
+                ['label' => 'درجة أولى', 'count' => Beneficiary::where('priority', 'first_class')->count()],
+                ['label' => 'درجة ثانية', 'count' => Beneficiary::where('priority', 'second_class')->count()],
+                ['label' => 'ذوو الاحتياجات', 'count' => Beneficiary::where('priority', 'special_needs')->orWhere('has_special_needs', true)->count()],
+                ['label' => 'كبار السن', 'count' => Beneficiary::where('priority', 'elderly')->orWhere('is_elderly', true)->count()],
+            ]);
+        }
+
+        // ب) المخطط الخطي: التطور الزمني للتسجيل والتوزيع عبر الأشهر (Line Chart)
+        $lineChartTimeline = [];
+        $tCursor = $startDate->copy()->startOfMonth();
+        $tEnd = $endDate->copy()->endOfMonth();
+        if ($tCursor->diffInMonths($tEnd) < 2) {
+            $tCursor = $today->copy()->subMonths(5)->startOfMonth();
+            $tEnd = $today->copy()->endOfMonth();
+        }
+        if ($tCursor->diffInMonths($tEnd) > 12) {
+            $tCursor = $tEnd->copy()->subMonths(11)->startOfMonth();
+        }
+
+        while ($tCursor->lte($tEnd)) {
+            $mStart = $tCursor->copy()->startOfMonth();
+            $mEnd = $tCursor->copy()->endOfMonth();
+
+            $regCount = Beneficiary::whereBetween('created_at', [$mStart, $mEnd])->count();
+            $distCount = Distribution::whereBetween('scheduled_at', [$mStart, $mEnd])
+                ->whereIn('status', ['delivered', 'received', 'completed'])
+                ->count();
+
+            $lineChartTimeline[] = [
+                'period' => $tCursor->translatedFormat('M Y'),
+                'registrations' => $regCount,
+                'distributions' => $distCount,
+            ];
+            $tCursor->addMonth();
+        }
+
+        // ج) المخطط القمعي: مسار مراحل الاستحقاق والتسليم (Funnel Chart)
+        $totalRegistered = max(1, $totalBeneficiaries);
+        $approvedCount = $activeBeneficiaries;
+        $scheduledCount = Distribution::whereBetween('scheduled_at', [$startDate, $endDate])
+            ->distinct('beneficiary_id')
+            ->count('beneficiary_id');
+        if ($scheduledCount === 0 && $beneficiariesReceivedCount > 0) {
+            $scheduledCount = $beneficiariesReceivedCount;
+        }
+        $deliveredCount = $beneficiariesReceivedCount;
+
+        $funnelStages = [
+            [
+                'stage' => 'المسجلون بالنظام',
+                'count' => $totalBeneficiaries,
+                'percentage' => 100,
+            ],
+            [
+                'stage' => 'المعتمدون للاستحقاق',
+                'count' => $approvedCount,
+                'percentage' => round(($approvedCount / $totalRegistered) * 100, 1),
+            ],
+            [
+                'stage' => 'المجدولون للتوزيع',
+                'count' => $scheduledCount,
+                'percentage' => round(($scheduledCount / $totalRegistered) * 100, 1),
+            ],
+            [
+                'stage' => 'المستلمون للمساعدات',
+                'count' => $deliveredCount,
+                'percentage' => round(($deliveredCount / $totalRegistered) * 100, 1),
+            ],
+        ];
+
+        // د) المخطط الدائري: التوزيع النسبي (مواطن مقابل مقيم) (Pie Chart)
+        $citizensCount = Beneficiary::where('beneficiary_type', 'citizen')->count();
+        $residentsCount = Beneficiary::where('beneficiary_type', 'resident')->count();
+        $pieChartData = [
+            'by_citizenship' => [
+                ['label' => 'مواطنون', 'count' => $citizensCount, 'color' => '#2E5A27'],
+                ['label' => 'مقيمون', 'count' => $residentsCount, 'color' => '#C9A24A'],
+            ],
+            'by_family_type' => [
+                ['label' => 'أسر متعففة', 'count' => $familiesCount, 'color' => '#0284C7'],
+                ['label' => 'أفراد مستقلون', 'count' => $individualsCount, 'color' => '#10B981'],
+            ],
+        ];
+
         return response()->json([
             'success' => true,
             'period' => [
@@ -311,6 +409,25 @@ class AnalyticsController extends Controller
                 'start_date' => $startDate->toDateString(),
                 'end_date' => $endDate->toDateString(),
                 'label' => $this->getPeriodLabel($periodType, $startDate, $endDate),
+            ],
+            'charts' => [
+                'column_chart' => [
+                    'title' => 'إجمالي المستفيدين حسب فئات الاستحقاق',
+                    'data' => $columnChartData,
+                ],
+                'line_chart' => [
+                    'title' => 'تطور تسجيل المستفيدين وتقديم المساعدات عبر الأشهر',
+                    'data' => $lineChartTimeline,
+                ],
+                'funnel_chart' => [
+                    'title' => 'مسار المستفيدين حسب مراحل الاستحقاق والدعم',
+                    'stages' => $funnelStages,
+                ],
+                'pie_chart' => [
+                    'title' => 'توزيع المستفيدين حسب صفة الإقامة',
+                    'data' => $pieChartData['by_citizenship'],
+                    'secondary_data' => $pieChartData['by_family_type'],
+                ],
             ],
             'kpis' => [
                 'grand_total_beneficiaries' => $grandTotalBeneficiaries,
