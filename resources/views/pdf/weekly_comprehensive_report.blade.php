@@ -4,11 +4,20 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>{{ $title ?? 'التقرير الإحصائي الشامل - جمعية إكرام' }}</title>
     <style>
+        @php
+            $reportFrame = file_exists(public_path('assets/33.jpeg')) 
+                ? public_path('assets/33.jpeg') 
+                : (file_exists(public_path('assets/33. jpeg')) ? public_path('assets/33. jpeg') : '');
+        @endphp
         @page {
-            margin-top: 25mm;
-            margin-bottom: 20mm;
+            margin-top: 36mm;
+            margin-bottom: 22mm;
             margin-left: 12mm;
             margin-right: 12mm;
+            @if($reportFrame)
+            background: url('{{ $reportFrame }}') no-repeat 0 0;
+            background-image-resize: 6;
+            @endif
         }
         body {
             font-family: 'xbriyaz', 'tajawal', 'cairo', 'DejaVu Sans', sans-serif;

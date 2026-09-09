@@ -12,8 +12,9 @@ import { useNotifications } from '../../context/NotificationContext';
 import {
   Package, AlertTriangle, TrendingUp, Plus, Edit, Trash2,
   ArrowUpCircle, ArrowDownCircle, X, Loader2, Search, RefreshCw,
-  Calendar, Filter, Clock, CheckCircle2
+  Calendar, Filter, Clock, CheckCircle2, FileSpreadsheet
 } from 'lucide-react';
+import { exportArrayToExcel } from '../../utils/excelExport';
 
 export default function Warehouse() {
   const [items, setItems] = useState([]);
@@ -177,6 +178,26 @@ export default function Warehouse() {
     });
   }, [items, search, statusFilter, expiryFilter]);
 
+  const handleExportWarehouseExcel = () => {
+    if (!filteredItems || filteredItems.length === 0) return;
+    const exportData = filteredItems.map((item, idx) => ({
+      "#": idx + 1,
+      "اسم الصنف": item.name,
+      "الكمية الحالية": item.current_quantity,
+      "الوحدة": item.unit,
+      "الحد الأدنى": item.min_threshold,
+      "تاريخ انتهاء الصلاحية": item.expiration_date ? item.expiration_date.slice(0, 10) : "غير محدد",
+      "رقم السلة": item.basket_number || "—",
+      "حالة الصلاحية": item.expiryState === "expired" ? "منتهي الصلاحية" : item.expiryState === "near_expiry" ? "قارب على الانتهاء" : "سليم",
+      "الوصف": item.description || "",
+    }));
+    exportArrayToExcel({
+      filename: "ikram-warehouse-inventory",
+      sheetName: "مخزون المستودع",
+      data: exportData,
+    });
+  };
+
   const stats = useMemo(() => {
     return {
       total: items.length,
@@ -197,14 +218,24 @@ export default function Warehouse() {
           badge="المستودع العام"
           breadcrumbs={[{ label: "المستودع والمخزون" }]}
           actions={
-            <Button
-              variant="primary"
-              size="sm"
-              icon={Plus}
-              onClick={() => setShowAddModal(true)}
-            >
-              إضافة صنف / مادة للسلة
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={FileSpreadsheet}
+                onClick={handleExportWarehouseExcel}
+              >
+                تصدير إكسل
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={Plus}
+                onClick={() => setShowAddModal(true)}
+              >
+                إضافة صنف / مادة للسلة
+              </Button>
+            </div>
           }
         />
 

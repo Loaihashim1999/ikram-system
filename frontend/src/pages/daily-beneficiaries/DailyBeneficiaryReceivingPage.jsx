@@ -27,11 +27,14 @@ import {
   FileText,
   UserCheck,
   AlertTriangle,
+  FileSpreadsheet,
 } from "lucide-react";
+import { exportApiDataToExcel } from "../../utils/excelExport";
+import { getDocumentPdfUrl } from "../../utils/documentUrl";
 
-export default function DailyBeneficiaryReceivingPage() {
+export default function DailyBeneficiaryReceivingPage({ embedded = false, initialSubTab = "beneficiaries" }) {
   // Active Tab: 'beneficiaries' (Queue for receiving) | 'transactions' (Executed Vouchers History)
-  const [activeTab, setActiveTab] = useState("beneficiaries");
+  const [activeTab, setActiveTab] = useState(initialSubTab);
 
   // Beneficiaries queue state
   const [beneficiaries, setBeneficiaries] = useState([]);
@@ -198,10 +201,46 @@ export default function DailyBeneficiaryReceivingPage() {
     return inventoryItems.find((i) => i.id === selectedItemId);
   }, [inventoryItems, selectedItemId]);
 
-  return (
-    <MainLayout>
-      <div className="space-y-6" dir="rtl">
-        {/* Page Header */}
+  // Export ALL matching transactions to Excel
+  const handleExportTransactionsExcel = async () => {
+    try {
+      setToast({ show: true, message: "جاري تجهيز وتصدير جميع سندات الاستلام المطابقة...", type: "info" });
+      const params = {
+        search: searchTx.trim() || undefined,
+        date_from: txDateFrom || undefined,
+        date_to: txDateTo || undefined,
+      };
+
+      const count = await exportApiDataToExcel({
+        endpoint: "/daily-beneficiaries/receiving-history",
+        params,
+        filename: "ikram-daily-receiving-vouchers",
+        sheetName: "سندات الاستلام اليومية",
+        transform: (tx, idx) => ({
+          "#": idx + 1,
+          "رقم السند": tx.document_number,
+          "اسم المستفيد": tx.beneficiary?.full_name || "—",
+          "رقم الهوية / الإقامة": tx.beneficiary?.national_id || "—",
+          "رقم الجوال": tx.beneficiary?.phone || "—",
+          "الحي": tx.beneficiary?.district || "—",
+          "المادة المستلمة": tx.inventory_item?.name || tx.basket_type_name || "سلة غذائية",
+          "الكمية": tx.quantity,
+          "تاريخ ووقت الاستلام": tx.receiving_date ? tx.receiving_date.slice(0, 16).replace("T", " ") : "—",
+          "الموظف المعتمد": tx.authorized_user?.full_name || "مدير النظام",
+          "ملاحظات": tx.notes || "",
+        }),
+      });
+
+      setToast({ show: true, message: `تم تصدير ${count} سند استلام بنجاح إلى ملف إكسل.`, type: "success" });
+    } catch (err) {
+      setToast({ show: true, message: err.message || "فشل تصدير ملف الإكسل", type: "error" });
+    }
+  };
+
+  const mainContent = (
+    <div className="space-y-6" dir="rtl">
+      {/* Page Header (only if standalone) */}
+      {!embedded && (
         <PageHeader
           title="تسليم ومساعدات المستفيدين اليوميين"
           subtitle="صرف فوري للمواد مع التوثيق الذري وإصدار سندات الاستلام الرسمية المعتمدة"
@@ -211,6 +250,7 @@ export default function DailyBeneficiaryReceivingPage() {
             { label: "تسليم واستلام المساعدات" },
           ]}
         />
+      )}
 
         {/* Top KPI Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -428,10 +468,18 @@ export default function DailyBeneficiaryReceivingPage() {
                 />
                 <button
                   onClick={() => loadTransactions(1)}
-                  className="px-4 py-2 bg-[#3F6B3A] text-white text-xs font-semibold rounded-lg hover:bg-[#345830] transition-colors"
+                  className="px-4 py-2 bg-[#3F6B3A] text-white text-xs font-semibold rounded-lg hover:bg-[#345830] transition-colors cursor-pointer"
                 >
                   تصفية
                 </button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={FileSpreadsheet}
+                  onClick={handleExportTransactionsExcel}
+                >
+                  تصدير إكسل
+                </Button>
               </div>
             </div>
 
@@ -486,7 +534,7 @@ export default function DailyBeneficiaryReceivingPage() {
                           </td>
                           <td className="py-3 px-4 text-center">
                             <a
-                              href={`http://127.0.0.1:8000/api/documents/daily-receiving/${tx.id}/pdf`}
+                              href={getDocumentPdfUrl(`/documents/daily-receiving/${tx.id}/pdf`)}
                               target="_blank"
                               rel="noreferrer"
                               className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#F5EDDA] hover:bg-[#ECE0C4] text-[#8C6C26] rounded-lg text-xs font-bold transition-colors"
@@ -551,7 +599,7 @@ export default function DailyBeneficiaryReceivingPage() {
                   </p>
                   <div className="pt-3 flex justify-center gap-3">
                     <a
-                      href={`http://127.0.0.1:8000/api/documents/daily-receiving/${createdVoucher.id}/pdf`}
+                      href={getDocumentPdfUrl(`/documents/daily-receiving/${createdVoucher.id}/pdf`)}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center gap-2 px-5 py-2.5 bg-[#C9A24A] hover:bg-[#B8923D] text-white rounded-lg text-xs font-bold transition-colors shadow"
@@ -661,7 +709,7 @@ export default function DailyBeneficiaryReceivingPage() {
           )}
         </Dialog>
 
-        {/* Toast */}
+        {/* Toast Notification */}
         <Toast
           show={toast.show}
           message={toast.message}
@@ -669,6 +717,11 @@ export default function DailyBeneficiaryReceivingPage() {
           onClose={() => setToast({ ...toast, show: false })}
         />
       </div>
-    </MainLayout>
-  );
-}
+    );
+
+    if (embedded) {
+      return mainContent;
+    }
+
+    return <MainLayout>{mainContent}</MainLayout>;
+  }

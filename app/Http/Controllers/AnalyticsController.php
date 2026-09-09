@@ -30,6 +30,25 @@ class AnalyticsController extends Controller
         $periodType = $request->get('period_type', 'custom'); // daily, weekly, monthly, yearly, custom
         $today = Carbon::today();
 
+        // التحقق من صحة تواريخ النطاق الزمني
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            try {
+                $sTest = Carbon::parse($request->start_date)->startOfDay();
+                $eTest = Carbon::parse($request->end_date)->endOfDay();
+                if ($sTest->gt($eTest)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية.',
+                    ], 422);
+                }
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'صيغة التاريخ غير صالحة.',
+                ], 422);
+            }
+        }
+
         // تحديد النطاق الزمني (Start Date & End Date)
         switch ($periodType) {
             case 'daily':

@@ -14,12 +14,14 @@ import {
   RefreshCw, Eye, Edit3, Trash2, X, Download, Users, FileArchive,
   Building2, Phone, Calendar, Hash, CheckCircle2, Package, Mail, Award
 } from "lucide-react";
+import { exportArrayToExcel } from "../../utils/excelExport";
 
 export default function NeighborhoodRepsPage() {
   const [reps, setReps] = useState([]);
   const [baskets, setBaskets] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
@@ -324,7 +326,7 @@ export default function NeighborhoodRepsPage() {
     }
   };
 
-  const handleExportExcel = async (repId) => {
+  const handleExportRepBeneficiariesExcel = async (repId) => {
     try {
       const response = await api.get(`/neighborhood-reps/${repId}/export-excel`, {
         responseType: 'blob',
@@ -383,6 +385,39 @@ export default function NeighborhoodRepsPage() {
 
   const cleanDate = (d) => (d ? String(d).slice(0, 10) : "—");
 
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      const exportData = filteredReps.map((r, idx) => ({
+        "م": idx + 1,
+        "اسم الجهة / المنظمة": r.organization_name || r.full_name || "—",
+        "نوع الجهة": r.organization_type || "جمعية خيرية",
+        "رقم الترخيص / السجل": r.license_number || r.national_id || "—",
+        "المسؤول المفوض": r.contact_person || "—",
+        "رقم الجوال": r.phone || "—",
+        "البريد الإلكتروني": r.email || "—",
+        "المدينة": r.city || "مكة المكرمة",
+        "الحي": r.district_name || "—",
+        "عدد الأسر التابعة": r.linked_beneficiaries_count || r.beneficiaries_count || 0,
+        "عدد مرات الاستلام": r.rep_distributions_count ?? 0,
+        "العنوان الوطني": r.national_address || "—",
+        "الحالة": r.status === "suspended" ? "موقوف" : "نشط",
+        "تاريخ التسجيل": cleanDate(r.created_at),
+      }));
+
+      await exportArrayToExcel({
+        data: exportData,
+        filename: `قائمة_الجهات_المستفيدة_${new Date().toISOString().slice(0, 10)}.xlsx`,
+        sheetName: "الجهات المستفيدة",
+      });
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء تصدير ملف الإكسل");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6" dir="rtl">
@@ -393,14 +428,25 @@ export default function NeighborhoodRepsPage() {
           badge="الجهات الشريكة"
           breadcrumbs={[{ label: "الجهات المستفيدة" }]}
           actions={
-            <Button
-              variant="primary"
-              size="sm"
-              icon={UserPlus}
-              onClick={handleOpenAddModal}
-            >
-              تسجيل جهة مستفيدة جديدة
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={FileSpreadsheet}
+                onClick={handleExportExcel}
+                disabled={exporting || filteredReps.length === 0}
+              >
+                {exporting ? "جاري التصدير..." : "تصدير إكسل"}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={UserPlus}
+                onClick={handleOpenAddModal}
+              >
+                تسجيل جهة مستفيدة جديدة
+              </Button>
+            </div>
           }
         />
 
@@ -627,7 +673,7 @@ export default function NeighborhoodRepsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleExportExcel(viewBeneficiariesRep.id)}
+                    onClick={() => handleExportRepBeneficiariesExcel(viewBeneficiariesRep.id)}
                     className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl font-bold text-xs transition-all border border-white/30 flex items-center gap-1.5 cursor-pointer"
                   >
                     <FileSpreadsheet className="w-4 h-4" />

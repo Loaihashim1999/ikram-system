@@ -4,12 +4,17 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>{{ $title ?? 'وثيقة رسمية - جمعية إكرام' }}</title>
     <style>
+        @php
+            $sanadFrame = file_exists(public_path('assets/11.jpeg')) 
+                ? public_path('assets/11.jpeg') 
+                : (file_exists(public_path('assets/11. jpeg')) ? public_path('assets/11. jpeg') : public_path('assets/ekram-letterhead.jpeg'));
+        @endphp
         @page {
-            margin-top: 58mm;
-            margin-bottom: 32mm;
+            margin-top: 52mm;
+            margin-bottom: 28mm;
             margin-left: 15mm;
             margin-right: 15mm;
-            background: url('{{ public_path("assets/ekram-letterhead.jpeg") }}') no-repeat 0 0;
+            background: url('{{ $sanadFrame }}') no-repeat 0 0;
             background-image-resize: 6;
         }
         body {

@@ -59,7 +59,11 @@ class DailyBeneficiaryController extends Controller
         }
 
         $perPage = intval($request->get('per_page', 15));
-        $beneficiaries = $query->latest()->paginate($perPage);
+        if ($perPage <= 0 || $request->boolean('all')) {
+            $beneficiaries = $query->latest()->get();
+        } else {
+            $beneficiaries = $query->latest()->paginate($perPage);
+        }
 
         // جلب قائمة الأحياء المتاحة للاستخدام في فلتر الواجهة
         $districts = DailyBeneficiary::distinct()->whereNotNull('district')->pluck('district');

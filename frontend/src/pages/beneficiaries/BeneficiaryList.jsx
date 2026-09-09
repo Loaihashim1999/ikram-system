@@ -14,6 +14,7 @@ import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
 import { Users, UserPlus, FileSpreadsheet, Search, Eye, Edit, Trash2, Package, RefreshCw, Send, X, FileText, QrCode, CheckCircle2, XCircle, Upload, ArrowRight, Download, Home, DollarSign, Plus } from "lucide-react";
+import { exportArrayToExcel } from "../../utils/excelExport";
 
 const DISPATCH_STEPS = ["اختيار المستفيدين", "اختيار سلة الدعم", "تحديد الموعد", "مراجعة وإرسال"];
 
@@ -377,6 +378,34 @@ export default function BeneficiaryList() {
     return matchSearch && matchType && matchPriority && matchCity && matchDistrict && matchStatus && matchFamilyStatus;
   });
 
+  // Export filtered beneficiaries to Excel
+  const handleExportExcel = () => {
+    if (!filtered || filtered.length === 0) {
+      triggerToast("لا توجد سجلات مستفيدين مطابقة للتصدير", "warning");
+      return;
+    }
+    const exportData = filtered.map((b, idx) => ({
+      "#": idx + 1,
+      "اسم المستفيد": b.full_name || b.name,
+      "رقم الهوية / الإقامة": b.national_id,
+      "رقم الجوال": b.phone || "—",
+      "النوع": (b.beneficiary_type || b.type) === "citizen" ? "مواطن" : "مقيم",
+      "المدينة": b.city || "—",
+      "الحي": b.district || "—",
+      "عدد أفراد الأسرة": b.family_members_count || 1,
+      "الأولوية": b.priority || "—",
+      "الحالة": b.status === "active" ? "نشط" : "موقوف",
+      "تاريخ التسجيل": b.created_at ? b.created_at.slice(0, 10) : "—",
+    }));
+
+    exportArrayToExcel({
+      filename: "ikram-beneficiaries",
+      sheetName: "المستفيدون",
+      data: exportData,
+    });
+    triggerToast(`تم تصدير ${filtered.length} مستفيد إلى ملف إكسل بنجاح.`);
+  };
+
   // ─── Dispatch Handlers ───
   const openDispatchModal = () => {
     setDispatchStep(0);
@@ -486,6 +515,15 @@ ${qrUrl}`;
                 onClick={() => openAddModalWithType("resident")}
               >
                 إضافة مقيم
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                icon={FileSpreadsheet}
+                onClick={handleExportExcel}
+              >
+                تصدير إكسل
               </Button>
 
               <Button

@@ -5,6 +5,7 @@ import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
 import Toast from "../../components/ui/Toast";
 import { getAnalytics } from "../../api/dailyBeneficiaries";
+import { getDocumentPdfUrl } from "../../utils/documentUrl";
 import {
   ShieldCheck,
   BarChart3,
@@ -52,8 +53,9 @@ export default function GovernancePage() {
   // Search filter inside sub-tables
   const [tableSearch, setTableSearch] = useState("");
 
-  // Toast
+  // Toast & Validation Error
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  const [dateRangeError, setDateRangeError] = useState("");
 
   const fetchAnalytics = async () => {
     try {
@@ -171,12 +173,27 @@ export default function GovernancePage() {
       month: selectedMonth,
       year: selectedYear,
     });
-    return `http://127.0.0.1:8000/api/reports/comprehensive/pdf?${params.toString()}`;
+    return getDocumentPdfUrl(`/reports/comprehensive/pdf?${params.toString()}`);
   }, [periodType, startDate, endDate, selectedDate, selectedMonth, selectedYear]);
 
   const pdfDailyUrl = useMemo(() => {
-    return `http://127.0.0.1:8000/api/reports/daily/pdf?date=${selectedDate}`;
+    return getDocumentPdfUrl(`/reports/daily/pdf?date=${selectedDate}`);
   }, [selectedDate]);
+
+  const handleGenerateReport = (e) => {
+    if (e) e.preventDefault();
+    if (!startDate || !endDate) {
+      setDateRangeError("يرجى اختيار تاريخ البداية وتاريخ النهاية.");
+      return;
+    }
+    if (new Date(startDate) > new Date(endDate)) {
+      setDateRangeError("خطأ في النطاق الزمني: تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية.");
+      return;
+    }
+    setDateRangeError("");
+    setPeriodType("custom");
+    fetchAnalytics();
+  };
 
   return (
     <MainLayout>
@@ -282,21 +299,35 @@ export default function GovernancePage() {
               )}
 
               {(periodType === "weekly" || periodType === "custom") && (
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-500">من:</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-slate-600 font-bold">من تاريخ:</span>
                   <input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="px-2.5 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs"
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setDateRangeError("");
+                    }}
+                    className="px-2.5 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs font-mono focus:border-[#3F6B3A] focus:outline-none"
                   />
-                  <span className="text-slate-500">إلى:</span>
+                  <span className="text-slate-600 font-bold">إلى تاريخ:</span>
                   <input
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="px-2.5 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs"
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setDateRangeError("");
+                    }}
+                    className="px-2.5 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs font-mono focus:border-[#3F6B3A] focus:outline-none"
                   />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={BarChart3}
+                    onClick={handleGenerateReport}
+                  >
+                    توليد التقرير
+                  </Button>
                 </div>
               )}
 
@@ -343,6 +374,37 @@ export default function GovernancePage() {
               </span>
             </div>
           </div>
+
+          {dateRangeError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-center gap-2 animate-shake">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+              <span>{dateRangeError}</span>
+            </div>
+          )}
+
+          {analytics?.period && (
+            <div className="p-3 bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl flex flex-wrap items-center justify-between text-xs gap-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#C9A24A]" />
+                <span className="text-gray-600 font-medium">فترة التقرير الحالية:</span>
+                <strong className="text-gray-900 font-mono">
+                  من {analytics.period.start_date} إلى {analytics.period.end_date}
+                </strong>
+                <span className="text-[11px] text-gray-500">({analytics.period.label})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={pdfComprehensiveUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1 bg-white border border-[#E5E2D9] hover:bg-[#FAF8F5] rounded-lg text-xs font-bold text-[#3F6B3A] flex items-center gap-1 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>تصدير تقرير الفترة (PDF)</span>
+                </a>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Dashboard Navigation Tabs */}

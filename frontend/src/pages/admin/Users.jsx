@@ -8,10 +8,10 @@ import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
 import StatusBadge from "../../components/ui/StatusBadge";
 import {
-  Shield, UserPlus, Key, CheckCircle, XCircle, Info, Lock,
-  Trash2, Edit3, Check, X, ShieldAlert, Truck, UserCheck,
-  Briefcase, User, Globe, RefreshCw, Copy, Eye, EyeOff, AlertTriangle
+  Trash2, Edit3, Check, X, Shield, ShieldAlert, Truck, UserCheck,
+  Briefcase, User, UserPlus, Globe, RefreshCw, Copy, Eye, EyeOff, AlertTriangle, FileSpreadsheet
 } from "lucide-react";
+import { exportArrayToExcel } from "../../utils/excelExport";
 
 const LOCKED_ACCOUNTS_KEY = 'ikram_locked_accounts';
 const FAILED_ATTEMPTS_KEY = 'ikram_failed_login_attempts';
@@ -78,6 +78,7 @@ export default function UsersPage() {
   // Form State
   const [form, setForm] = useState({
     username: "",
+    email: "",
     password: "",
     full_name: "",
     phone: "",
@@ -127,6 +128,7 @@ export default function UsersPage() {
     setEditingUser(null);
     setForm({
       username: "",
+      email: "",
       password: "Ikram@" + Math.floor(1000 + Math.random() * 9000) + "!",
       full_name: "",
       phone: "",
@@ -156,6 +158,7 @@ export default function UsersPage() {
 
     setForm({
       username: u.username,
+      email: u.email || "",
       password: "",
       full_name: u.full_name || u.name || "",
       phone: u.phone || "",
@@ -166,6 +169,29 @@ export default function UsersPage() {
     });
     setShowPassword(false);
     setShowAddModal(true);
+  };
+
+  const handleExportUsersExcel = () => {
+    if (!users || users.length === 0) {
+      triggerToast("لا توجد بيانات حسابات لتصديرها", "warning");
+      return;
+    }
+    const exportData = users.map((u, idx) => ({
+      "#": idx + 1,
+      "اسم المستخدم": u.username,
+      "الاسم الكامل": u.full_name || u.name,
+      "البريد الإلكتروني": u.email || "—",
+      "رقم الجوال": u.phone || "—",
+      "الدور الوظيفي": u.role === "admin" ? "المدير العام" : u.role === "assistant_admin" ? "مساعد المدير" : "سائق ميداني",
+      "الحالة": u.is_active !== false ? "نشط" : "موقوف",
+      "تاريخ الإنشاء": u.created_at ? u.created_at.slice(0, 10) : "—",
+    }));
+    exportArrayToExcel({
+      filename: "ikram-system-users",
+      sheetName: "حسابات النظام",
+      data: exportData,
+    });
+    triggerToast("تم تصدير قائمة الحسابات إلى ملف إكسل بنجاح.");
   };
 
   const handlePermissionToggle = (moduleKey, action) => {
@@ -302,14 +328,24 @@ export default function UsersPage() {
           badge="الأمان والتحكم (RBAC)"
           breadcrumbs={[{ label: "إدارة الحسابات" }]}
           actions={
-            <Button
-              variant="primary"
-              size="sm"
-              icon={UserPlus}
-              onClick={openAddUserModal}
-            >
-              إنشاء حساب مستخدم جديد
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={FileSpreadsheet}
+                onClick={handleExportUsersExcel}
+              >
+                تصدير إكسل
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={UserPlus}
+                onClick={openAddUserModal}
+              >
+                إنشاء حساب مستخدم جديد
+              </Button>
+            </div>
           }
         />
 
@@ -420,10 +456,11 @@ export default function UsersPage() {
 
                           <button
                             onClick={() => openEditUserModal(u)}
-                            className="p-1.5 bg-[#FAF8F5] hover:bg-gray-100 text-[#C9A24A] rounded-xl border border-[#E5E2D9] cursor-pointer transition-colors"
+                            className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-[#C9A24A] rounded-xl border border-amber-200 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
                             title="تعديل الحساب وتخصيص الصلاحيات"
                           >
-                            <Key size={14} />
+                            <Edit3 size={13} />
+                            <span>تعديل</span>
                           </button>
 
                           {u.username !== 'admin' && (
@@ -511,6 +548,29 @@ export default function UsersPage() {
               </div>
 
               <div>
+                <label className="block text-xs font-bold text-[#111827] mb-1">البريد الإلكتروني (Email)</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs font-mono"
+                  placeholder="name@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#111827] mb-1">حالة الحساب *</label>
+                <select
+                  value={form.is_active ? "active" : "inactive"}
+                  onChange={(e) => setForm({ ...form, is_active: e.target.value === "active" })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs font-bold"
+                >
+                  <option value="active">حساب نشط ومفعّل</option>
+                  <option value="inactive">حساب موقوف مؤقتاً</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
                 <label className="block text-xs font-bold text-[#111827] mb-1">الدور الأساسي (System Role) *</label>
                 <select
                   value={form.role}

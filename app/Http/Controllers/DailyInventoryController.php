@@ -280,7 +280,11 @@ class DailyInventoryController extends Controller
         }
 
         $perPage = intval($request->get('per_page', 20));
-        $movements = $query->latest()->paginate($perPage);
+        if ($perPage <= 0 || $request->boolean('all')) {
+            $movements = $query->latest()->get();
+        } else {
+            $movements = $query->latest()->paginate($perPage);
+        }
 
         return response()->json([
             'success' => true,

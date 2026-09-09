@@ -35,6 +35,7 @@ import {
   AlertCircle,
   FileCheck,
 } from "lucide-react";
+import { getDocumentPdfUrl } from "../../utils/documentUrl";
 
 export default function DailyBeneficiaryDetails() {
   const { id } = useParams();
@@ -427,7 +428,7 @@ export default function DailyBeneficiaryDetails() {
                       </td>
                       <td className="py-3 px-4 text-center">
                         <a
-                          href={`http://127.0.0.1:8000/api/documents/daily-receiving/${tx.id}/pdf`}
+                          href={getDocumentPdfUrl(`/documents/daily-receiving/${tx.id}/pdf`)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#F5EDDA] text-[#8C6C26] hover:bg-[#ECE0C4] rounded-lg text-xs font-bold transition-colors"
@@ -518,7 +519,7 @@ export default function DailyBeneficiaryDetails() {
               </p>
               <div className="pt-2 flex justify-center gap-3">
                 <a
-                  href={`http://127.0.0.1:8000/api/documents/daily-receiving/${createdVoucher.id}/pdf`}
+                  href={getDocumentPdfUrl(`/documents/daily-receiving/${createdVoucher.id}/pdf`)}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center gap-2 px-4 py-2 bg-[#C9A24A] hover:bg-[#B8923D] text-white rounded-lg text-xs font-bold transition-colors"

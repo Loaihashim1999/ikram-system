@@ -58,7 +58,10 @@ class BeneficiaryController extends Controller
             );
         }
 
-        $perPage = $request->input('per_page', 500);
+        $perPage = intval($request->input('per_page', 500));
+        if ($perPage <= 0 || $request->boolean('all')) {
+            return response()->json(['data' => $query->latest()->get()]);
+        }
 
         return response()->json(['data' => $query->latest()->paginate($perPage)]);
     }

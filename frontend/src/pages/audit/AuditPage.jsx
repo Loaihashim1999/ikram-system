@@ -3,7 +3,8 @@ import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
-import { FileText, Shield, User, MapPin, Package, Truck, Download, Search, CheckCircle2 } from "lucide-react";
+import { FileText, Shield, User, MapPin, Package, Truck, Download, Search, CheckCircle2, FileSpreadsheet } from "lucide-react";
+import { exportArrayToExcel } from "../../utils/excelExport";
 
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
 
@@ -12,6 +13,7 @@ export default function AuditPage() {
     beneficiaries: [], distributions: [], representatives: [], inventory_movements: [], drivers: [], audit_logs: []
   });
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [tab, setTab] = useState("distributions");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -27,6 +29,73 @@ export default function AuditPage() {
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com');
 
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      let exportRows = [];
+      let filename = `سجل_التدقيق_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      let sheetName = "التدقيق";
+
+      if (tab === "distributions") {
+        sheetName = "سندات وعمليات التوزيع";
+        filename = `سجل_عمليات_التوزيع_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        const filtered = data.distributions.filter((d) => 
+          statusFilter === "all" || (statusFilter === "delivered" ? d.status === "delivered" : d.status !== "delivered")
+        );
+        exportRows = filtered.map((d, idx) => ({
+          "م": idx + 1,
+          "اسم المستفيد": d.beneficiaries?.full_name || d.beneficiary?.name || "مستفيد",
+          "نوع السلة": d.basket?.name || "سلة دعم",
+          "تاريخ التوجيه": d.scheduled_at ? new Date(d.scheduled_at).toLocaleDateString('ar-SA') : "—",
+          "رمز الباركود": d.barcode_code || "—",
+          "حالة التسليم": d.status === 'delivered' ? 'تم الاستلام' : 'قيد الانتظار',
+        }));
+      } else if (tab === "representatives") {
+        sheetName = "سندات الجهات المستفيدة";
+        filename = `سجل_سندات_الجهات_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        exportRows = data.representatives.map((r, idx) => ({
+          "م": idx + 1,
+          "اسم الجهة المستفيدة": r.organization_name || r.name || r.full_name || "—",
+          "الحي / المنطقة": r.district || r.district_name || r.city || "—",
+          "رقم الترخيص / الهوية": r.license_number || r.national_id || "—",
+          "عدد المستفيدين / الأسر": r.beneficiaries_count || r.beneficiariesCount || 0,
+        }));
+      } else if (tab === "movements") {
+        sheetName = "حركات المستودع";
+        filename = `سجل_حركات_المستودع_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        exportRows = data.inventory_movements.map((m, idx) => ({
+          "م": idx + 1,
+          "المادة / الصنف": m.inventory_item?.name || "سلة غذائية",
+          "نوع الحركة": m.type === 'in' ? 'إدخال مخزون +' : 'صرف توزيع -',
+          "الكمية": m.quantity || 0,
+          "السبب والتفاصيل": m.reason || "توجيه وسحب سلال",
+          "التاريخ والتوقيت": m.created_at ? new Date(m.created_at).toLocaleString('ar-SA') : "—",
+        }));
+      } else if (tab === "drivers") {
+        sheetName = "سجل وأداء السائقين";
+        filename = `سجل_السائقين_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        exportRows = data.drivers.map((drv, idx) => ({
+          "م": idx + 1,
+          "اسم السائق": drv.full_name || drv.username || "—",
+          "رقم الجوال": drv.phone || "—",
+          "الدور والصلاحية": "سائق التوصيل الميداني",
+          "الحالة": "نشط في المنظومة",
+        }));
+      }
+
+      await exportArrayToExcel({
+        data: exportRows,
+        filename,
+        sheetName,
+      });
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء تصدير ملف الإكسل");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6" dir="rtl">
@@ -36,6 +105,17 @@ export default function AuditPage() {
           subtitle="تتبع كافة العمليات والتوزيعات وإخراج السندات المكسوة بالترويسة الرسمية للجمعية"
           badge="الرقابة الإدارية"
           breadcrumbs={[{ label: "سجل التدقيق والوثائق" }]}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              icon={FileSpreadsheet}
+              onClick={handleExportExcel}
+              disabled={exporting || loading}
+            >
+              {exporting ? "جاري التصدير..." : "تصدير التبويب الحالي إلى إكسل"}
+            </Button>
+          }
         />
 
       {/* Tabs */}

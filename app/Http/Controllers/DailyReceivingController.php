@@ -51,7 +51,11 @@ class DailyReceivingController extends Controller
         }
 
         $perPage = intval($request->get('per_page', 20));
-        $transactions = $query->latest('receiving_date')->paginate($perPage);
+        if ($perPage <= 0 || $request->boolean('all')) {
+            $transactions = $query->latest('receiving_date')->get();
+        } else {
+            $transactions = $query->latest('receiving_date')->paginate($perPage);
+        }
 
         // إحصائيات سريعة
         $today = Carbon::today();

@@ -36,6 +36,9 @@ class DistributionController extends Controller
         }
 
         $perPage = intval($request->get('per_page', 50));
+        if ($perPage <= 0 || $request->boolean('all')) {
+            return response()->json(['data' => $query->latest()->get()]);
+        }
 
         return response()->json(['data' => $query->latest()->paginate($perPage)]);
     }

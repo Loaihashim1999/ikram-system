@@ -27,7 +27,12 @@ class StaffController extends Controller
             );
         }
 
-        return response()->json(['data' => $query->latest()->paginate(20)]);
+        $perPage = intval($request->input('per_page', 20));
+        if ($perPage <= 0 || $request->boolean('all')) {
+            return response()->json(['data' => $query->latest()->get()]);
+        }
+
+        return response()->json(['data' => $query->latest()->paginate($perPage)]);
     }
 
     // ─── Store ───────────────────────────────────────────────────────────────

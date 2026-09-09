@@ -15,6 +15,7 @@ import EditBeneficiaryPage   from './pages/beneficiaries/EditBeneficiaryPage';
 import BeneficiaryImportPage from './pages/beneficiaries/BeneficiaryImportPage';
 
 // Daily Beneficiaries
+import DailyBeneficiariesPage from './pages/daily-beneficiaries/DailyBeneficiariesPage';
 import DailyBeneficiariesList from './pages/daily-beneficiaries/DailyBeneficiariesList';
 import DailyBeneficiaryForm from './pages/daily-beneficiaries/DailyBeneficiaryForm';
 import DailyBeneficiaryDetails from './pages/daily-beneficiaries/DailyBeneficiaryDetails';
@@ -108,11 +109,11 @@ function App() {
       <Route path="/beneficiaries/:id"          element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<BeneficiaryDetails />} />} />
       <Route path="/beneficiaries/:id/edit"     element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<EditBeneficiaryPage />} />} />
 
-      {/* Daily Beneficiaries */}
-      <Route path="/daily-beneficiaries"                  element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<DailyBeneficiariesList />} />} />
+      {/* Daily Beneficiaries (Consolidated Module) */}
+      <Route path="/daily-beneficiaries"                  element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<DailyBeneficiariesPage />} />} />
       <Route path="/daily-beneficiaries/add"              element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<DailyBeneficiaryForm />} />} />
-      <Route path="/daily-beneficiaries/receiving"        element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<DailyBeneficiaryReceivingPage />} />} />
-      <Route path="/daily-beneficiaries/inventory"        element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<DailyInventoryPage />} />} />
+      <Route path="/daily-beneficiaries/receiving"        element={<Navigate to="/daily-beneficiaries?tab=deliveries" replace />} />
+      <Route path="/daily-beneficiaries/inventory"        element={<Navigate to="/daily-beneficiaries?tab=inventory" replace />} />
       <Route path="/daily-beneficiaries/:id"              element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<DailyBeneficiaryDetails />} />} />
       <Route path="/daily-beneficiaries/:id/edit"         element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<DailyBeneficiaryForm />} />} />
 

@@ -4,11 +4,20 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>{{ $title ?? 'التقرير اليومي لعمليات التوزيع والمساعدات' }}</title>
     <style>
+        @php
+            $reportFrame = file_exists(public_path('assets/33.jpeg')) 
+                ? public_path('assets/33.jpeg') 
+                : (file_exists(public_path('assets/33. jpeg')) ? public_path('assets/33. jpeg') : '');
+        @endphp
         @page {
-            margin-top: 25mm;
-            margin-bottom: 20mm;
-            margin-left: 15mm;
-            margin-right: 15mm;
+            margin-top: 36mm;
+            margin-bottom: 22mm;
+            margin-left: 14mm;
+            margin-right: 14mm;
+            @if($reportFrame)
+            background: url('{{ $reportFrame }}') no-repeat 0 0;
+            background-image-resize: 6;
+            @endif
         }
         body {
             font-family: 'xbriyaz', 'tajawal', 'cairo', 'DejaVu Sans', sans-serif;
@@ -130,25 +139,25 @@
         <tr>
             <td style="width: 25%; padding: 4px;">
                 <div class="kpi-card">
-                    <div class="kpi-val">{{ $dailyReceivingCount }}</div>
+                    <div class="kpi-val">{{ $dailyReceivingCount ?? 0 }}</div>
                     <div class="kpi-lbl">استلامات المستفيدين اليوميين</div>
                 </div>
             </td>
             <td style="width: 25%; padding: 4px;">
                 <div class="kpi-card">
-                    <div class="kpi-val">{{ $dailyBasketsCount }}</div>
+                    <div class="kpi-val">{{ $dailyBasketsCount ?? 0 }}</div>
                     <div class="kpi-lbl">سلال المستفيدين اليوميين</div>
                 </div>
             </td>
             <td style="width: 25%; padding: 4px;">
                 <div class="kpi-card">
-                    <div class="kpi-val">{{ $generalDeliveriesCount }}</div>
+                    <div class="kpi-val">{{ $generalDeliveriesCount ?? 0 }}</div>
                     <div class="kpi-lbl">تسليمات التوزيع العام</div>
                 </div>
             </td>
             <td style="width: 25%; padding: 4px;">
                 <div class="kpi-card">
-                    <div class="kpi-val">{{ $dailyBasketsCount + $generalDeliveriesCount }}</div>
+                    <div class="kpi-val">{{ ($dailyBasketsCount ?? 0) + ($generalDeliveriesCount ?? 0) }}</div>
                     <div class="kpi-lbl">إجمالي السلال الموزعة اليوم</div>
                 </div>
             </td>

@@ -8,7 +8,8 @@ import Button from "../../components/ui/Button";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
 import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
-import { Eye, Edit3, Trash2, RefreshCw, X, FileText, Download, UserCheck, ShieldAlert, Award, FileArchive, Users, Plus, Send, Truck, Package, Calendar, QrCode, CheckCircle2, XCircle } from "lucide-react";
+import { Eye, Edit3, Trash2, RefreshCw, X, FileText, Download, UserCheck, ShieldAlert, Award, FileArchive, Users, Plus, Send, Truck, Package, Calendar, QrCode, CheckCircle2, XCircle, FileSpreadsheet } from "lucide-react";
+import { exportArrayToExcel } from "../../utils/excelExport";
 
 const DISPATCH_STEPS = ["اختيار المستفيدين / الجهات المستفيدة", "اختيار السائق المعتمد", "اختيار سلة الدعم", "تحديد الموعد", "مراجعة وإرسال"];
 
@@ -309,6 +310,45 @@ ${qrUrl}`;
     window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(textMsg)}`, "_blank");
   };
 
+  const handleExportDeliveryExcel = () => {
+    if (activeTab === "special_needs") {
+      if (!filteredBeneficiaries || filteredBeneficiaries.length === 0) return;
+      const exportData = filteredBeneficiaries.map((b, idx) => ({
+        "#": idx + 1,
+        "اسم المستفيد": b.full_name || b.name,
+        "رقم الهوية / الإقامة": b.national_id,
+        "رقم الهاتف": b.phone || "—",
+        "المدينة": b.city || "—",
+        "الحي السكني": b.district || "—",
+        "الفئة المستحقة": b.priority === "special_needs" ? "ذوو احتياجات خاصة" : "كبار السن",
+        "حالة الملف": b.status === "active" ? "نشط" : "موقوف",
+        "تاريخ التسجيل": b.created_at ? b.created_at.slice(0, 10) : "—",
+      }));
+      exportArrayToExcel({
+        filename: "ikram-home-delivery-beneficiaries",
+        sheetName: "توصيل المنازل",
+        data: exportData,
+      });
+    } else {
+      if (!filteredRepresentatives || filteredRepresentatives.length === 0) return;
+      const exportData = filteredRepresentatives.map((r, idx) => ({
+        "#": idx + 1,
+        "اسم الجهة / المندوب": r.name,
+        "رقم الهوية": r.national_id || "—",
+        "رقم الجوال": r.phone || "—",
+        "المدينة": r.city || "—",
+        "الحي التابع": r.district || "—",
+        "الأسر المرتبطة": r.linked_beneficiaries_count || 0,
+        "سلال الدعم": r.total_received_count || 0,
+      }));
+      exportArrayToExcel({
+        filename: "ikram-delivery-representatives",
+        sheetName: "توزيعات الجهات المستفيدة",
+        data: exportData,
+      });
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6" dir="rtl">
@@ -319,16 +359,26 @@ ${qrUrl}`;
           badge={isDriver ? "نمط السائق الميداني" : "العمليات اللوجستية"}
           breadcrumbs={[{ label: "إدارة التوصيل" }]}
           actions={
-            !isDriver && (
+            <div className="flex items-center gap-2">
               <Button
-                variant="primary"
+                variant="outline"
                 size="sm"
-                icon={Send}
-                onClick={openHomeDeliveryDispatchModal}
+                icon={FileSpreadsheet}
+                onClick={handleExportDeliveryExcel}
               >
-                توجيه دعم التوصيل
+                تصدير إكسل
               </Button>
-            )
+              {!isDriver && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={Send}
+                  onClick={openHomeDeliveryDispatchModal}
+                >
+                  توجيه دعم التوصيل
+                </Button>
+              )}
+            </div>
           }
         />
 

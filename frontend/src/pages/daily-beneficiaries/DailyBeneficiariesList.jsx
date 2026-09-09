@@ -34,8 +34,10 @@ import {
   Filter,
   RotateCcw,
 } from "lucide-react";
+import { exportApiDataToExcel } from "../../utils/excelExport";
+import { getDocumentPdfUrl } from "../../utils/documentUrl";
 
-export default function DailyBeneficiariesList() {
+export default function DailyBeneficiariesList({ embedded = false }) {
   const navigate = useNavigate();
 
   // Data & loading states
@@ -214,42 +216,55 @@ export default function DailyBeneficiariesList() {
     }
   };
 
-  // Export to Excel
-  const handleExportExcel = () => {
-    if (beneficiaries.length === 0) {
-      setToast({ show: true, message: "لا توجد بيانات متاحة للتصدير", type: "warning" });
-      return;
+  // Export ALL records matching current filters to Excel
+  const handleExportExcel = async () => {
+    try {
+      setToast({ show: true, message: "جاري استخراج وتصدير جميع السجلات المطابقة للتصفية...", type: "info" });
+      const params = {
+        search: search.trim() || undefined,
+        district: selectedDistrict !== "all" ? selectedDistrict : undefined,
+        category_id: selectedCategory !== "all" ? selectedCategory : undefined,
+        status: selectedStatus !== "all" ? selectedStatus : undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+        last_delivery_from: lastDeliveryFrom || undefined,
+        last_delivery_to: lastDeliveryTo || undefined,
+      };
+
+      const count = await exportApiDataToExcel({
+        endpoint: "/daily-beneficiaries",
+        params,
+        filename: "ikram-daily-beneficiaries",
+        sheetName: "المستفيدون اليوميون",
+        transform: (b, idx) => ({
+          "#": idx + 1,
+          "اسم المستفيد": b.full_name,
+          "رقم الهوية / الإقامة": b.national_id,
+          "رقم الجوال": b.phone,
+          "الحي": b.district || "غير محدد",
+          "الفئة": b.category_name || b.category?.name || "أسر متعففة",
+          "مرات الاستلام": b.total_received_count || 0,
+          "تاريخ آخر استلام": b.last_delivery_date ? b.last_delivery_date.slice(0, 10) : "لم يستلم بعد",
+          "تاريخ التسجيل": b.created_at ? b.created_at.slice(0, 10) : "—",
+          "الحالة": b.status === "active" ? "نشط" : "غير نشط",
+          "ملاحظات": b.notes || "",
+        }),
+      });
+
+      setToast({ show: true, message: `تم تصدير ${count} مستفيد بنجاح إلى ملف إكسل.`, type: "success" });
+    } catch (err) {
+      setToast({ show: true, message: err.message || "فشل تصدير ملف الإكسل", type: "error" });
     }
-
-    const exportRows = beneficiaries.map((b, idx) => ({
-      "#": idx + 1,
-      "اسم المستفيد": b.full_name,
-      "رقم الهوية / الإقامة": b.national_id,
-      "رقم الجوال": b.phone,
-      "الحي": b.district || "غير محدد",
-      "الفئة": b.category_name || b.category?.name || "أسر متعففة",
-      "مرات الاستلام": b.total_received_count || 0,
-      "تاريخ آخر استلام": b.last_delivery_date ? new Date(b.last_delivery_date).toLocaleDateString("ar-SA") : "لم يستلم بعد",
-      "تاريخ التسجيل": new Date(b.created_at).toLocaleDateString("ar-SA"),
-      "الحالة": b.status === "active" ? "نشط" : "غير نشط",
-      "ملاحظات": b.notes || "",
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportRows);
-    ws["!dir"] = "rtl";
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "المستفيدون اليوميون");
-    XLSX.writeFile(wb, `قائمة_المستفيدين_اليوميين_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   const selectedInventoryItemObj = useMemo(() => {
     return inventoryItems.find((i) => i.id === selectedItem);
   }, [inventoryItems, selectedItem]);
 
-  return (
-    <MainLayout>
-      <div className="space-y-6" dir="rtl">
-        {/* Page Header with Actions */}
+  const mainContent = (
+    <div className="space-y-6" dir="rtl">
+      {/* Page Header with Actions (only if standalone) */}
+      {!embedded && (
         <PageHeader
           title="سجل المستفيدين اليوميين"
           subtitle="إدارة المستفيدين من المساعدات اليومية وتسجيل الاستلامات وتتبع الصرف الفوري"
@@ -266,26 +281,15 @@ export default function DailyBeneficiariesList() {
                 تصدير إكسل
               </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                icon={Package}
-                onClick={() => navigate("/daily-beneficiaries/receiving")}
-              >
-                شاشة الاستلام والتسليم
-              </Button>
-
-              <Button
-                variant="primary"
-                size="sm"
-                icon={UserPlus}
-                onClick={() => navigate("/daily-beneficiaries/add")}
-              >
-                إضافة مستفيد جديد
-              </Button>
+              <Link to="/daily-beneficiaries/add">
+                <Button variant="primary" size="sm" icon={UserPlus}>
+                  إضافة مستفيد جديد
+                </Button>
+              </Link>
             </div>
           }
         />
+      )}
 
         {/* Filter Card */}
         <div className="bg-white border border-[#E5E2D9] rounded-2xl p-4 shadow-xs">
@@ -544,7 +548,6 @@ export default function DailyBeneficiariesList() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
@@ -577,7 +580,7 @@ export default function DailyBeneficiariesList() {
                 </p>
                 <div className="pt-2 flex justify-center gap-3">
                   <a
-                    href={`http://127.0.0.1:8000/api/documents/daily-receiving/${createdVoucher.id}/pdf`}
+                    href={getDocumentPdfUrl(`/documents/daily-receiving/${createdVoucher.id}/pdf`)}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center gap-2 px-4 py-2 bg-[#C9A24A] hover:bg-[#B8923D] text-white rounded-lg text-xs font-bold transition-colors"
@@ -709,7 +712,7 @@ export default function DailyBeneficiariesList() {
                       <td className="p-2.5 text-slate-600">{h.authorized_user?.full_name || "النظام"}</td>
                       <td className="p-2.5 text-center">
                         <a
-                          href={`http://127.0.0.1:8000/api/documents/daily-receiving/${h.id}/pdf`}
+                          href={getDocumentPdfUrl(`/documents/daily-receiving/${h.id}/pdf`)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded text-[11px] font-bold"
@@ -743,6 +746,12 @@ export default function DailyBeneficiariesList() {
         type={toast.type}
         onClose={() => setToast({ ...toast, show: false })}
       />
-    </MainLayout>
+    </div>
   );
+
+  if (embedded) {
+    return mainContent;
+  }
+
+  return <MainLayout>{mainContent}</MainLayout>;
 }

@@ -12,6 +12,7 @@ import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
 import { Eye, Edit, Trash2, RefreshCw, X, FileText, Users, Home, Briefcase, Package, Send, QrCode, UserPlus, FileSpreadsheet, Upload, Download, CheckCircle2, XCircle, Plus, Search } from "lucide-react";
+import { exportArrayToExcel } from "../../utils/excelExport";
 
 const statusLabels = {
   active: { label: "نشط", class: "bg-emerald-100 text-emerald-800 border-emerald-300" },
@@ -364,6 +365,32 @@ ${qrUrl}`;
     return matchQ && matchJob && matchDept && matchStatus;
   });
 
+  const handleExportExcel = () => {
+    if (!filteredStaff || filteredStaff.length === 0) {
+      triggerToast("لا توجد سجلات موظفين مطابقة للتصدير", "warning");
+      return;
+    }
+    const exportData = filteredStaff.map((s, idx) => ({
+      "#": idx + 1,
+      "اسم الموظف": s.name,
+      "رقم الهوية الوطنية": s.national_id,
+      "رقم الجوال": s.phone || "—",
+      "البريد الإلكتروني": s.email || "—",
+      "المسمى الوظيفي": s.job_title || "—",
+      "القسم / الإدارة": s.department || "—",
+      "الراتب": s.salary || "—",
+      "تاريخ التعيين": s.hire_date || "—",
+      "عدد أفراد الأسرة": s.family_members_count || 1,
+      "الحالة الوظيفية": s.status === "active" ? "نشط" : s.status === "on_leave" ? "إجازة" : "منتهي الخدمة",
+    }));
+    exportArrayToExcel({
+      filename: "ikram-staff-members",
+      sheetName: "موظفو الجمعية",
+      data: exportData,
+    });
+    triggerToast(`تم تصدير ${filteredStaff.length} موظف بنجاح.`);
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6" dir="rtl">
@@ -391,6 +418,15 @@ ${qrUrl}`;
                 onClick={openAddStaffModal}
               >
                 إضافة موظف جديد
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                icon={FileSpreadsheet}
+                onClick={handleExportExcel}
+              >
+                تصدير إكسل
               </Button>
 
               <Button

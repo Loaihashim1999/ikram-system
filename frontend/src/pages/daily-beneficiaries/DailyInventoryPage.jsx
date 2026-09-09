@@ -28,9 +28,11 @@ import {
   CheckCircle2,
   Clock,
   Layers,
+  FileSpreadsheet,
 } from "lucide-react";
+import { exportApiDataToExcel, exportArrayToExcel } from "../../utils/excelExport";
 
-export default function DailyInventoryPage() {
+export default function DailyInventoryPage({ embedded = false }) {
   const [activeTab, setActiveTab] = useState("items"); // 'items' | 'movements'
 
   // Items state
@@ -257,10 +259,62 @@ export default function DailyInventoryPage() {
     }
   };
 
-  return (
-    <MainLayout>
-      <div className="space-y-6" dir="rtl">
-        {/* Page Header */}
+  const handleExportItemsExcel = () => {
+    if (!items || items.length === 0) {
+      setToast({ show: true, message: "لا توجد أصناف في المستودع لتصديرها", type: "warning" });
+      return;
+    }
+    const exportData = items.map((i, idx) => ({
+      "#": idx + 1,
+      "اسم الصنف": i.name,
+      "الرصيد الحالي": i.current_quantity,
+      "الوحدة": i.unit || "قطعة",
+      "حد التنبيه الأدنى": i.min_threshold || 0,
+      "التصنيف": i.category || "عام",
+      "رقم التشغيلة": i.batch_number || "—",
+      "المورد": i.supplier || "—",
+      "تاريخ انتهاء الصلاحية": i.expiry_date ? i.expiry_date.slice(0, 10) : "غير محدد",
+      "الحالة": i.status === "active" ? "متاح" : "معلق",
+      "الوصف": i.description || "",
+    }));
+    exportArrayToExcel({
+      filename: "ikram-daily-inventory-items",
+      sheetName: "مخزون اليوميين",
+      data: exportData,
+    });
+    setToast({ show: true, message: "تم تصدير قائمة أصناف المستودع بنجاح.", type: "success" });
+  };
+
+  const handleExportMovementsExcel = async () => {
+    try {
+      setToast({ show: true, message: "جاري استخراج وتصدير سجل الحركات المخزنية...", type: "info" });
+      const count = await exportApiDataToExcel({
+        endpoint: "/daily-beneficiaries/inventory/movements",
+        filename: "ikram-daily-inventory-movements",
+        sheetName: "حركات المستودع",
+        transform: (m, idx) => ({
+          "#": idx + 1,
+          "التاريخ والوقت": m.created_at ? m.created_at.slice(0, 16).replace("T", " ") : "—",
+          "الصنف": m.item?.name || "—",
+          "نوع الحركة": m.type === "in" ? "توريد / إضافة" : m.type === "out" ? "صرف / استهلاك" : "تسوية رصيد",
+          "الكمية": m.quantity,
+          "الرصيد قبل": m.balance_before ?? "—",
+          "الرصيد بعد": m.balance_after ?? "—",
+          "سبب الحركة": m.reason || "—",
+          "الموظف المسؤول": m.user?.name || "إدارة المستودع",
+          "ملاحظات": m.notes || "",
+        }),
+      });
+      setToast({ show: true, message: `تم تصدير ${count} حركة مخزنية بنجاح.`, type: "success" });
+    } catch (err) {
+      setToast({ show: true, message: err.message || "فشل تصدير الحركات", type: "error" });
+    }
+  };
+
+  const mainContent = (
+    <div className="space-y-6" dir="rtl">
+      {/* Page Header (only if standalone) */}
+      {!embedded && (
         <PageHeader
           title="مستودع المستفيدين اليوميين"
           subtitle="إدارة الأصناف المخزنية المخصصة للحالات الطارئة ومتابعة تواريخ الصلاحية والتسويات"
@@ -270,20 +324,27 @@ export default function DailyInventoryPage() {
             { label: "المستودع والمخزون" },
           ]}
           actions={
-            <Button
-              variant="primary"
-              size="sm"
-              icon={Plus}
-              onClick={() => {
-                setEditingItem(null);
-                setForm(initialForm);
-                setShowItemModal(true);
-              }}
-            >
-              إضافة صنف جديد
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={FileSpreadsheet}
+                onClick={activeTab === "items" ? handleExportItemsExcel : handleExportMovementsExcel}
+              >
+                تصدير إكسل
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={Plus}
+                onClick={handleOpenAddModal}
+              >
+                إضافة صنف جديد
+              </Button>
+            </div>
           }
         />
+      )}
 
         {/* Top KPI Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -858,6 +919,11 @@ export default function DailyInventoryPage() {
           onClose={() => setToast({ ...toast, show: false })}
         />
       </div>
-    </MainLayout>
-  );
-}
+    );
+
+    if (embedded) {
+      return mainContent;
+    }
+
+    return <MainLayout>{mainContent}</MainLayout>;
+  }
