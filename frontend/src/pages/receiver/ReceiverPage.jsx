@@ -1,6 +1,8 @@
 import { useState } from "react";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import QrScannerModal from "../../components/common/QrScannerModal";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { QrCode, Search, CheckCircle2, FileText, UserCheck, ShieldAlert, ArrowRight, AlertTriangle, XCircle, Clock } from "lucide-react";
@@ -102,47 +104,46 @@ export default function ReceiverPage() {
 
   return (
     <MainLayout>
-    <div className="p-6 max-w-4xl mx-auto" dir="rtl">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-black text-gray-800 flex items-center justify-center gap-2">
-          <QrCode className="w-8 h-8 text-primary-700" />
-          <span>صفحة التحقق والاستلام برمز QR (Single-Use Verification)</span>
-        </h1>
-        <p className="text-xs text-gray-500 mt-2">
-          مسح أو إدخال رمز الاستلام المخصص لمرة واحدة فقط لتوثيق التسليم للمستفيد أو الجهة المستفيدة وتوليد السند المعتمد
-        </p>
-      </div>
+      <div className="space-y-6 max-w-4xl mx-auto" dir="rtl">
+        {/* Page Header */}
+        <PageHeader
+          title="التحقق والاستلام برمز الاستجابة السريعة (QR)"
+          subtitle="مسح أو إدخال رمز الاستلام لتوثيق التسليم للمستفيد أو الجهة وتأكيد الصرف المعتمد"
+          badge="التحقق الفوري"
+          breadcrumbs={[{ label: "التحقق والاستلام" }]}
+        />
 
-      {/* Scanner & Code Search Box */}
-      <div className="bg-white rounded-3xl shadow-md border border-primary-100 p-6 mb-8 text-center">
-        <div className="flex flex-col md:flex-row gap-3 max-w-xl mx-auto">
-          <input
-            type="text"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="أدخل رمز الباركود / QR (مثال: REP-A1B2C3)..."
-            className="flex-1 rounded-2xl border-2 border-primary-200 px-4 py-3 text-sm text-right font-mono focus:ring-2 focus:ring-primary-500 bg-surface-subtle"
-          />
-          
-          <button
-            onClick={() => handleSearch()}
-            disabled={loading}
-            className="bg-primary-700 hover:bg-primary-800 text-white font-bold px-6 py-3 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
-          >
-            <Search className="w-4 h-4" />
-            <span>{loading ? "جاري البحث..." : "بحث بالرمز"}</span>
-          </button>
+        {/* Scanner & Code Search Box */}
+        <div className="bg-white rounded-2xl shadow-xs border border-[#E5E2D9] p-6 text-center">
+          <div className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="أدخل رمز الباركود / QR (مثال: REP-A1B2C3)..."
+              className="flex-1 h-11 rounded-xl border border-[#E5E2D9] px-4 text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-[#C9A24A] bg-[#FAF8F5]"
+            />
+            
+            <Button
+              variant="primary"
+              size="md"
+              icon={Search}
+              loading={loading}
+              onClick={() => handleSearch()}
+            >
+              بحث بالرمز
+            </Button>
 
-          <button
-            onClick={() => setShowScanner(true)}
-            className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-5 py-3 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
-          >
-            <QrCode className="w-4 h-4" />
-            <span>فتح الكاميرا 📷</span>
-          </button>
+            <Button
+              variant="secondary"
+              size="md"
+              icon={QrCode}
+              onClick={() => setShowScanner(true)}
+            >
+              فتح الكاميرا
+            </Button>
+          </div>
         </div>
-      </div>
 
       {/* Result Display */}
       {result && !confirmed && (

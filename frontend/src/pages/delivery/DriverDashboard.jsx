@@ -3,6 +3,8 @@ import beneficiaryApi from "../../api/beneficiaries";
 import distributionApi from "../../api/distributions";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import { Truck, Phone, MapPin, CheckCircle, QrCode, Search } from "lucide-react";
 
 export default function DriverDashboard() {
@@ -100,41 +102,41 @@ export default function DriverDashboard() {
     <MainLayout>
       <div className="p-6 max-w-5xl mx-auto" dir="rtl">
         {/* Header */}
-        <div className="mb-6 bg-gradient-to-r from-amber-800 to-amber-900 text-white p-6 rounded-2xl shadow-md flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
-              <Truck className="w-7 h-7 text-amber-400" />
-              <span>لوحة سائق التوصيل المباشر</span>
-            </h1>
-            <p className="text-xs text-amber-200 mt-1">عرض المستفيدين والجهات المستفيدة المسندة إليك فقط وتأكيد الاستلام عبر كود الـ QR</p>
-          </div>
-
-          {/* Driver Switcher Selector */}
-          <div className="bg-white/10 p-2 rounded-xl border border-white/20">
-            <label className="block text-[10px] text-amber-200 font-bold mb-1">السائق الحالي:</label>
-            <select
-              value={selectedDriverId}
-              onChange={(e) => setSelectedDriverId(e.target.value)}
-              className="bg-amber-950 text-white text-xs font-bold rounded-lg p-2 border border-amber-600 focus:outline-none"
-            >
-              <option value="">جميع السائقين (عرض شمول)</option>
-              {drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  🚚 {d.full_name || d.name} ({d.phone})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <PageHeader
+          title="لوحة سائق التوصيل المباشر"
+          subtitle="عرض المستفيدين والجهات المستفيدة المسندة إليك فقط وتأكيد الاستلام عبر كود الـ QR"
+          breadcrumbs={[
+            { label: "الرئيسية", href: "/" },
+            { label: "إدارة التوزيع والتوصيل", href: "/delivery" },
+            { label: "لوحة السائق" }
+          ]}
+          action={
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-[#E5E2D9] shadow-xs">
+              <span className="text-xs text-slate-500 font-bold whitespace-nowrap">السائق المحدد:</span>
+              <select
+                value={selectedDriverId}
+                onChange={(e) => setSelectedDriverId(e.target.value)}
+                className="bg-slate-50 text-slate-800 text-xs font-bold rounded-lg px-2.5 py-1.5 border border-[#E5E2D9] focus:outline-none focus:border-[#3F6B3A]"
+              >
+                <option value="">جميع السائقين (عرض شمول)</option>
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.full_name || d.name} ({d.phone || "—"})
+                  </option>
+                ))}
+              </select>
+            </div>
+          }
+        />
 
         {/* Tab Buttons */}
-        <div className="flex bg-gray-100 p-1.5 rounded-2xl border border-gray-200 mb-6">
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-[#E5E2D9] mb-6 gap-2">
           <button
             onClick={() => setActiveTab("special_needs")}
             className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === "special_needs"
-                ? "bg-amber-600 text-white shadow-md"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-[#3F6B3A] text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             👵 قائمة كبار السن وذوي الاحتياجات الخاصة ({beneficiaryDeliveries.length})
@@ -143,8 +145,8 @@ export default function DriverDashboard() {
             onClick={() => setActiveTab("representatives")}
             className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === "representatives"
-                ? "bg-amber-600 text-white shadow-md"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-[#3F6B3A] text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             🏢 قائمة الجهات المستفيدة ({repDeliveries.length})

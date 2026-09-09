@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import staffApi from "../../api/staffApi";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
+import { UserPlus, Save } from "lucide-react";
 
 const RELATIONSHIP_OPTIONS = [
   "ابن", "بنت", "زوجة", "أم", "أب", "أخ", "أخت", "جد", "جدة", "حفيد", "أخرى"
@@ -65,10 +68,20 @@ export default function AddStaffPage() {
   return (
     <MainLayout>
     <div className="p-6 max-w-4xl mx-auto" dir="rtl">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">➕ إضافة موظف جديد</h1>
-        <Link to="/staff" className="text-amber-700 hover:underline text-sm">← قائمة الموظفين</Link>
-      </div>
+      <PageHeader
+        title="إضافة موظف جديد"
+        subtitle="تسجيل بيانات الموظف والبيانات الوظيفية وأفراد الأسرة والتابعين"
+        breadcrumbs={[
+          { label: "الرئيسية", href: "/" },
+          { label: "إدارة الموظفين", href: "/staff" },
+          { label: "إضافة موظف" }
+        ]}
+        action={
+          <Button variant="outline" size="sm" onClick={() => navigate("/staff")}>
+            ← قائمة الموظفين
+          </Button>
+        }
+      />
 
       <form onSubmit={handleSubmit}>
 
@@ -249,12 +262,25 @@ export default function AddStaffPage() {
           </div>
         )}
 
-        <button
-          disabled={saving}
-          className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-8 py-2.5 rounded-lg disabled:opacity-50 transition-colors"
-        >
-          {saving ? "⏳ جاري الحفظ..." : "✅ حفظ الموظف"}
-        </button>
+        <div className="flex items-center gap-3 pt-4">
+          <Button
+            type="submit"
+            variant="secondary"
+            size="md"
+            loading={saving}
+            icon={Save}
+          >
+            حفظ الموظف
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={() => navigate("/staff")}
+          >
+            إلغاء
+          </Button>
+        </div>
       </form>
     </div>
     </MainLayout>

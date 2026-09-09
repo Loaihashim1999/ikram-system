@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import { FileText, Shield, User, MapPin, Package, Truck, Download, Search, CheckCircle2 } from "lucide-react";
 
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
@@ -27,17 +29,14 @@ export default function AuditPage() {
 
   return (
     <MainLayout>
-    <div className="p-6 max-w-7xl mx-auto" dir="rtl">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Shield className="w-7 h-7 text-amber-600" />
-            <span>سجل التدقيق العام والتوثيق الرسمي (Audit & Logs)</span>
-          </h1>
-          <p className="text-xs text-gray-500 mt-1">تتبع كافة العمليات والتوزيعات وإخراج السندات المكسوة بالخط الهوائي الرسمي للجمعية</p>
-        </div>
-      </div>
+      <div className="space-y-6" dir="rtl">
+        {/* Page Header */}
+        <PageHeader
+          title="سجل التدقيق العام والتوثيق الرسمي"
+          subtitle="تتبع كافة العمليات والتوزيعات وإخراج السندات المكسوة بالترويسة الرسمية للجمعية"
+          badge="الرقابة الإدارية"
+          breadcrumbs={[{ label: "سجل التدقيق والوثائق" }]}
+        />
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 flex-wrap border-b pb-3">

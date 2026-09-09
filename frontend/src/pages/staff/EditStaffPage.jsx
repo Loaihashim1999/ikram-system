@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import staffApi from "../../api/staffApi";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import {
   Briefcase, Home, Users, FileText, Save, ArrowRight, Plus, Trash2
 } from "lucide-react";
@@ -115,19 +117,20 @@ export default function EditStaffPage() {
     <MainLayout>
       <div className="p-6 max-w-4xl mx-auto" dir="rtl">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">✏️ تعديل بيانات الموظف</h1>
-            <p className="text-xs text-gray-500 mt-1">{form.name}</p>
-          </div>
-          <Link
-            to="/staff"
-            className="text-amber-700 hover:underline text-xs font-bold flex items-center gap-1"
-          >
-            <ArrowRight className="w-4 h-4" />
-            <span>العودة لقائمة الموظفين</span>
-          </Link>
-        </div>
+        <PageHeader
+          title="تعديل بيانات الموظف"
+          subtitle={form.name}
+          breadcrumbs={[
+            { label: "الرئيسية", href: "/" },
+            { label: "إدارة الموظفين", href: "/staff" },
+            { label: form.name || "تعديل موظف" }
+          ]}
+          action={
+            <Button variant="outline" size="sm" onClick={() => navigate("/staff")}>
+              ← العودة لقائمة الموظفين
+            </Button>
+          }
+        />
 
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
           {/* 4 Tabs Header */}
@@ -494,20 +497,23 @@ export default function EditStaffPage() {
 
           {/* Form Actions Footer */}
           <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-            <Link
-              to="/staff"
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-300"
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={() => navigate("/staff")}
             >
               إلغاء
-            </Link>
-            <button
+            </Button>
+            <Button
               type="submit"
-              disabled={saving}
-              className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              variant="secondary"
+              size="md"
+              loading={saving}
+              icon={Save}
             >
-              <Save className="w-4 h-4" />
-              <span>{saving ? "جاري التحديث..." : "حفظ والتحديث"}</span>
-            </button>
+              {saving ? "جاري التحديث..." : "حفظ والتحديث"}
+            </Button>
           </div>
         </form>
       </div>

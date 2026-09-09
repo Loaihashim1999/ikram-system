@@ -1,0 +1,84 @@
+{
+  "$schema": "https://tokens.studio/schemas/token-engine.json",
+  "name": "Ikram Association Design System",
+  "version": "2.0.0",
+  "color": {
+    "brand": {
+      "primaryGreen": { "value": "#3F6B3A", "type": "color", "description": "الهوية الرسمية للجمعية، العناوين الرئيسية وشريط التنقل" },
+      "primaryGreenHover": { "value": "#31542D", "type": "color" },
+      "primaryGreenLight": { "value": "#EBF4EA", "type": "color" },
+      "primaryGreenDark": { "value": "#223B1E", "type": "color" },
+      "gold": { "value": "#C9A24A", "type": "color", "description": "الذهب الملكي للعناصر النشطة والأيقونات واللمسات الجمالية" },
+      "goldHover": { "value": "#B45309", "type": "color" },
+      "goldLight": { "value": "#F5EDDA", "type": "color" },
+      "actionAmber": { "value": "#D97706", "type": "color", "description": "أزرار الحفظ والإضافة والإجراءات الرئيسية" },
+      "hoverAmber": { "value": "#B45309", "type": "color" },
+      "amberLight": { "value": "#FEF3C7", "type": "color" }
+    },
+    "surface": {
+      "appBg": { "value": "#F7F5F0", "type": "color", "description": "خلفية التطبيق الدافئة" },
+      "cardBg": { "value": "#FFFFFF", "type": "color", "description": "خلفية البطاقات الرئيسية" },
+      "softBg": { "value": "#FAF8F5", "type": "color", "description": "الأسطح الفرعية والمدخلات" },
+      "accentBg": { "value": "#F4EFE3", "type": "color", "description": "الخلفيات التمييزية" }
+    },
+    "border": {
+      "light": { "value": "#E5E2D9", "type": "color", "description": "حدود البطاقات والجداول" },
+      "neutral": { "value": "#E5E7EB", "type": "color", "description": "الحدود العامة" },
+      "focus": { "value": "#C9A24A", "type": "color", "description": "حدود التركيز على الحقول" }
+    },
+    "text": {
+      "primary": { "value": "#111827", "type": "color", "description": "النصوص الأساسية والعناوين" },
+      "secondary": { "value": "#1F2937", "type": "color", "description": "النصوص الفرعية والوصفية" },
+      "muted": { "value": "#6B7280", "type": "color", "description": "النصوص الخافتة والأرقام التوضيحية" }
+    },
+    "status": {
+      "successBg": { "value": "#E6F4EC", "type": "color" },
+      "successText": { "value": "#2E7D32", "type": "color" },
+      "successBorder": { "value": "#A5D6A7", "type": "color" },
+      "warningBg": { "value": "#FEF3C7", "type": "color" },
+      "warningText": { "value": "#B45309", "type": "color" },
+      "warningBorder": { "value": "#FCD34D", "type": "color" },
+      "dangerBg": { "value": "#FEE2E2", "type": "color" },
+      "dangerText": { "value": "#B91C1C", "type": "color" },
+      "dangerBorder": { "value": "#FCA5A5", "type": "color" },
+      "infoBg": { "value": "#E0F2FE", "type": "color" },
+      "infoText": { "value": "#0369A1", "type": "color" },
+      "infoBorder": { "value": "#7DD3FC", "type": "color" }
+    }
+  },
+  "fontFamilies": {
+    "arabic": { "value": "'Tajawal', 'Cairo', system-ui, -apple-system, sans-serif", "type": "fontFamilies" },
+    "mono": { "value": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", "type": "fontFamilies" }
+  },
+  "fontSizes": {
+    "xs": { "value": "12px", "type": "fontSizes" },
+    "sm": { "value": "14px", "type": "fontSizes" },
+    "base": { "value": "16px", "type": "fontSizes" },
+    "lg": { "value": "18px", "type": "fontSizes" },
+    "xl": { "value": "20px", "type": "fontSizes" },
+    "2xl": { "value": "24px", "type": "fontSizes" },
+    "3xl": { "value": "30px", "type": "fontSizes" }
+  },
+  "borderRadius": {
+    "sm": { "value": "6px", "type": "borderRadius" },
+    "md": { "value": "8px", "type": "borderRadius" },
+    "lg": { "value": "12px", "type": "borderRadius" },
+    "xl": { "value": "16px", "type": "borderRadius" },
+    "2xl": { "value": "24px", "type": "borderRadius" },
+    "full": { "value": "9999px", "type": "borderRadius" }
+  },
+  "boxShadow": {
+    "card": {
+      "value": "0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)",
+      "type": "boxShadow"
+    },
+    "cardHover": {
+      "value": "0 10px 15px -3px rgba(63, 107, 58, 0.08), 0 4px 6px -2px rgba(63, 107, 58, 0.04)",
+      "type": "boxShadow"
+    },
+    "dialog": {
+      "value": "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      "type": "boxShadow"
+    }
+  }
+}

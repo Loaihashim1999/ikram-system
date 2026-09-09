@@ -1,572 +1,314 @@
-# 🎨 Frontend Design System — Ikram Association
+# 🎨 كتيب ومواصفات نظام التصميم لكافة صفحات نظام إكرام
+## Ikram Association — Master Frontend Design System & Complete Pages UI Specification
 
-This document defines the visual identity, design tokens, page layouts, UI components, interaction patterns, overlays, dialogs, responsive behavior, and accessibility standards for the Ikram Association web application.
-
-The goal is a modern, premium, professional, calm, and highly usable RTL Arabic interface while preserving the association's established visual identity.
+> **الإصدار:** 2.0.0 (شامل لكافة صفحات النظام الأصلية ووحدة المستفيدين اليوميين ووحدة الحوكمة المطورة)  
+> **الاتجاه الأساسي:** RTL (من اليمين إلى اليسار - العربية أولاً)  
+> **ملف رموز التصميم المتوافق مع Figma / Penpot:** [`frontend/src/theme/design-tokens.json`](file:///c:/laragon/www/ikram-system/frontend/src/theme/design-tokens.json)
 
 ---
 
-## 1. 🎨 Visual Identity & Color System
+## 1. 🌟 الهوية البصرية ونظام الألوان (Visual Identity & Color Palette)
 
-The design system preserves the official Ikram visual identity:
+تلتزم جميع واجهات النظام بهوية جمعية إكرام المعتمدة، مع تحقيق التوازن بين الطابع المؤسسي الموثوق وتجربة مستخدم عصرية وسلسة (SaaS Dashboard):
 
-| Token | HEX | Primary Usage |
+### جدول الألوان المعتمدة (Design Tokens)
+
+| الرمز (Token) | القيمة اللونية (HEX) | الوظيفة في الواجهات |
 |---|---|---|
-| Primary Green | `#3F6B3A` | Brand identity, main headings, primary navigation |
-| Royal Gold | `#C9A24A` | Active navigation, accents, key icons |
-| Action Amber | `#D97706` | Primary actions, save, add, submit support |
-| Dark Amber | `#B45309` | Hover/pressed action states |
-| Warm Background | `#F7F5F0` | Application background |
-| Soft Background | `#FAF8F5` | Cards and secondary surfaces |
-| Light Border | `#E5E2D9` | Cards, tables, inputs |
-| Neutral Border | `#E5E7EB` | General UI borders |
-| Primary Text | `#111827` | Headings and important content |
-| Secondary Text | `#4B5563` | Supporting text |
+| **Primary Green (الأخضر الإكرامي)** | `#3F6B3A` | الهوية الرسمية، العناوين البارزة، شريط التنقل، وأيقونات الأقسام المعتمدة |
+| **Primary Green Dark** | `#223B1E` | حالات الضغط (Pressed) والتدرجات العميقة |
+| **Primary Green Light** | `#EBF4EA` | خلفيات العناصر النشطة والتأكيدات الناعمة |
+| **Royal Gold (الذهب الملكي)** | `#C9A24A` | القوائم النشطة، مؤشرات الإنجاز، وأيقونات التمييز |
+| **Action Amber (العنبر التنفيذي)** | `#D97706` | الأزرار الرئيسية، أزرار الحفظ والإضافة، والإجراءات الإيجابية |
+| **Hover Amber** | `#B45309` | حالة التمرير (Hover) على الأزرار والإجراءات |
+| **Warm Background (الخلفية الدافئة)** | `#F7F5F0` | خلفية الصفحة العامة (تقليل إجهاد العين) |
+| **Soft Background (السطح الناعم)** | `#FAF8F5` | خلفية البطاقات الداخلية والحقول وحاويات التصفية |
+| **Card White** | `#FFFFFF` | خلفية بطاقات الإحصائيات والجداول والنوافذ المنبثقة |
+| **Light Border (الحدود الفاتحة)** | `#E5E2D9` | خطوط الفصل، حدود الحقول والبطاقات |
+| **Neutral Border** | `#E5E7EB` | الحدود العامة المحايدة |
+| **Primary Text (النص الأساسي)** | `#111827` | العناوين الرئيسية، أسماء المستفيدين، الأرقام |
+| **Secondary Text (النص الفرعي)** | `#1F2937` | التسميات التوضيحية وتفاصيل البيانات |
+| **Muted Text (النص الخافت)** | `#6B7280` | التواريخ، الأرقام الوصفية، ونصوص الملاحظات |
 
-### Color Usage Principles
+### حالات النظام والتنبيهات (Semantic Status Colors)
 
-- Use green and gold as identity accents rather than covering the entire interface with strong colors.
-- Use amber for primary actions.
-- Use red only for destructive or dangerous actions.
-- Keep surfaces predominantly neutral and warm.
-- Maintain strong contrast between text and backgrounds.
-
----
-
-## 2. 🔤 Typography & Direction
-
-- **Direction:** `dir="rtl"` for the Arabic application interface.
-- **Font Family:** Prefer `Tajawal`, `Cairo`, or an appropriate RTL system font.
-- **Numeric / Identity Data:** Use `font-mono` for national IDs, phone numbers, QR codes, and technical identifiers.
-- **Headings:** Clear, confident, and compact.
-- **Body Text:** Comfortable line height and readable spacing.
+* **صالح / نشط / مكتمل (Success):** خلفية `#E6F4EC`، نص `#2E7D32`، حدود `#A5D6A7`.
+* **قارب على الانتهاء / تحذير (Warning):** خلفية `#FEF3C7`، نص `#B45309`، حدود `#FCD34D`.
+* **منتهي / ملغي / خطر (Danger):** خلفية `#FEE2E2`، نص `#B91C1C`، حدود `#FCA5A5`.
+* **تم التوزيع / معلومات (Info):** خلفية `#E0F2FE`، نص `#0369A1`، حدود `#7DD3FC`.
 
 ---
 
-## 3. 📐 Application Layout
+## 2. 🔤 الخطوط وتنسيق النصوص (Typography & RTL Standards)
 
-### Main Layout
-
-```text
-+-----------------------------------------------------------------------------------+
-| Header: Logo | Page Context | Current User | Notifications | User Menu          |
-+------------------------------------------+----------------------------------------+
-| Sidebar                                  | Main Content                           |
-| Width: 288px                             | Max Width: 1280px                      |
-|                                          | Padding: 24px                          |
-| - Dashboard                              | 1. Page Header                         |
-| - Beneficiaries                          | 2. Statistics Cards                    |
-| - Warehouse & Inventory                  | 3. Filters / Search                     |
-| - Association Employees                  | 4. Interactive Data Table              |
-| - Neighborhood Representatives            |                                        |
-| - Home Delivery                          |                                        |
-| - Governance & Indicators                |                                        |
-| - Accounts & Permissions                 |                                        |
-+------------------------------------------+----------------------------------------+
-```
-
-### Sidebar
-
-- Desktop width: `288px`.
-- Fixed or sticky positioning.
-- Soft neutral background.
-- Active item uses a subtle green/gold accent.
-- Navigation groups can be collapsible.
-- Icons use a consistent size and visual weight.
-- On mobile, the sidebar becomes a slide-in drawer.
-
-### Header
-
-- Sticky on desktop where appropriate.
-- Clean neutral surface.
-- Subtle border and shadow.
-- User menu and notifications are accessible from the header.
-- Avoid excessive visual density.
+* **الخط المعتمد:** خط **`Tajawal`** كخيار أول، مدعوماً بخط **`Cairo`** وخطوط النظام العربية الحديثة.
+* **الأرقام والهويات:** استخدام خط المونو (`font-mono`) لأرقام الهوية الوطنية، الإقامات، أرقام السندات، والباركود لضمان اصطفاف رقمي متناسق.
+* **التسلسل الهرمي للنصوص (Type Scale):**
+  * **عنوان الصفحة الرئيسي (H1):** `text-2xl font-bold text-gray-900`
+  * **عنوان الأقسام والبطاقات (H2):** `text-lg font-bold text-gray-800`
+  * **عناوين الحقول والتسميات (Labels):** `text-sm font-semibold text-gray-700`
+  * **النصوص الأساسية وقيم الجداول:** `text-sm text-gray-800`
+  * **النصوص الثانوية والملاحظات:** `text-xs text-gray-500`
 
 ---
 
-## 4. 🌫️ Scrim / Backdrop / Overlay System
-
-All actions that require user focus must use a consistent overlay system.
-
-### Use Scrim For
-
-- Edit dialogs.
-- Delete confirmations.
-- Add/create dialogs.
-- Beneficiary details.
-- Support submission.
-- Permission editing.
-- Inventory actions.
-- Any critical or focused workflow.
-
-### Standard Scrim
-
-```css
-fixed inset-0
-bg-slate-950/45
-backdrop-blur-[3px]
-z-40
-```
-
-### Scrim Behavior
-
-- Fade from `opacity-0` to `opacity-100`.
-- Prevent interaction with content behind the active dialog.
-- Support `Esc` to close non-critical dialogs.
-- Preserve RTL behavior.
-- Do not use excessive blur.
-
-### Animation
+## 3. 📐 الهيكل العام للواجهة (Application Layout Architecture)
 
 ```text
-Scrim:
-opacity 0 → 100
-
-Dialog:
-opacity 0 → 100
-scale 0.97 → 1
-translateY 8px → 0
-```
-
-Use short, subtle transitions around `150–220ms`.
-
----
-
-## 5. 🪟 Dialog & Modal System
-
-Use a unified component architecture:
-
-| Component | Purpose |
-|---|---|
-| `Dialog` | Create and edit forms |
-| `ConfirmDialog` | Delete and destructive confirmations |
-| `DetailsDialog` | View beneficiary/support details |
-| `ActionDialog` | Submit support or execute workflows |
-| `Drawer` | Mobile-friendly forms and contextual actions |
-
-### Dialog Design
-
-- `rounded-2xl`.
-- Clean white/warm surface.
-- Deep but soft shadow.
-- Clear header.
-- Contextual icon.
-- Close button.
-- Scrollable content area when necessary.
-- Stable footer for actions.
-- Maximum readable width.
-- Full RTL support.
-
-### Dialog Footer
-
-Primary action should be visually dominant.
-
-```text
-[ Cancel ]                         [ Save Changes ]
-```
-
-For destructive actions:
-
-```text
-[ Cancel ]                         [ Delete Permanently ]
++-----------------------------------------------------------------------------------------------------+
+| TopBar: الشعار الرسمي | سياق الصفحة | شارة الدور (Supervisor) | التنبيهات | قائمة المستخدم الشخصية   |
++----------------------------------------------------+------------------------------------------------+
+| شريط القائمة الجانبية (Sidebar)                    | منطقة المحتوى التفاعلية (Main Content)         |
+| العرض: 288px (محدد وثابت لليمين في الشاشات الكبيرة)| العرض الأقصى: 1280px / 1440px، حشو: 24px       |
+|                                                    |                                                |
+| - لوحة التحكم الرئيسية                             | 1. شريط العنوان والإجراءات السريعة             |
+| - إدارة وقوائم المستفيدين (دائمون)                 | 2. بطاقات المؤشرات الإحصائية (KPI Cards)       |
+| - المستفيدون اليوميون (جديد!)                      | 3. شريط أدوات البحث والتصفية المتقدمة          |
+| - مستودع المستفيدين اليوميين (جديد!)               | 4. جدول البيانات المتطور مع التصفح             |
+| - المستودع والمخزون العام                          | 5. أزرار التصدير (PDF / Excel)                 |
+| - إدارة موظفي الجمعية                              |                                                |
+| - إدارة الجهات المستفيدة                           |                                                |
+| - صفحة الاستلام والمسح (QR)                        |                                                |
+| - إدارة وتوصيل المنازل (السائقون)                  |                                                |
+| - ممثلو الأحياء وتوثيق التوزيع                     |                                                |
+| - الحوكمة والمؤشرات الشاملة (محدث!)                |                                                |
+| - سجل التدقيق والوثائق                             |                                                |
+| - إدارة النظام والصلاحيات                          |                                                |
++----------------------------------------------------+------------------------------------------------+
 ```
 
 ---
 
-## 6. 🗑️ Destructive Actions
+## 4. 🪟 نظام التراكب والنوافذ المنبثقة (Scrim & Dialogs System)
 
-Never delete important records immediately without confirmation.
+للحفاظ على تركيز المستخدم ومنع الأخطاء في الإجراءات المالية والبيانات الحساسة:
 
-### Delete Confirmation
-
-```text
-Delete Beneficiary?
-
-Are you sure you want to delete this record?
-This action cannot be undone.
-
-[ Cancel ]              [ Delete Permanently ]
-```
-
-Rules:
-
-- Destructive button uses red.
-- Confirmation dialog uses a warning icon.
-- Do not use red for unrelated UI.
-- Show loading state while deletion is processing.
-- Prevent duplicate submissions.
+1. **الخلفية المظللة المعتمة (Scrim Backdrop):**
+   ```css
+   fixed inset-0 bg-slate-950/45 backdrop-blur-[3px] z-40 transition-opacity
+   ```
+2. **نافذة الحذف والتأكيد (`ConfirmDialog`):**
+   * استخدام أيقونة تحذير مثلثة باللون الأحمر.
+   * زر الحذف المميز باللون الأحمر (`bg-red-600 hover:bg-red-700`).
+   * تدرج إغلاق عند الضغط على مفتاح `Esc` أو إلغاء.
+3. **نافذة الإجراءات المتخصصة (`ActionDialog` / `DetailsDialog`):**
+   * زوايا دائرية عريضة `rounded-2xl`، سطح أبيض ناصع، رأس مخصص يحتوي على أيقونة ملونة وزر إغلاق.
 
 ---
 
-## 7. 🤝 Support Submission Workflow
-
-Support submission should use a dedicated `ActionDialog`.
-
-```text
-Submit Support
-────────────────────────────────
-
-Beneficiary
-[ Mohammed Ahmed                         ]
-
-Support Type
-[ Food Basket                         ▼ ]
-
-Quantity
-[ 3 ]
-
-Delivery Method
-○ Home Delivery
-○ Association Pickup
-
-Notes
-[                                      ]
-[                                      ]
-
-────────────────────────────────
-[ Cancel ]                    [ Submit Support ]
-```
-
-After successful submission, show a success toast:
-
-```text
-✓ Support submitted successfully
-```
+## 5. 📑 المواصفات التفصيلية لجميع صفحات النظام (All Pages UI Specs)
 
 ---
 
-## 8. 🔘 Buttons & Action Controls
-
-Buttons must have consistent states:
-
-```text
-Default
-Hover
-Focus
-Active
-Disabled
-Loading
-Success
-Warning
-Danger
-```
-
-### Primary Button
-
-Use amber for the main application action.
-
-```text
-bg-amber-600
-hover:bg-amber-700
-```
-
-### Secondary Button
-
-Use a neutral surface with a subtle border.
-
-### Destructive Button
-
-Use red only for irreversible or dangerous actions.
-
-### Icon Action Buttons
-
-Use compact icon buttons for table actions.
-
-```jsx
-<button className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl border border-amber-200">
-  <Key className="w-4 h-4" />
-</button>
-```
-
-Delete:
-
-```jsx
-<button className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200">
-  <Trash2 className="w-4 h-4" />
-</button>
-```
-
-For dense tables, prefer a single `MoreHorizontal` menu when multiple actions are available.
+### صفحة 1: لوحة التحكم الرئيسية (`/dashboard`)
+* **الهدف:** توفير نظرة شاملة وفورية على أنشطة الجمعية وعملياتها اليومية.
+* **المكونات:**
+  * بطاقة ترحيب عصرية باسم المستخدم ودوره الإداري.
+  * شبكة بطاقات الوصول السريع (Quick Actions Grid): بطاقات كبيرة بزوايا `rounded-2xl` تبرز الأقسام الرئيسية بأيقونات مميزة وظلال ناعمة عند التمرير (`hover:shadow-lg`).
+  * بطاقات الإحصائيات الفورية (إجمالي المستفيدين، السلال الموزعة اليوم، رصيد المستودع، التوصيلات الجارية).
+  * سجل العمليات الأخيرة (Recent Activity Stream) المباشر.
 
 ---
 
-## 9. 📊 Data Tables
-
-### Standard
-
-- `rounded-2xl`.
-- `border border-gray-200`.
-- Warm table header.
-- Clear row separation.
-- `hover:bg-gray-50`.
-- Sticky header for long datasets.
-- Horizontal scrolling on mobile.
-
-### Table Features
-
-Where appropriate, provide:
-
-- Search.
-- Filters.
-- Sorting.
-- Pagination.
-- Multi-row selection.
-- Bulk actions.
-- Row action menu.
-- Empty state.
-- Loading skeleton.
-- Error state.
-
-Example:
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ Beneficiaries                 Search...   Filters             │
-├──────────────────────────────────────────────────────────────┤
-│ □ │ Beneficiary │ Status │ Support │ Last Updated │ Actions │
-│───┼─────────────┼────────┼─────────┼───────────────┼─────────│
-│ □ │ Mohammed    │ Active │ 3       │ Today         │   ⋮     │
-│ □ │ Abdullah    │ Active │ 1       │ Yesterday     │   ⋮     │
-└──────────────────────────────────────────────────────────────┘
-```
+### صفحة 2: قائمة المستفيدين الدائمين (`/beneficiaries`)
+* **الهدف:** استعراض وإدارة قاعدة بيانات المستفيدين المسجلين بانتظام.
+* **المكونات:**
+  * شريط الأدوات العلوي: شريط بحث ذكي، زر "إضافة مستفيد"، زر "استيراد إكسل"، وزر "تصدير".
+  * تصفية متقدمة حسب: الحي، حالة الاستحقاق، تصنيف الدخل، والحالة الاجتماعية.
+  * جدول البيانات التفاعلي (`DataTable`): يحتوي على أعمدة (الاسم، الهوية، الهاتف، عدد التابعين، الحي، الحالة، الإجراءات).
+  * قائمة إجراءات منبثقة لكل سطر: (عرض الملف، تعديل، تسليم سلة، حذف مع تأكيد).
 
 ---
 
-## 10. 🏷️ Status & Category Badges
-
-Use semantic colors consistently:
-
-| Status / Category | Style |
-|---|---|
-| People with Disabilities | Blue |
-| Senior Citizens | Purple |
-| Active | Emerald |
-| Suspended / Disabled | Red |
-| Warning / Pending | Amber |
-| Informational | Blue |
-
-Badges should remain compact and readable, with optional semantic icons.
+### صفحة 3 & 4: تسجيل وتعديل مستفيد دائم (`/beneficiaries/add` & `/beneficiaries/edit/:id`)
+* **الهدف:** استمارة شاملة ومقسمة منطقياً لجمع بيانات المستفيد والأسرة.
+* **المكونات:**
+  * تخطيط من 3 أقسام على شكل بطاقات منفصلة:
+    1. **البيانات الشخصية والاتصال:** الاسم الرباعي، رقم الهوية/الإقامة، تاريخ الميلاد، رقم الجوال، المدينة، الحي.
+    2. **البيانات الاقتصادية والاستحقاق:** الدخل الشهري، نوع السكن، الحالة الوظيفية، التصنيف الآلي.
+    3. **التابعين وأفراد الأسرة:** جدول ديناميكي لإضافة التابعين مع صلة القرابة وأعمارهم.
+    4. **المرفقات والوثائق:** منطقة سحب وإفلات لرفع صور الهوية، كروت العائلة، وشهادات الراتب.
+  * شريط أزرار ثابت أسفل الصفحة: زر "حفظ ومتابعة" بلون `#D97706` وزر "إلغاء".
 
 ---
 
-## 11. 📝 Forms & Inputs
-
-Inputs should have:
-
-- Clear labels.
-- Helpful placeholders only when needed.
-- Visible focus state.
-- Error messages below the field.
-- Consistent border radius.
-- Adequate touch target size.
-- RTL-aware alignment.
-- Loading and disabled states.
-
-Focus should be visually obvious without relying only on color.
+### صفحة 5: ملف وتفاصيل المستفيد الدائم (`/beneficiaries/:id`)
+* **الهدف:** عرض ملف شامل 360 درجة لجميع تفاصيل المستفيد وتاريخه مع الجمعية.
+* **المكونات:**
+  * رأس الملف (Profile Header): الاسم، رقم الهوية، شارات الاستحقاق، وإجمالي المساعدات المستلمة.
+  * تبويبات تفاعلية (Tabs):
+    * **تبويب التابعين:** كروت سريعة بأسماء وبيانات أفراد الأسرة.
+    * **سجل المساعدات والتسليمات:** جدول زمني بكافة السلال والمساعدات السابقة وتواريخها والمندوب المسلم.
+    * **الوثائق المرفوعة:** معاينة مصغرة للمستندات مع إمكانية التحميل.
+    * **سجل التدقيق:** متى تم التسجيل ومن قام بآخر تعديل.
 
 ---
 
-## 12. 🔔 Toast & Feedback System
-
-Use non-blocking Toast notifications for completed actions.
-
-### Success
-
-```text
-✓ Support submitted successfully
-```
-
-### Error
-
-```text
-Unable to complete the action.
-Please try again.
-```
-
-### Warning
-
-```text
-This action requires your attention.
-```
-
-### Info
-
-```text
-Changes have been saved as a draft.
-```
-
-Toasts should:
-
-- Animate in/out smoothly.
-- Remain readable.
-- Support manual dismissal.
-- Avoid blocking critical controls.
+### صفحة 6: استيراد المستفيدين من Excel (`/beneficiaries/import`)
+* **الهدف:** رفع بيانات المستفيدين دفعة واحدة عبر ملف إكسل بطريقة آمنة ومحققة.
+* **المكونات:**
+  * صندوق سحب وإفلات الملفات (Drag & Drop Zone) مع نموذج إكسل استرشادي قابل للتنزيل.
+  * جدول معاينة ما قبل الاستيراد (Preview Table): إبراز الأخطاء باللون الأحمر (مثل تكرار رقم الهوية أو نقص الحقول الإلزامية).
+  * شريط تقدم العملية الحية ونسبة الإنجاز.
 
 ---
 
-## 13. ✨ Motion & Micro-interactions
-
-Motion should communicate state, not decorate the interface unnecessarily.
-
-Recommended transitions:
-
-```text
-Modal       → Fade + Scale
-Drawer      → Slide
-Dropdown    → Fade + Translate
-Toast       → Slide + Fade
-Button      → 120–160ms press
-Table Row   → 120ms hover
-Sidebar     → 200ms transition
-```
-
-Respect `prefers-reduced-motion`.
+### صفحة 7: قائمة المستفيدين اليوميين (`/daily-beneficiaries`) — *جديد*
+* **الهدف:** إدارة الحالات الطارئة والزائرين اليوميين للجمعية دون دمجهم مع المستفيدين الدائمين.
+* **المكونات:**
+  * شريط تصفية فوري حسب: الجنسية، سبب الاستحقاق (طارئ، عابر سبيل، أزمة معيشية مؤقتة)، الحي، وتاريخ الزيارة.
+  * جدول احترافي يعرض: الكود الفريد، الاسم، رقم الهوية/الإقامة، الجنسية، سبب الزيارة، آخر تاريخ استلام، وزر إجراء سريع "تسليم مساعدة الآن".
+  * مؤشر حالة الأهلية (مؤهل، غير مؤهل، معلق).
 
 ---
 
-## 14. 📱 Responsive Strategy
-
-### Desktop — `lg` and above
-
-- Sidebar visible.
-- Sidebar width: `288px`.
-- Main content uses a centered maximum width.
-- Tables use full available space.
-
-### Tablet / Mobile
-
-- Sidebar hidden by default.
-- Sidebar opens as a slide-in drawer.
-- Scrim appears behind the drawer:
-
-```css
-fixed inset-0 bg-black/50 backdrop-blur-sm
-```
-
-- Tables use intelligent horizontal scrolling.
-- Dialogs can become bottom sheets or full-width mobile dialogs where appropriate.
-- Touch targets should remain comfortable.
+### صفحة 8: تسجيل وتعديل مستفيد يومي (`/daily-beneficiaries/new` & `edit/:id`) — *جديد*
+* **الهدف:** تسجيل فوري وسريع للمستفيدين اليوميين مع منع تكرار الهويات في الوقت الفعلي.
+* **المكونات:**
+  * حقل فحص مسبق لرقم الهوية الوطنية/الإقامة في الوقت الفعلي (`Real-time Duplicate Check`) ينبه الموظف فورياً إذا كان المستفيد مسجلاً من قبل أو مسجل كمستفيد دائم لمنع الازدواجية.
+  * نموذج من قسمين خفيفين:
+    1. البيانات الأساسية والجنسية ورقم الهاتف ومقر السكن الحالي.
+    2. سبب الزيارة ونوع المساعدة المطلوبة والوثائق الثبوتية.
 
 ---
 
-## 15. 🧭 Empty, Loading & Error States
-
-Every major data component should define three states.
-
-### Empty State
-
-```text
-No beneficiaries found.
-
-There are no records matching your current filters.
-
-[ Add Beneficiary ]
-```
-
-### Loading State
-
-Use skeleton placeholders instead of freezing the interface.
-
-### Error State
-
-```text
-Something went wrong.
-
-We could not load this information.
-
-[ Try Again ]
-```
+### صفحة 9: ملف وتفاصيل المستفيد اليومي (`/daily-beneficiaries/:id`) — *جديد*
+* **الهدف:** متابعة الحالات اليومية والتحقق من عدد مرات ترددهم على الجمعية.
+* **المكونات:**
+  * بطاقة الحالة الشخصية والهوية وتاريخ أول وآخر زيارة.
+  * جدول سندات الاستلام السابقة مع إمكانية إعادة طباعة أي سند استلام بضغطة زر واحدة.
+  * مساحة إرفاق مستندات الزيارة الطارئة.
 
 ---
 
-## 16. ♿ Accessibility
-
-The interface must support:
-
-- Keyboard navigation.
-- Visible focus indicators.
-- Screen-reader labels for icon-only buttons.
-- Proper semantic HTML.
-- Logical RTL tab order.
-- `aria-label` and dialog semantics where appropriate.
-- Escape-to-close for non-critical dialogs.
-- Reduced-motion preferences.
-- Sufficient text/background contrast.
+### صفحة 10: شاشة تسليم المساعدات وسند الاستلام (`/daily-beneficiaries/receive`) — *جديد*
+* **الهدف:** تنفيذ عملية التسليم الفوري مع الخصم المخزني الذري وطباعة السند المعتمد.
+* **المكونات:**
+  * صندوق بحث ذكي بالاسم أو رقم الهوية لاختيار المستفيد.
+  * شبكة كروت اختيار المواد من مستودع اليوميين، مع عرض الرصيد المتاح لكل صنف في الوقت الفعلي وتاريخ صلاحيته.
+  * حقل إدخال الكمية مع منع كتابة كمية أكبر من الرصيد المتوفر آلياً.
+  * نافذة معاينة وطباعة سند الاستلام الرسمي (`DRV-YYYYMMDD-XXXX`) المجهز للطباعة الحرارية السريعة أو ورق A4.
 
 ---
 
-## 17. 🎯 Design Principles
-
-1. **Modern** — clean SaaS-style interface without unnecessary decoration.
-2. **Premium** — refined spacing, typography, shadows, and motion.
-3. **Professional** — consistent components and predictable interactions.
-4. **Calm** — warm neutral surfaces with controlled use of green and gold.
-5. **Fast** — lightweight animations and clear feedback.
-6. **Accessible** — keyboard, screen reader, contrast, and reduced-motion support.
-7. **RTL First** — Arabic is treated as a first-class layout direction.
-8. **Consistent** — the same interaction pattern should look and behave the same everywhere.
-9. **Focused** — destructive and important actions use dialogs and scrims to keep user attention.
-10. **Responsive** — desktop, tablet, and mobile layouts are designed as one coherent system.
+### صفحة 11: مستودع المستفيدين اليوميين المستقل (`/daily-beneficiaries/inventory`) — *جديد*
+* **الهدف:** إدارة المخزون المخصص للمستفيدين اليوميين وتتبع تواريخ الصلاحية.
+* **المكونات:**
+  * شريط بطاقات KPI: إجمالي الأصناف، القيمة التقديرية، الأصناف منخفضة الرصيد، والأصناف القريبة من الانتهاء.
+  * لافتات تنبيهية ذكية للمنتجات الوشيكة (خلال 7 أيام، 30 يوماً، 60 يوماً).
+  * جدول المخزون مع أزرار: "إدخال شحنة"، "تسوية مخزنية"، وسجل الحركات التاريخي (`Movements Log`).
 
 ---
 
-## 18. 🧱 Recommended Component Architecture
-
-```text
-components/
-├── layout/
-│   ├── MainLayout
-│   ├── Header
-│   └── Sidebar
-│
-├── ui/
-│   ├── Button
-│   ├── IconButton
-│   ├── Input
-│   ├── Select
-│   ├── Badge
-│   ├── Toast
-│   ├── Skeleton
-│   └── DropdownMenu
-│
-├── overlays/
-│   ├── Scrim
-│   ├── Dialog
-│   ├── ConfirmDialog
-│   ├── DetailsDialog
-│   ├── ActionDialog
-│   └── Drawer
-│
-├── data/
-│   ├── DataTable
-│   ├── TableToolbar
-│   ├── Pagination
-│   └── EmptyState
-│
-└── forms/
-    ├── BeneficiaryForm
-    ├── SupportForm
-    └── PermissionForm
-```
-
-This architecture ensures that every edit, delete, support, details, and permission workflow uses the same professional interaction patterns.
+### صفحة 12: المستودع العام وإدارة السلال الغذائية (`/warehouse`)
+* **الهدف:** إدارة مخزون الجمعية العام، الوارد من التبرعات، وتجهيز السلال المجدولة.
+* **المكونات:**
+  * تبويب السلال الغذائية الجاهزة وتصنيفاتها (كبيرة، متوسطة، مخصصة).
+  * جدول حركات الإدخال والصرف مع تسجيل سبب الحركة والموظف المسؤول.
+  * تنبيهات الرصيد الحرج التلقائية.
 
 ---
 
-## 19. 🚀 Final UX Direction
+### صفحة 13، 14 & 15: إدارة موظفي الجمعية وسلفهم (`/staff`, `/staff/:id`, `/staff/edit/:id`)
+* **الهدف:** متابعة موظفي الجمعية المستحقين للدعم العيني والسلف الغذائية.
+* **المكونات:**
+  * جدول الموظفين يوضح الوظيفة، القسم، السلال المستلمة هذا الشهر، والحد المتبقي.
+  * نافذة تسجيل تسليم لموظف مع التحقق من استحقاق الشهر الحالي.
+  * ملف الموظف مع سجل الاستلام السنوي وإمكانية التصدير.
 
-The final product should feel like a modern enterprise SaaS platform designed specifically for Ikram Association:
+---
 
-- Premium but not excessive.
-- Modern but still familiar.
-- Warm and trustworthy.
-- Strong Arabic RTL support.
-- Clear actions.
-- Minimal visual clutter.
-- Consistent Scrim and Dialog behavior.
-- Professional tables and forms.
-- Smooth micro-interactions.
-- Excellent mobile behavior.
+### صفحة 16: إدارة الجهات المستفيدة والمؤسسات الشريكة (`/statistics`)
+* **الهدف:** تنظيم التوزيع للمؤسسات، الجمعيات الشقيقة، ودور الرعاية.
+* **المكونات:**
+  * دليل الجهات الشريكة، بيانات المفوض بالاستلام، والاتفاقيات الموقعة.
+  * كوتة التوزيع المعتمدة وسجل الشحنات المسلمة.
 
-The existing Ikram green and gold identity remains the foundation; the modernization comes from better spacing, hierarchy, overlays, dialogs, component consistency, interaction states, and responsive behavior.
+---
+
+### صفحة 17 & 18: إدارة التوصيل المنزلي ولوحة تحكم السائق (`/delivery` & `/driver-dashboard`)
+* **الهدف:** جدولة وتتبع مسارات سيارات التوزيع وسائقي الميدان.
+* **المكونات:**
+  * **صفحة إدارة التوصيل:** شاشة التوزيع وتقسيم الطلبات حسب الأحياء وإسنادها للسائقين.
+  * **لوحة تحكم السائق (Mobile-First):** بطاقات طلبات التوصيل بحجم شاشة الجوال، تحتوي على اسم المستفيد، عنوان المنزل، رابط خريطة Google Maps، وزر "تم التسليم" مع توثيق التوقيع أو صورة السند.
+
+---
+
+### صفحة 19: ممثلو الأحياء والتوثيق الميداني بالصور (`/representatives`)
+* **الهدف:** متابعة مندوبي الأحياء ومستندات الإثبات الميدانية لتوزيع السلال.
+* **المكونات:**
+  * دليل الممثلين مصنف حسب الحي والمدينة مع حالة النشاط.
+  * معرض مستندات الإثبات (Proof Gallery): استعراض صور فواتير الاستلام وتوقيعات المستفيدين في الحي للرقابة المالية والإدارية.
+
+---
+
+### صفحة 20: صفحة الاستلام والمسح السريع عبر QR (`/receiver`)
+* **الهدف:** نقطة تسليم سريعة في مقر الجمعية تعمل عبر قارئ الباركود أو كاميرا الجوال.
+* **المكونات:**
+  * مساحة مسح الكاميرا الذاتية مع مؤشر ليزري متحرك لقراءة رمز الاستجابة السريعة (QR Code).
+  * حقل إدخال يدوي بديل للرقم المرجعي أو رقم الهوية.
+  * بطاقة تحقق فورية خضراء تظهر صورة المستفيد وبيانات الاستحقاق وزر تأكيد التسليم بلون أخضر كبير.
+
+---
+
+### صفحة 21: لوحة الحوكمة والتحليلات الشاملة والتقارير (`/governance`) — *محدث وشامل*
+* **الهدف:** لوحة تحكم إدارية عليا تقدم رؤية استراتيجية وتقارير رسمية بالعرض (Landscape).
+* **المكونات:**
+  * **شريط التصفية الزمني الديناميكي:** خيارات (اليوم، الأسبوع الحالي، الشهر الحالي، السنة الحالية، وفترة مخصصة).
+  * **شريط أدوات التقارير الرسمية:**
+    * زر تحميل "التقرير اليومي المعتمد PDF (Landscape)".
+    * زر تحميل "تقرير الحوكمة والتحليلات الشامل PDF (Landscape)".
+    * زر "تصدير حزمة جداول الإكسل الشاملة".
+  * **8 تبويبات تفاعلية للمحاور الإدارية:**
+    1. **المستفيدون الدائمون:** توزيع التصنيفات، معدل الاستحقاق، وأفراد الأسر.
+    2. **المستفيدون اليوميون:** تحليل الجنسيات، الأسباب الطارئة، وحجم المساعدات.
+    3. **الموظفون وممثلو الأحياء:** تقييم الإنتاجية، سرعة التوزيع، وعدد العائلات المخدومة.
+    4. **الجهات الشريكة:** إحصائيات التعاون والكوتات المنجزة.
+    5. **الأحياء والتغطية الجغرافية:** خريطة حرارية بأعلى الأحياء احتياجاً وتوزيعاً.
+    6. **مقارنة المستودعات وتواريخ الصلاحية:** مقارنة متوازية بين المستودع العام ومستودع اليوميين مع مؤشرات المخزون الحرج والقريب من الانتهاء.
+    7. **اللوجستيات وسلاسل الإمداد:** معدلات نجاح التوصيل المنزلي ومتوسط وقت التسليم.
+    8. **سجل الاعتمادات والرقابة:** ملخص الامتثال لمعايير الحوكمة والشفافية.
+
+---
+
+### صفحة 22: سجل التدقيق والرقابة الإدارية والتغييرات (`/audit`)
+* **الهدف:** توثيق كل حركة في النظام لحماية البيانات وتطبيق الشفافية الإدارية.
+* **المكونات:**
+  * جدول زمني لجميع عمليات الإضافة، التعديل، الحذف، وتسجيل الدخول.
+  * تفاصيل العملية: اسم الموظف، عنوان الـ IP، الوقت بالثواني، ومقارنة بصرية بين القيمة السابقة والجديدة (Diff View).
+
+---
+
+### صفحة 23: إدارة الحسابات، الأدوار ومصفوفة الصلاحيات (`/admin/users`)
+* **الهدف:** إدارة المستخدمين وتحديد الصلاحيات الدقيقة لكل موظف.
+* **المكونات:**
+  * جدول المستخدمين مع شارات الدور (مدير عام، مساعد مدير، سائق ميداني).
+  * نافذة إدارة الصلاحيات الدقيقة (Granular Permissions Matrix): مربعات اختيار لكل وحدة في النظام (المستفيدون، المستودع، التوصيل، الحوكمة، المستفيدون اليوميون).
+
+---
+
+### صفحة 24: تسجيل الدخول وحماية الجلسات (`/login`)
+* **الهدف:** بوابة دخول آمنة وسريعة تعكس هوية الجمعية.
+* **المكونات:**
+  * بطاقة مركزية أنيقة مع شعار جمعية إكرام الرسمي.
+  * حقول اسم المستخدم وكلمة المرور مع إمكانية إظهار/إخفاء كلمة المرور.
+  * تفعيل استجابة تامة على شاشات الجوال والحواسيب.
+
+---
+
+## 6. 🖨️ مواصفات تقارير الطباعة وسندات الاستلام (Print & PDF Specs)
+
+1. **الترويسة الرسمية:** استخدام صورة الترويسة المعتمدة للجمعية [`public/assets/ekram-letterhead.jpeg`](file:///c:/laragon/www/ikram-system/public/assets/ekram-letterhead.jpeg) في أعلى كل صفحة.
+2. **الاتجاه والتنسيق للتقارير الشاملة:** اتجاه أفقي **Landscape** بهوامش منضبطة (12mm) لاستيعاب كافة الأعمدة والرسوم التحليلية دون اقتصاص.
+3. **سند الاستلام اليومي (`Daily Receiving Voucher`):** مصمم ليتناسب مع الطابعات الحرارية السريعة (Thermal 80mm) أو ورق A4 مع باركود السند وختم التسليم وتوقيع المستلم.
+
+---
+
+## 7. 🚀 تصدير واستخدام رموز التصميم (Tokens Integration)
+
+لأي تعديل أو تصدير لأدوات التصميم الخارجية (Figma / Sketch / Penpot):
+* تم توليد وحفظ ملف **[`frontend/src/theme/design-tokens.json`](file:///c:/laragon/www/ikram-system/frontend/src/theme/design-tokens.json)** المتوافق مع معيار **Tokens Studio for Figma**.
+* كما يمكن استدعاء الرموز في أي مكون React عبر:
+  ```javascript
+  import { tokens } from '../theme/tokens';
+  ```

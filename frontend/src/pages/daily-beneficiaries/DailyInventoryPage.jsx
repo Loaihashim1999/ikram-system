@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import KpiCard from "../../components/ui/KpiCard";
+import Button from "../../components/ui/Button";
 import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
@@ -255,53 +258,63 @@ export default function DailyInventoryPage() {
   };
 
   return (
-    <MainLayout title="مستودع المستفيدين اليوميين">
-      <div className="space-y-6">
-        {/* KPI Cards Header */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div className="bg-white border border-[#E5E2D9] rounded-xl p-4 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-[#3F6B3A]/10 text-[#3F6B3A] rounded-xl">
-              <Package className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-xs text-slate-500 block">إجمالي الأصناف والسلال</span>
-              <strong className="text-xl font-bold text-slate-800">{stats.total_items}</strong>
-              <span className="text-[11px] text-slate-400 block mt-0.5">أصناف مسجلة</span>
-            </div>
-          </div>
+    <MainLayout>
+      <div className="space-y-6" dir="rtl">
+        {/* Page Header */}
+        <PageHeader
+          title="مستودع المستفيدين اليوميين"
+          subtitle="إدارة الأصناف المخزنية المخصصة للحالات الطارئة ومتابعة تواريخ الصلاحية والتسويات"
+          badge="مستودع مستقل"
+          breadcrumbs={[
+            { label: "المستفيدون اليوميون", to: "/daily-beneficiaries" },
+            { label: "المستودع والمخزون" },
+          ]}
+          actions={
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Plus}
+              onClick={() => {
+                setEditingItem(null);
+                setForm(initialForm);
+                setShowItemModal(true);
+              }}
+            >
+              إضافة صنف جديد
+            </Button>
+          }
+        />
 
-          <div className="bg-white border border-[#E5E2D9] rounded-xl p-4 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl">
-              <Layers className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-xs text-slate-500 block">إجمالي الرصيد المتوفر</span>
-              <strong className="text-xl font-bold text-emerald-800">{stats.total_quantity}</strong>
-              <span className="text-[11px] text-emerald-600 block mt-0.5">وحدة جاهزة للصرف</span>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#E5E2D9] rounded-xl p-4 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-xs text-slate-500 block">أصناف قاربت على النفاد</span>
-              <strong className="text-xl font-bold text-amber-700">{stats.low_stock_count}</strong>
-              <span className="text-[11px] text-amber-600 block mt-0.5">تحت حد التنبيه</span>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#E5E2D9] rounded-xl p-4 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-red-50 text-red-600 rounded-xl">
-              <Clock className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-xs text-slate-500 block">أصناف منتهية الصلاحية</span>
-              <strong className="text-xl font-bold text-red-700">{stats.expired_count}</strong>
-              <span className="text-[11px] text-red-600 block mt-0.5">تتطلب استبعاد فوري</span>
-            </div>
-          </div>
+        {/* Top KPI Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard
+            title="إجمالي الأصناف والسلال"
+            value={stats.total_items}
+            subtitle="أصناف مسجلة"
+            icon={Package}
+            iconColor="green"
+          />
+          <KpiCard
+            title="إجمالي الرصيد المتوفر"
+            value={stats.total_quantity}
+            subtitle="وحدة جاهزة للصرف"
+            icon={Layers}
+            iconColor="gold"
+          />
+          <KpiCard
+            title="أصناف قاربت على النفاد"
+            value={stats.low_stock_count}
+            subtitle="تحت حد التنبيه الأدنى"
+            icon={AlertTriangle}
+            iconColor="amber"
+          />
+          <KpiCard
+            title="أصناف منتهية الصلاحية"
+            value={stats.expired_count}
+            subtitle="تتطلب استبعاد فوري"
+            icon={Clock}
+            iconColor="red"
+          />
         </div>
 
         {/* Action & Tab Bar */}

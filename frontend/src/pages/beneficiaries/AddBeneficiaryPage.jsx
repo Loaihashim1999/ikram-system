@@ -4,6 +4,8 @@ import beneficiaryApi from "../../api/beneficiaries";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import { calculateIncomeAndClassification } from "../../utils/financialCalculations";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import {
   CheckCircle2, AlertCircle, Info, Shield, Save, FileText,
   UserCheck, MapPin, DollarSign, Users, Calculator, ArrowRight,
@@ -321,19 +323,20 @@ export default function AddBeneficiaryPage() {
         )}
 
         {/* Top Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-extrabold text-[#111827]">
-              {type === "citizen" ? "➕ تسجيل مستفيد مواطن جديد" : "➕ تسجيل مستفيد مقيم جديد"}
-            </h1>
-            <p className="text-xs text-[#6B7280] mt-1">
-              تعبئة البيانات، اقتطاع الإيجار، والتصنيف التلقائي (خالي تماماً من الحقول البنكية)
-            </p>
-          </div>
-          <Link to="/beneficiaries" className="text-[#C9A24A] hover:underline text-xs font-bold flex items-center gap-1">
-            <span>← العودة للقائمة</span>
-          </Link>
-        </div>
+        <PageHeader
+          title={type === "citizen" ? "تسجيل مستفيد مواطن جديد" : "تسجيل مستفيد مقيم جديد"}
+          subtitle="تعبئة البيانات، اقتطاع الإيجار، والتصنيف التلقائي (خالي تماماً من الحقول البنكية)"
+          breadcrumbs={[
+            { label: "الرئيسية", href: "/" },
+            { label: "إدارة المستفيدين", href: "/beneficiaries" },
+            { label: type === "citizen" ? "تسجيل مواطن" : "تسجيل مقيم" }
+          ]}
+          action={
+            <Button variant="outline" size="sm" onClick={() => navigate("/beneficiaries")}>
+              ← العودة للقائمة
+            </Button>
+          }
+        />
 
         {/* Step Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
@@ -817,33 +820,37 @@ export default function AddBeneficiaryPage() {
           )}
 
           {/* Navigation buttons */}
-          <div className="flex justify-between mt-4">
-            <button
+          <div className="flex justify-between items-center mt-6 pt-4 border-t border-[#E5E2D9]">
+            <Button
               type="button"
+              variant="outline"
+              size="md"
               onClick={() => setStep((s) => Math.max(1, s - 1))}
               disabled={step === 1}
-              className="px-6 py-2.5 rounded-xl bg-gray-100 text-gray-600 font-bold text-xs disabled:opacity-40 hover:bg-gray-200 cursor-pointer"
             >
               ← السابق
-            </button>
+            </Button>
 
             {step < STEPS.length ? (
-              <button
+              <Button
                 type="button"
+                variant="gold"
+                size="md"
                 onClick={handleNextStep}
-                className="px-6 py-2.5 rounded-xl bg-[#D97706] hover:bg-[#B45309] text-white font-extrabold text-xs shadow-xs transition-colors cursor-pointer"
               >
                 التالي →
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 type="submit"
-                disabled={saving || idStatus === "taken"}
-                className="px-8 py-2.5 rounded-xl bg-[#3F6B3A] hover:bg-[#31542D] text-white font-extrabold text-xs disabled:opacity-50 shadow-xs flex items-center gap-1.5 cursor-pointer"
+                variant="secondary"
+                size="md"
+                disabled={idStatus === "taken"}
+                loading={saving}
+                icon={Save}
               >
-                <Save className="w-4 h-4" />
-                <span>{saving ? "جاري الحفظ والتصنيف..." : "✅ حفظ وتصنيف المستفيد"}</span>
-              </button>
+                حفظ وتصنيف المستفيد
+              </Button>
             )}
           </div>
         </form>

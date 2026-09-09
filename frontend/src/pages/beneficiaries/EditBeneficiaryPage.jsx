@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getBeneficiary, updateBeneficiary } from '../../api/beneficiaries';
 import MainLayout from '../../components/layout/MainLayout';
 import { calculateIncomeAndClassification } from '../../utils/financialCalculations';
+import PageHeader from '../../components/ui/PageHeader';
+import Button from '../../components/ui/Button';
 import { 
   Loader2, Save, X, User, MapPin, Users, DollarSign, FileText, 
   Plus, Trash2, Shield, CheckCircle2, ArrowRight, Upload, AlertCircle, Calculator 
@@ -248,24 +250,20 @@ export default function EditBeneficiaryPage() {
       <div className="max-w-5xl mx-auto p-6" dir="rtl">
         
         {/* Top Action Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-              <span>✏️</span>
-              <span>تعديل بيانات المستفيد الشاملة</span>
-            </h1>
-            <p className="text-xs text-gray-500 mt-1">
-              {form.full_name} | رقم الهوية: <span className="font-mono font-bold text-amber-800">{form.national_id}</span>
-            </p>
-          </div>
-          <Link
-            to="/beneficiaries"
-            className="text-amber-800 hover:underline text-xs font-bold flex items-center gap-1 bg-amber-50 px-3.5 py-2 rounded-xl border border-amber-200"
-          >
-            <ArrowRight className="w-4 h-4" />
-            <span>العودة لقائمة المستفيدين</span>
-          </Link>
-        </div>
+        <PageHeader
+          title="تعديل بيانات المستفيد الشاملة"
+          subtitle={`${form.full_name} | رقم الهوية: ${form.national_id}`}
+          breadcrumbs={[
+            { label: "الرئيسية", href: "/" },
+            { label: "إدارة المستفيدين", href: "/beneficiaries" },
+            { label: "تعديل مستفيد" }
+          ]}
+          action={
+            <Button variant="outline" size="sm" onClick={() => navigate("/beneficiaries")}>
+              ← العودة لقائمة المستفيدين
+            </Button>
+          }
+        />
 
         {/* Navigation Tabs Bar */}
         <div className="flex border-b border-gray-200 bg-white rounded-2xl p-1.5 mb-6 shadow-xs gap-1 text-xs font-bold overflow-x-auto">
@@ -805,48 +803,42 @@ export default function EditBeneficiaryPage() {
           )}
 
           {/* Form Action Controls */}
-          <div className="flex items-center justify-between bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky bottom-4 z-10">
-            <button
+          <div className="flex items-center justify-between bg-white p-5 rounded-2xl shadow-sm border border-gray-100 sticky bottom-4 z-10">
+            <Button
               type="button"
+              variant="outline"
+              size="md"
               onClick={() => navigate("/beneficiaries")}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-100 font-bold text-xs cursor-pointer transition-all"
+              icon={X}
             >
-              <X size={18} />
-              <span>إلغاء</span>
-            </button>
+              إلغاء
+            </Button>
 
             <div className="flex items-center gap-3">
               {activeTab !== "documents" && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="md"
                   onClick={() => {
                     const order = ["basic", "address", "family", "financial", "documents"];
                     const nextIdx = order.indexOf(activeTab) + 1;
                     if (nextIdx < order.length) setActiveTab(order[nextIdx]);
                   }}
-                  className="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs transition-all cursor-pointer"
                 >
                   التالي ←
-                </button>
+                </Button>
               )}
 
-              <button
+              <Button
                 type="submit"
-                disabled={saving}
-                className="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold shadow-md text-xs disabled:opacity-50 transition-all cursor-pointer"
+                variant="gold"
+                size="md"
+                loading={saving}
+                icon={Save}
               >
-                {saving ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span>جاري حفظ البيانات وتحديث المستندات...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    <span>حفظ التعديلات والتصنيف</span>
-                  </>
-                )}
-              </button>
+                {saving ? "جاري حفظ البيانات وتحديث المستندات..." : "حفظ التعديلات والتصنيف"}
+              </Button>
             </div>
           </div>
 

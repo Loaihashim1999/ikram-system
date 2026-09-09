@@ -21,7 +21,7 @@ export default function FormField({
       {label && (
         <label htmlFor={name} className="block text-xs font-bold text-[#111827]">
           {label}
-          {required && <span className="text-[#C24B3F] mr-1" aria-hidden="true">*</span>}
+          {required && <span className="text-red-600 mr-1" aria-hidden="true">*</span>}
         </label>
       )}
 
@@ -34,13 +34,13 @@ export default function FormField({
             'aria-invalid': error ? 'true' : 'false',
             'aria-describedby': [errorId, helperId].filter(Boolean).join(' ') || undefined,
             className: `${children.props.className || ''} ${
-              error ? 'border-[#C24B3F] focus:border-[#C24B3F] focus:ring-[#C24B3F]/20' : 'border-[#E5E2D9] focus:border-[#C9A24A]'
+              error ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : 'border-[#E5E2D9] focus:border-[#C9A24A]'
             }`,
           })
         : children}
 
       {error && (
-        <p id={errorId} className="text-xs text-[#C24B3F] font-semibold mt-1" role="alert">
+        <p id={errorId} className="text-xs text-red-600 font-semibold mt-1" role="alert">
           {error}
         </p>
       )}

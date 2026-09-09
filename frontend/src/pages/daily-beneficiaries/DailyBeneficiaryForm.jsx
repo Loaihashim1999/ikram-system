@@ -3,6 +3,8 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
 import Toast from "../../components/ui/Toast";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import {
   getDailyBeneficiary,
   createDailyBeneficiary,
@@ -271,18 +273,24 @@ export default function DailyBeneficiaryForm() {
     <MainLayout title={isEdit ? "تعديل بيانات المستفيد اليومي" : "إضافة مستفيد يومي جديد"}>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Back link & Header */}
-        <div className="flex items-center justify-between">
-          <Link
-            to="/daily-beneficiaries"
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-[#3F6B3A] transition-colors"
-          >
-            <ArrowRight className="w-4 h-4" />
-            العودة لقائمة المستفيدين اليوميين
-          </Link>
-          <span className="text-xs text-slate-400">
-            {isEdit ? "تعديل الملف الشخصي" : "تسجيل مستفيد جديد"}
-          </span>
-        </div>
+        <PageHeader
+          title={isEdit ? "تعديل بيانات المستفيد اليومي" : "إضافة مستفيد يومي جديد"}
+          subtitle={isEdit ? `تعديل الملف الشخصي لـ ${formData.full_name}` : "تسجيل مستفيد يومي جديد والتأكد من عدم ازدواجية الهوية والجوال"}
+          breadcrumbs={[
+            { label: "الرئيسية", href: "/" },
+            { label: "المستفيدين اليوميين", href: "/daily-beneficiaries" },
+            { label: isEdit ? "تعديل مستفيد" : "إضافة مستفيد" }
+          ]}
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/daily-beneficiaries")}
+            >
+              ← العودة للقائمة
+            </Button>
+          }
+        />
 
         {/* Main Form Card */}
         <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm p-6">
@@ -466,20 +474,23 @@ export default function DailyBeneficiaryForm() {
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-3 pt-5 border-t border-[#E5E2D9]">
-              <Link
-                to="/daily-beneficiaries"
-                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold transition-colors"
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => navigate("/daily-beneficiaries")}
               >
                 إلغاء
-              </Link>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 bg-[#3F6B3A] hover:bg-[#345830] text-white rounded-lg text-sm font-bold shadow transition-colors disabled:opacity-50"
+                variant="secondary"
+                size="md"
+                loading={saving}
+                icon={Save}
               >
-                <Save className="w-4 h-4" />
-                {saving ? "جاري الحفظ..." : isEdit ? "حفظ التعديلات" : "تسجيل المستفيد"}
-              </button>
+                {isEdit ? "حفظ التعديلات" : "تسجيل المستفيد"}
+              </Button>
             </div>
           </form>
         </div>

@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import Toast from "../../components/ui/Toast";
 import { getAnalytics } from "../../api/dailyBeneficiaries";
 import {
@@ -177,57 +179,51 @@ export default function GovernancePage() {
   }, [selectedDate]);
 
   return (
-    <MainLayout title="الحوكمة والتحليلات الشاملة">
-      <div className="space-y-6">
-        {/* Top Control Bar: Date Range Selector & Export Actions */}
-        <div className="bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl p-5 shadow-sm space-y-4">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="p-2.5 bg-[#3F6B3A]/10 text-[#3F6B3A] rounded-xl">
-                <ShieldCheck className="w-6 h-6" />
-              </span>
-              <div>
-                <h1 className="text-xl font-bold text-slate-800">منظومة الحوكمة والتحليلات الشاملة</h1>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  رصد أداء العمليات والتوزيع، المستفيدين العامين واليوميين، المخزون، واللوجستيات
-                </p>
-              </div>
-            </div>
-
-            {/* Export Reports Buttons */}
+    <MainLayout>
+      <div className="space-y-6" dir="rtl">
+        {/* Page Header with Official Actions */}
+        <PageHeader
+          title="منظومة الحوكمة والتحليلات الشاملة"
+          subtitle="رصد استراتيجي وتحليلي لأداء العمليات والمستفيدين العامين واليوميين والمخزون واللوجستيات"
+          badge="الحوكمة والامتثال"
+          breadcrumbs={[{ label: "الحوكمة والتقارير" }]}
+          actions={
             <div className="flex flex-wrap items-center gap-2">
-              <button
+              <Button
+                variant="outline"
+                size="sm"
+                icon={FileSpreadsheet}
                 onClick={handleExportExcel}
-                className="flex items-center gap-2 px-3.5 py-2 bg-white border border-[#C9A24A]/40 text-[#8C6C26] hover:bg-[#F5EDDA] rounded-lg text-xs font-bold transition-colors shadow-xs"
               >
-                <FileSpreadsheet className="w-4 h-4 text-[#8C6C26]" />
                 تصدير إكسل (Excel)
-              </button>
+              </Button>
 
               <a
                 href={pdfDailyUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-2 px-3.5 py-2 bg-white border border-[#3F6B3A]/40 text-[#3F6B3A] hover:bg-[#EBF4EA] rounded-lg text-xs font-bold transition-colors shadow-xs"
               >
-                <Printer className="w-4 h-4 text-[#3F6B3A]" />
-                التقرير اليومي (PDF)
+                <Button variant="outline" size="sm" icon={Printer}>
+                  التقرير اليومي (PDF)
+                </Button>
               </a>
 
               <a
                 href={pdfComprehensiveUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-2 px-4 py-2 bg-[#3F6B3A] hover:bg-[#345830] text-white rounded-lg text-xs font-bold shadow transition-colors"
               >
-                <Download className="w-4 h-4" />
-                التقرير الشامل (PDF)
+                <Button variant="secondary" size="sm" icon={Download}>
+                  التقرير الشامل (PDF)
+                </Button>
               </a>
             </div>
-          </div>
+          }
+        />
 
-          {/* Date Range Controls */}
-          <div className="pt-3 border-t border-[#E5E2D9] flex flex-wrap items-center justify-between gap-3">
+        {/* Date Range Selector Box */}
+        <div className="bg-white border border-[#E5E2D9] rounded-2xl p-4 shadow-xs space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-1.5 bg-white p-1 rounded-lg border border-[#E5E2D9] text-xs">
               <button
                 onClick={() => setPeriodType("daily")}

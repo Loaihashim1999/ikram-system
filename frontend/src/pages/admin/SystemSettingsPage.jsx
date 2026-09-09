@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import { Settings, Save, AlertCircle, CheckCircle2, Package, ShieldCheck } from "lucide-react";
 
 export default function SystemSettingsPage() {
@@ -52,17 +54,15 @@ export default function SystemSettingsPage() {
   return (
     <MainLayout>
       <div className="p-4 lg:p-6 max-w-5xl mx-auto" dir="rtl">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-extrabold text-[#111827] flex items-center gap-2">
-              <Settings className="w-7 h-7 text-[#C9A24A]" />
-              <span>إعدادات النظام وضوابط التصنيف المالي والمستودع</span>
-            </h1>
-            <p className="text-xs text-[#6B7280] mt-1">
-              تحديد حدود الدخل الشهري للفئات، أيام تنبيه الصلاحية، ومعايير الحوكمة
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="إعدادات النظام وضوابط التصنيف المالي والمستودع"
+          subtitle="تحديد حدود الدخل الشهري للفئات، أيام تنبيه الصلاحية، ومعايير الحوكمة"
+          breadcrumbs={[
+            { label: "الرئيسية", href: "/" },
+            { label: "لوحة التحكم", href: "/admin/users" },
+            { label: "إعدادات النظام" }
+          ]}
+        />
 
         {msg && (
           <div className={`p-4 rounded-2xl mb-6 flex items-center gap-3 font-semibold text-xs shadow-xs ${
@@ -220,15 +220,16 @@ export default function SystemSettingsPage() {
             </div>
 
             {/* Save Button */}
-            <div className="flex justify-end">
-              <button
+            <div className="flex justify-end pt-4">
+              <Button
                 type="submit"
-                disabled={saving}
-                className="flex items-center gap-2 bg-[#D97706] hover:bg-[#B45309] text-white font-extrabold px-7 py-3 rounded-xl transition-colors shadow-xs text-xs disabled:opacity-50 cursor-pointer"
+                variant="secondary"
+                size="md"
+                loading={saving}
+                icon={Save}
               >
-                <Save className="w-4 h-4" />
-                <span>{saving ? "جاري الحفظ..." : "حفظ الإعدادات والتحديث"}</span>
-              </button>
+                حفظ الإعدادات والتحديث
+              </Button>
             </div>
           </form>
         )}

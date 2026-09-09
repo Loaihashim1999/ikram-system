@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getInventory, addInventoryItem, deleteInventoryItem, adjustStock } from '../../api/warehouse';
 import MainLayout from '../../components/layout/MainLayout';
+import PageHeader from '../../components/ui/PageHeader';
+import KpiCard from '../../components/ui/KpiCard';
+import Button from '../../components/ui/Button';
 import Dialog from '../../components/overlays/Dialog';
 import ConfirmDialog from '../../components/overlays/ConfirmDialog';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -186,69 +189,55 @@ export default function Warehouse() {
 
   return (
     <MainLayout>
-      <div className="max-w-7xl mx-auto p-4 lg:p-6" dir="rtl">
-        {/* Top Header */}
-        <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
-          <div>
-            <h1 className="text-2xl font-extrabold text-[#111827] flex items-center gap-2">
-              <Package className="w-7 h-7 text-[#C9A24A]" />
-              <span>إدارة المستودع والمخزون ومتابعة الصلاحية</span>
-            </h1>
-            <p className="text-xs text-[#6B7280] mt-1">
-              متابعة كميات السلال، تواريخ الصلاحية، والتنبيهات المسبقة قبل الانتهاء بـ {thresholdDays} أيام
-            </p>
-          </div>
+      <div className="space-y-6 p-4 lg:p-6" dir="rtl">
+        {/* Page Header with Primary Action */}
+        <PageHeader
+          title="إدارة المستودع والمخزون ومتابعة الصلاحية"
+          subtitle={`متابعة كميات السلال، تواريخ الصلاحية، والتنبيهات المسبقة قبل الانتهاء بـ ${thresholdDays} أيام`}
+          badge="المستودع العام"
+          breadcrumbs={[{ label: "المستودع والمخزون" }]}
+          actions={
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Plus}
+              onClick={() => setShowAddModal(true)}
+            >
+              إضافة صنف / مادة للسلة
+            </Button>
+          }
+        />
 
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#D97706] hover:bg-[#B45309] text-white rounded-xl transition-colors font-extrabold text-xs shadow-xs cursor-pointer"
-          >
-            <Plus size={16} />
-            <span>إضافة صنف / مادة للسلة</span>
-          </button>
-        </div>
-
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-2xl border border-[#E5E2D9] flex items-center gap-3.5 shadow-xs">
-            <div className="w-11 h-11 bg-[#FAF8F5] rounded-xl flex items-center justify-center text-[#C9A24A] border border-[#E5E2D9]">
-              <Package size={22} />
-            </div>
-            <div>
-              <p className="text-xs text-[#6B7280]">إجمالي الأصناف</p>
-              <p className="text-xl font-extrabold text-[#111827] font-mono">{stats.total}</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-[#E5E2D9] flex items-center gap-3.5 shadow-xs">
-            <div className="w-11 h-11 bg-[#FEF3C7] rounded-xl flex items-center justify-center text-[#B45309] border border-[#FCD34D]">
-              <Clock size={22} />
-            </div>
-            <div>
-              <p className="text-xs text-[#6B7280]">قاربت على الانتهاء</p>
-              <p className="text-xl font-extrabold text-[#B45309] font-mono">{stats.nearExpiry}</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-[#E5E2D9] flex items-center gap-3.5 shadow-xs">
-            <div className="w-11 h-11 bg-[#FEE2E2] rounded-xl flex items-center justify-center text-[#B91C1C] border border-[#FCA5A5]">
-              <AlertTriangle size={22} />
-            </div>
-            <div>
-              <p className="text-xs text-[#6B7280]">منتهية الصلاحية</p>
-              <p className="text-xl font-extrabold text-[#B91C1C] font-mono">{stats.expired}</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-[#E5E2D9] flex items-center gap-3.5 shadow-xs">
-            <div className="w-11 h-11 bg-[#E0F2FE] rounded-xl flex items-center justify-center text-[#0369A1] border border-[#7DD3FC]">
-              <CheckCircle2 size={22} />
-            </div>
-            <div>
-              <p className="text-xs text-[#6B7280]">تم توزيعها</p>
-              <p className="text-xl font-extrabold text-[#0369A1] font-mono">{stats.distributed}</p>
-            </div>
-          </div>
+        {/* Top KPI Cards Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard
+            title="إجمالي الأصناف"
+            value={stats.total}
+            subtitle="أصناف مخزنية مسجلة"
+            icon={Package}
+            iconColor="gold"
+          />
+          <KpiCard
+            title="قاربت على الانتهاء"
+            value={stats.nearExpiry}
+            subtitle="تحت حد التنبيه"
+            icon={Clock}
+            iconColor="amber"
+          />
+          <KpiCard
+            title="منتهية الصلاحية"
+            value={stats.expired}
+            subtitle="تتطلب استبعاد فوري"
+            icon={AlertTriangle}
+            iconColor="red"
+          />
+          <KpiCard
+            title="تم توزيعها"
+            value={stats.distributed}
+            subtitle="صرفت للمستفيدين"
+            icon={CheckCircle2}
+            iconColor="green"
+          />
         </div>
 
         {/* Filter & Search Bar */}

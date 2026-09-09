@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
@@ -245,55 +247,49 @@ export default function DailyBeneficiariesList() {
   }, [inventoryItems, selectedItem]);
 
   return (
-    <MainLayout title="إدارة وقوائم المستفيدين اليوميين">
-      <div className="space-y-6">
-        {/* Top Header Card */}
-        <div className="bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl p-5 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="p-2 bg-[#3F6B3A]/10 text-[#3F6B3A] rounded-lg">
-                  <Users className="w-6 h-6" />
-                </span>
-                <div>
-                  <h1 className="text-xl font-bold text-slate-800">سجل المستفيدين اليوميين</h1>
-                  <p className="text-sm text-slate-500 mt-0.5">
-                    إدارة المستفيدين من المساعدات اليومية وتسجيل الاستلامات وتتبع الصرف الفوري
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <button
+    <MainLayout>
+      <div className="space-y-6" dir="rtl">
+        {/* Page Header with Actions */}
+        <PageHeader
+          title="سجل المستفيدين اليوميين"
+          subtitle="إدارة المستفيدين من المساعدات اليومية وتسجيل الاستلامات وتتبع الصرف الفوري"
+          badge="الحالات الطارئة"
+          breadcrumbs={[{ label: "المستفيدون اليوميون" }]}
+          actions={
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={FileSpreadsheet}
                 onClick={handleExportExcel}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#C9A24A]/40 text-[#8C6C26] hover:bg-[#F5EDDA] rounded-lg text-sm font-semibold transition-colors shadow-sm"
               >
-                <FileSpreadsheet className="w-4 h-4 text-[#8C6C26]" />
                 تصدير إكسل
-              </button>
+              </Button>
 
-              <Link
-                to="/daily-beneficiaries/receiving"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#3F6B3A]/40 text-[#3F6B3A] hover:bg-[#EBF4EA] rounded-lg text-sm font-semibold transition-colors shadow-sm"
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Package}
+                onClick={() => navigate("/daily-beneficiaries/receiving")}
               >
-                <Package className="w-4 h-4 text-[#3F6B3A]" />
                 شاشة الاستلام والتسليم
-              </Link>
+              </Button>
 
-              <Link
-                to="/daily-beneficiaries/add"
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#3F6B3A] hover:bg-[#345830] text-white rounded-lg text-sm font-bold shadow transition-colors"
+              <Button
+                variant="primary"
+                size="sm"
+                icon={UserPlus}
+                onClick={() => navigate("/daily-beneficiaries/add")}
               >
-                <UserPlus className="w-4 h-4" />
-                إضافة مستفيد يومي جديد
-              </Link>
+                إضافة مستفيد جديد
+              </Button>
             </div>
-          </div>
+          }
+        />
 
-          {/* Search & Filter Bar */}
-          <div className="mt-5 pt-4 border-t border-[#E5E2D9]">
-            <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row items-center gap-3">
+        {/* Filter Card */}
+        <div className="bg-white border border-[#E5E2D9] rounded-2xl p-4 shadow-xs">
+          <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row items-center gap-3">
               <div className="relative flex-1 w-full">
                 <Search className="w-5 h-5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
@@ -393,7 +389,6 @@ export default function DailyBeneficiariesList() {
               </div>
             )}
           </div>
-        </div>
 
         {/* Data Table */}
         <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm overflow-hidden">

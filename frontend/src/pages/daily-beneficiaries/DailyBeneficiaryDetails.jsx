@@ -4,6 +4,8 @@ import MainLayout from "../../components/layout/MainLayout";
 import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import {
   getDailyBeneficiary,
   deleteDailyBeneficiary,
@@ -207,49 +209,59 @@ export default function DailyBeneficiaryDetails() {
     <MainLayout title={`ملف المستفيد اليومي: ${beneficiary.full_name}`}>
       <div className="space-y-6">
         {/* Top Header & Actions */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <Link
-            to="/daily-beneficiaries"
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-[#3F6B3A] transition-colors"
-          >
-            <ArrowRight className="w-4 h-4" />
-            العودة لقائمة المستفيدين اليوميين
-          </Link>
+        <PageHeader
+          title={`ملف المستفيد: ${beneficiary.full_name}`}
+          subtitle={`رقم الهوية: ${beneficiary.national_id} | الفئة: ${beneficiary.category?.name || "عام"} | الحي: ${beneficiary.district || "—"}`}
+          badge={{
+            text: beneficiary.status === "active" ? "نشط ومؤهل" : "غير نشط",
+            variant: beneficiary.status === "active" ? "success" : "neutral"
+          }}
+          breadcrumbs={[
+            { label: "الرئيسية", href: "/" },
+            { label: "المستفيدين اليوميين", href: "/daily-beneficiaries" },
+            { label: beneficiary.full_name }
+          ]}
+          action={
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={Package}
+                onClick={openReceiveModal}
+              >
+                تسجيل استلام مساعدة
+              </Button>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={openReceiveModal}
-              className="flex items-center gap-2 px-4 py-2 bg-[#3F6B3A] hover:bg-[#345830] text-white rounded-lg text-xs font-bold shadow transition-colors"
-            >
-              <Package className="w-4 h-4" />
-              تسجيل استلام مساعدة
-            </button>
+              <Button
+                variant="gold"
+                size="sm"
+                icon={Plus}
+                onClick={() => setShowDocModal(true)}
+              >
+                إرفاق وثيقة
+              </Button>
 
-            <button
-              onClick={() => setShowDocModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-[#C9A24A]/40 text-[#8C6C26] hover:bg-[#F5EDDA] rounded-lg text-xs font-bold transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              إرفاق وثيقة
-            </button>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Edit}
+                as={Link}
+                to={`/daily-beneficiaries/${beneficiary.id}/edit`}
+              >
+                تعديل
+              </Button>
 
-            <Link
-              to={`/daily-beneficiaries/${beneficiary.id}/edit`}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold transition-colors"
-            >
-              <Edit className="w-3.5 h-3.5" />
-              تعديل البيانات
-            </Link>
-
-            <button
-              onClick={() => setShowDelete(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-xs font-semibold transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              حذف
-            </button>
-          </div>
-        </div>
+              <Button
+                variant="dangerOutline"
+                size="sm"
+                icon={Trash2}
+                onClick={() => setShowDelete(true)}
+              >
+                حذف
+              </Button>
+            </div>
+          }
+        />
 
         {/* Profile Card & KPIs Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

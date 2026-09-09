@@ -5,6 +5,9 @@ import beneficiaryApi from "../../api/beneficiaries";
 import distributionApi from "../../api/distributions";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
+import IconButton from "../../components/ui/IconButton";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
 import Dialog from "../../components/overlays/Dialog";
@@ -449,61 +452,66 @@ ${qrUrl}`;
 
   return (
     <MainLayout>
-      <div className="p-6 max-w-7xl mx-auto" dir="rtl">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Users className="w-7 h-7 text-amber-600" />
-              <span>قائمة وتوجيه المستفيدين (المواطنين والمقيمين)</span>
-            </h1>
-            <p className="text-xs text-gray-500 mt-1">إدارة شاملة لجميع المستفيدين، تسجيل كافة البيانات، إضافة المواطنين والمقيمين واستيراد القوائم بملف Excel</p>
-          </div>
+      <div className="space-y-6" dir="rtl">
+        {/* Page Header with Actions */}
+        <PageHeader
+          title="قائمة وتوجيه المستفيدين"
+          subtitle="إدارة شاملة لجميع المستفيدين الدائمين، تسجيل المواطنين والمقيمين وتوجيه سلال الدعم"
+          badge="المستفيدون الدائمون"
+          breadcrumbs={[{ label: "إدارة المستفيدين" }]}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={Send}
+                onClick={openDispatchModal}
+              >
+                تقديم الدعم
+              </Button>
 
-          <div className="flex gap-2 flex-wrap text-xs font-bold">
-            <button
-              onClick={openDispatchModal}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            >
-              <Send className="w-4 h-4" />
-              <span>🚀 تقديم الدعم للمستفيدين</span>
-            </button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={UserPlus}
+                onClick={() => openAddModalWithType("citizen")}
+              >
+                إضافة مواطن
+              </Button>
 
-            <button
-              onClick={() => openAddModalWithType("citizen")}
-              className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>+ إضافة مواطن (بيانات كاملة)</span>
-            </button>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={UserPlus}
+                onClick={() => openAddModalWithType("resident")}
+              >
+                إضافة مقيم
+              </Button>
 
-            <button
-              onClick={() => openAddModalWithType("resident")}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>+ إضافة مقيم (بيانات كاملة)</span>
-            </button>
-
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>📊 استيراد مستفيدين (Excel)</span>
-            </button>
-          </div>
-        </div>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={FileSpreadsheet}
+                onClick={() => setShowImportModal(true)}
+              >
+                استيراد Excel
+              </Button>
+            </div>
+          }
+        />
 
         {/* Global Search Bar */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="🔍 بحث بالاسم الكامل أو رقم الهوية أو رقم الجوال..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full max-w-md p-2.5 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 bg-white font-bold"
-          />
+        <div className="bg-white border border-[#E5E2D9] rounded-2xl p-4 shadow-xs">
+          <div className="relative max-w-md w-full">
+            <Search className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="بحث بالاسم الكامل أو رقم الهوية أو رقم الجوال..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 pr-9 pl-3 bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C9A24A] focus:bg-white transition-all font-medium"
+            />
+          </div>
         </div>
 
         {/* Main Table */}

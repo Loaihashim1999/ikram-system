@@ -1,6 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import KpiCard from "../../components/ui/KpiCard";
+import Button from "../../components/ui/Button";
 import Dialog from "../../components/overlays/Dialog";
 import Toast from "../../components/ui/Toast";
 import {
@@ -196,42 +199,42 @@ export default function DailyBeneficiaryReceivingPage() {
   }, [inventoryItems, selectedItemId]);
 
   return (
-    <MainLayout title="تسليم ومساعدات المستفيدين اليوميين">
-      <div className="space-y-6">
-        {/* KPI Header Cards */}
+    <MainLayout>
+      <div className="space-y-6" dir="rtl">
+        {/* Page Header */}
+        <PageHeader
+          title="تسليم ومساعدات المستفيدين اليوميين"
+          subtitle="صرف فوري للمواد مع التوثيق الذري وإصدار سندات الاستلام الرسمية المعتمدة"
+          badge="صرف فوري"
+          breadcrumbs={[
+            { label: "المستفيدون اليوميون", to: "/daily-beneficiaries" },
+            { label: "تسليم واستلام المساعدات" },
+          ]}
+        />
+
+        {/* Top KPI Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white border border-[#E5E2D9] rounded-xl p-4 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-[#3F6B3A]/10 text-[#3F6B3A] rounded-xl">
-              <Package className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-xs text-slate-500 block">إجمالي السلال المسلمة اليوم</span>
-              <strong className="text-xl font-bold text-slate-800">{stats.today_baskets}</strong>
-              <span className="text-[11px] text-emerald-700 block mt-0.5">صرف مباشر من المستودع</span>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#E5E2D9] rounded-xl p-4 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-[#C9A24A]/10 text-[#C9A24A] rounded-xl">
-              <UserCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-xs text-slate-500 block">المستفيدون المخدومون اليوم</span>
-              <strong className="text-xl font-bold text-slate-800">{stats.today_beneficiaries}</strong>
-              <span className="text-[11px] text-[#8C6C26] block mt-0.5">مستفيد يومي نشط</span>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#E5E2D9] rounded-xl p-4 shadow-sm flex items-center gap-3">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-              <History className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-xs text-slate-500 block">سندات الاستلام الصادرة اليوم</span>
-              <strong className="text-xl font-bold text-slate-800">{stats.today_transactions}</strong>
-              <span className="text-[11px] text-blue-700 block mt-0.5">سند معتمد وموثق</span>
-            </div>
-          </div>
+          <KpiCard
+            title="إجمالي السلال المسلمة اليوم"
+            value={stats.today_baskets}
+            subtitle="صرف مباشر من المستودع"
+            icon={Package}
+            iconColor="green"
+          />
+          <KpiCard
+            title="المستفيدون المخدومون اليوم"
+            value={stats.today_beneficiaries}
+            subtitle="مستفيد يومي نشط"
+            icon={UserCheck}
+            iconColor="gold"
+          />
+          <KpiCard
+            title="سندات الاستلام الصادرة اليوم"
+            value={stats.today_transactions}
+            subtitle="سند معتمد وموثق"
+            icon={History}
+            iconColor="blue"
+          />
         </div>
 
         {/* Navigation Tabs */}

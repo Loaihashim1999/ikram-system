@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import staffApi from "../../api/staffApi";
 import MainLayout from "../../components/layout/MainLayout";
-import { Briefcase, Home, Users, FileText, ArrowRight, Package } from "lucide-react";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
+import { Briefcase, Home, Users, FileText, ArrowRight, Package, Edit } from "lucide-react";
 
 export default function StaffDetailsPage() {
   const { id } = useParams();
@@ -49,13 +51,40 @@ export default function StaffDetailsPage() {
   return (
     <MainLayout>
       <div className="p-6 max-w-4xl mx-auto" dir="rtl">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">📋 بطاقة الموظف التفصيلية</h1>
-          <Link to="/staff" className="text-amber-700 hover:underline text-xs font-bold flex items-center gap-1">
-            <ArrowRight className="w-4 h-4" />
-            <span>العودة لقائمة الموظفين</span>
-          </Link>
-        </div>
+        <PageHeader
+          title={`بطاقة الموظف: ${selectedStaff.name}`}
+          subtitle={`المسمى الوظيفي: ${selectedStaff.job_title || "—"} | القسم: ${selectedStaff.department || "—"} | الهوية: ${selectedStaff.national_id || "—"}`}
+          badge={{
+            text: selectedStaff.status === "active" ? "على رأس العمل" : "غير نشط",
+            variant: selectedStaff.status === "active" ? "success" : "neutral"
+          }}
+          breadcrumbs={[
+            { label: "الرئيسية", href: "/" },
+            { label: "إدارة الموظفين", href: "/staff" },
+            { label: selectedStaff.name }
+          ]}
+          action={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="gold"
+                size="sm"
+                icon={Edit}
+                as={Link}
+                to={`/staff/${selectedStaff.id}/edit`}
+              >
+                تعديل البيانات
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                as={Link}
+                to="/staff"
+              >
+                ← قائمة الموظفين
+              </Button>
+            </div>
+          }
+        />
 
         {/* ─── Standardized Card Design ─── */}
         <div className="bg-white rounded-3xl max-w-3xl mx-auto shadow-2xl border border-gray-100 overflow-hidden">

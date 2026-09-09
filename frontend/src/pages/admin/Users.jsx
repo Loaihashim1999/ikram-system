@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
@@ -292,27 +294,24 @@ export default function UsersPage() {
 
   return (
     <MainLayout>
-      <div className="p-4 lg:p-6 max-w-7xl mx-auto" dir="rtl">
-        {/* Top Action Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-extrabold text-[#111827] flex items-center gap-2">
-              <Shield className="w-7 h-7 text-[#C9A24A]" />
-              <span>إدارة الحسابات ومصفوفة الصلاحيات (RBAC & Security)</span>
-            </h1>
-            <p className="text-xs text-[#6B7280] mt-1">
-              إدارة مستخدمي النظام وتعيين الصلاحيات الدقيقة وإعادة تفعيل الحسابات المقفلة
-            </p>
-          </div>
-
-          <button
-            onClick={openAddUserModal}
-            className="flex items-center gap-2 bg-[#D97706] hover:bg-[#B45309] text-white font-extrabold px-5 py-2.5 rounded-xl text-xs shadow-xs transition-colors cursor-pointer"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>إنشاء حساب مستخدم جديد</span>
-          </button>
-        </div>
+      <div className="space-y-6" dir="rtl">
+        {/* Page Header */}
+        <PageHeader
+          title="إدارة الحسابات ومصفوفة الصلاحيات"
+          subtitle="إدارة مستخدمي النظام وتعيين الصلاحيات الدقيقة وإعادة تفعيل الحسابات المقفلة"
+          badge="الأمان والتحكم (RBAC)"
+          breadcrumbs={[{ label: "إدارة الحسابات" }]}
+          actions={
+            <Button
+              variant="primary"
+              size="sm"
+              icon={UserPlus}
+              onClick={openAddUserModal}
+            >
+              إنشاء حساب مستخدم جديد
+            </Button>
+          }
+        />
 
         {/* Roles Guide Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

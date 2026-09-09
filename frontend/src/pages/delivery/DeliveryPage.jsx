@@ -3,6 +3,8 @@ import beneficiaryApi from "../../api/beneficiaries";
 import distributionApi from "../../api/distributions";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
 import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
@@ -309,57 +311,49 @@ ${qrUrl}`;
 
   return (
     <MainLayout>
-      <div className="p-6 max-w-7xl mx-auto" dir="rtl">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <span>🚚</span> إدارة التوصيل المنازل
-            </h1>
-            <p className="text-xs text-gray-500 mt-1">إدارة عمليات التوصيل المباشرة لكبار السن وذوي الاحتياجات الخاصة وتوزيعات الجهات المستفيدة والشريكة وتعيين السائقين</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Dedicated Home Delivery Support Dispatch Button (Visible only to Admin/Supervisor) */}
-            {!isDriver ? (
-              <button
+      <div className="space-y-6" dir="rtl">
+        {/* Page Header */}
+        <PageHeader
+          title="إدارة وتوصيل المنازل"
+          subtitle="إدارة عمليات التوصيل المباشرة لكبار السن وذوي الاحتياجات الخاصة وتعيين السائقين"
+          badge={isDriver ? "نمط السائق الميداني" : "العمليات اللوجستية"}
+          breadcrumbs={[{ label: "إدارة التوصيل" }]}
+          actions={
+            !isDriver && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={Send}
                 onClick={openHomeDeliveryDispatchModal}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
               >
-                <Send className="w-4 h-4" />
-                <span>🚀 تقديم وتوجيه دعم التوصيل (كبار السن / ذوو الاحتياجات / الجهات المستفيدة)</span>
-              </button>
-            ) : (
-              <div className="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-4 py-2 rounded-2xl text-xs flex items-center gap-2 shadow-2xs">
-                <span>🚚 نمط السائق الميداني: استعراض الشحنات الموكلة وتوثيق التسليم</span>
-              </div>
-            )}
+                توجيه دعم التوصيل
+              </Button>
+            )
+          }
+        />
 
-            {/* Tab Buttons */}
-            <div className="flex bg-gray-100 p-1.5 rounded-2xl border border-gray-200">
-              <button
-                onClick={() => setActiveTab("special_needs")}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === "special_needs"
-                    ? "bg-amber-600 text-white shadow-md"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                ♿ توصيل المنازل (كبار السن وذوو الاحتياجات)
-              </button>
-              <button
-                onClick={() => setActiveTab("representatives")}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === "representatives"
-                    ? "bg-amber-600 text-white shadow-md"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                🏢 توزيعات الجهات المستفيدة
-              </button>
-            </div>
-          </div>
-
+        {/* Tab Buttons */}
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-[#E5E2D9] gap-2">
+          <button
+            onClick={() => setActiveTab("special_needs")}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "special_needs"
+                ? "bg-[#3F6B3A] text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            ♿ توصيل المنازل (كبار السن وذوو الاحتياجات)
+          </button>
+          <button
+            onClick={() => setActiveTab("representatives")}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "representatives"
+                ? "bg-[#3F6B3A] text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            🏢 توزيعات الجهات المستفيدة
+          </button>
         </div>
 
         {/* Global Search Input */}

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
 import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
@@ -383,27 +385,24 @@ export default function NeighborhoodRepsPage() {
 
   return (
     <MainLayout>
-      <div className="p-6 max-w-7xl mx-auto" dir="rtl">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Building2 className="w-7 h-7 text-primary-600" />
-              <span>إدارة الجهات المستفيدة والشريكة</span>
-            </h1>
-            <p className="text-xs text-gray-500 mt-1">
-              إدارة الجمعيات الشريكة، المساجد، الأوقاف، دور الرعاية، لجان التنمية، ومتابعة المستفيدين وتوثيق الدعم والاستلام
-            </p>
-          </div>
-
-          <button
-            onClick={handleOpenAddModal}
-            className="flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow-md cursor-pointer"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>+ تسجيل جهة مستفيدة جديدة</span>
-          </button>
-        </div>
+      <div className="space-y-6" dir="rtl">
+        {/* Page Header */}
+        <PageHeader
+          title="إدارة الجهات المستفيدة والشريكة"
+          subtitle="إدارة الجمعيات الشريكة، المساجد، الأوقاف، دور الرعاية، ومتابعة المستفيدين وتوثيق الدعم"
+          badge="الجهات الشريكة"
+          breadcrumbs={[{ label: "الجهات المستفيدة" }]}
+          actions={
+            <Button
+              variant="primary"
+              size="sm"
+              icon={UserPlus}
+              onClick={handleOpenAddModal}
+            >
+              تسجيل جهة مستفيدة جديدة
+            </Button>
+          }
+        />
 
         {/* Search and Filters Bar */}
         <div className="flex flex-wrap items-center gap-3 mb-6 bg-white p-4 rounded-2xl border border-border-light shadow-sm">

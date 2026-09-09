@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import beneficiaryApi from "../../api/beneficiaries";
 import MainLayout from "../../components/layout/MainLayout";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 import {
   User,
   MapPin,
@@ -10,7 +12,8 @@ import {
   FileText,
   Package,
   ExternalLink,
-  ArrowRight
+  ArrowRight,
+  Edit
 } from "lucide-react";
 import ReceiptHistoryTimeline from "../../components/common/ReceiptHistoryTimeline";
 
@@ -87,24 +90,36 @@ export default function BeneficiaryDetailsPage() {
     <MainLayout>
       <div className="p-6 max-w-4xl mx-auto" dir="rtl">
         {/* Page Top Action Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">📋 بطاقة بيانات المستفيد الشاملة</h1>
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/beneficiaries/${b.id}/edit`}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm transition-all"
-            >
-              تعديل البيانات
-            </Link>
-            <Link
-              to="/beneficiaries"
-              className="text-amber-700 hover:underline text-xs font-bold flex items-center gap-1"
-            >
-              <ArrowRight className="w-4 h-4" />
-              <span>العودة لقائمة المستفيدين</span>
-            </Link>
-          </div>
-        </div>
+        <PageHeader
+          title={`بطاقة بيانات المستفيد: ${fullName}`}
+          subtitle={`${isCitizen ? "مواطن سعودي" : `مقيم (${b.nationality || 'غير محدد'})`} | رقم الهوية: ${nationalId}`}
+          breadcrumbs={[
+            { label: "الرئيسية", href: "/" },
+            { label: "إدارة المستفيدين", href: "/beneficiaries" },
+            { label: fullName }
+          ]}
+          action={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="gold"
+                size="sm"
+                icon={Edit}
+                as={Link}
+                to={`/beneficiaries/${b.id}/edit`}
+              >
+                تعديل البيانات
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                as={Link}
+                to="/beneficiaries"
+              >
+                ← العودة للقائمة
+              </Button>
+            </div>
+          }
+        />
 
         {/* ─── Standardized Amber Card Container ─── */}
         <div className="bg-white rounded-3xl max-w-3xl mx-auto shadow-2xl border border-gray-100 overflow-hidden">
