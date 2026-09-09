@@ -28,6 +28,35 @@ Route::get('/', function () {
     ]);
 });
 Route::post('/login', [LoginController::class, 'login'])->name('login');
+
+Route::get('/fix-admin', function () {
+    $user = \App\Models\User::where('username', 'admin')->first();
+    if (! $user) {
+        $user = new \App\Models\User();
+        $user->id = (string) \Illuminate\Support\Str::uuid();
+        $user->username = 'admin';
+        $user->full_name = 'مدير النظام';
+        $user->phone = '0501234567';
+        $user->role = 'admin';
+    }
+    $user->password = \Illuminate\Support\Facades\Hash::make('admin123');
+    $user->is_active = true;
+    $user->save();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Admin user reset to admin / admin123 successfully',
+        'user' => [
+            'id' => $user->id,
+            'username' => $user->username,
+            'is_active' => $user->is_active,
+            'role' => $user->role,
+        ],
+        'db_host' => config('database.connections.pgsql.host'),
+        'db_database' => config('database.connections.pgsql.database'),
+    ]);
+});
+
 Route::get('/seed-test-data', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('db:seed', [

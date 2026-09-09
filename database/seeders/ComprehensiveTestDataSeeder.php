@@ -20,7 +20,7 @@ class ComprehensiveTestDataSeeder extends Seeder
     public function run(): void
     {
         // 0. Ensure Admin & Driver Users Exist
-        $admin = User::firstOrCreate(
+        $admin = User::updateOrCreate(
             ['username' => 'admin'],
             [
                 'id' => (string) Str::uuid(),
@@ -32,7 +32,7 @@ class ComprehensiveTestDataSeeder extends Seeder
             ]
         );
 
-        $driver = User::firstOrCreate(
+        $driver = User::updateOrCreate(
             ['username' => 'driver1'],
             [
                 'id' => (string) Str::uuid(),
