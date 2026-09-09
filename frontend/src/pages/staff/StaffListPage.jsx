@@ -11,7 +11,7 @@ import FilterableTableHeader from "../../components/common/FilterableTableHeader
 import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
-import { Eye, Edit, Trash2, RefreshCw, X, FileText, Users, Home, Briefcase, Package, Send, QrCode, UserPlus, FileSpreadsheet, Upload, Download, CheckCircle2, XCircle, Plus } from "lucide-react";
+import { Eye, Edit, Trash2, RefreshCw, X, FileText, Users, Home, Briefcase, Package, Send, QrCode, UserPlus, FileSpreadsheet, Upload, Download, CheckCircle2, XCircle, Plus, Search } from "lucide-react";
 
 const statusLabels = {
   active: { label: "نشط", class: "bg-emerald-100 text-emerald-800 border-emerald-300" },
