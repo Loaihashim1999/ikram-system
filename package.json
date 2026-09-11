@@ -5,7 +5,7 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "test:browser": "npx playwright test --config=playwright.config.js",
+        "test:browser": "npx playwright test --config=playwright.config.js"
     },
     "devDependencies": {
         "@playwright/test": "^1.63.0",

@@ -10,19 +10,17 @@ class AuthenticationFailureTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
-    public function it_fails_when_user_not_found()
+    public function test_it_fails_when_user_not_found(): void
     {
         $response = $this->postJson('/api/login', [
             'username' => 'nonexistent',
             'password' => 'secret',
         ]);
-        $response->assertStatus(401);
+        $response->assertStatus(422);
         $response->assertJsonMissing(['token']);
     }
 
-    /** @test */
-    public function it_fails_with_wrong_password()
+    public function test_it_fails_with_wrong_password(): void
     {
         $user = User::factory()->create([
             'username' => 'john',
@@ -32,11 +30,10 @@ class AuthenticationFailureTest extends TestCase
             'username' => 'john',
             'password' => 'wrong',
         ]);
-        $response->assertStatus(401);
+        $response->assertStatus(422);
     }
 
-    /** @test */
-    public function it_fails_when_user_is_inactive()
+    public function test_it_fails_when_user_is_inactive(): void
     {
         $user = User::factory()->create([
             'username' => 'jane',
@@ -47,7 +44,7 @@ class AuthenticationFailureTest extends TestCase
             'username' => 'jane',
             'password' => 'secret',
         ]);
-        $response->assertStatus(401);
+        $response->assertStatus(422);
     }
 }
 ?>

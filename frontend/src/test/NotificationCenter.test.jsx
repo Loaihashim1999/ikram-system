@@ -34,9 +34,24 @@ function NotificationTestHarness({ initialNotifications = [] }) {
   );
 }
 
+const localStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => { store[key] = String(value); },
+    clear: () => { store = {}; },
+    removeItem: (key) => { delete store[key]; },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+});
+
 describe('NotificationCenter & Warehouse Alert Rules', () => {
   beforeEach(() => {
-    localStorage.clear();
+    window.localStorage.clear();
   });
 
   it('renders notification bell icon', () => {

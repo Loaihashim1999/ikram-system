@@ -11,9 +11,12 @@ class RoleMiddlewareTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
-    public function non_admin_cannot_access_admin_route()
+    public function test_non_admin_cannot_access_admin_route(): void
     {
+        \Illuminate\Support\Facades\Route::get('/api/admin/secure-endpoint', function () {
+            return response()->json(['secret' => 'data']);
+        })->middleware(['auth:sanctum', 'role:admin']);
+
         $user = User::factory()->create([
             'role' => 'staff',
             'is_active' => true,
