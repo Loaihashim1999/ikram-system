@@ -30,30 +30,72 @@ Route::get('/', function () {
 Route::post('/login', [LoginController::class, 'login'])->name('login');
 
 Route::get('/fix-admin', function () {
-    $user = \App\Models\User::where('username', 'admin')->first();
-    if (! $user) {
-        $user = new \App\Models\User();
-        $user->id = (string) \Illuminate\Support\Str::uuid();
-        $user->username = 'admin';
-        $user->full_name = 'مدير النظام';
-        $user->phone = '0501234567';
-        $user->role = 'admin';
+    $rolesConfig = [
+        [
+            'username' => 'admin',
+            'full_name' => 'مدير النظام (Admin)',
+            'email' => 'admin@ikram.test',
+            'role' => 'admin',
+            'can_receive_notifications' => true,
+        ],
+        [
+            'username' => 'reception',
+            'full_name' => 'موظف الاستقبال (Reception)',
+            'email' => 'reception@ikram.test',
+            'role' => 'reception',
+            'can_receive_notifications' => true,
+        ],
+        [
+            'username' => 'staff',
+            'full_name' => 'موظف العمليات (Staff)',
+            'email' => 'staff@ikram.test',
+            'role' => 'staff',
+            'can_receive_notifications' => false,
+        ],
+        [
+            'username' => 'warehouse',
+            'full_name' => 'أمين المستودع (Warehouse)',
+            'email' => 'warehouse@ikram.test',
+            'role' => 'warehouse',
+            'can_receive_notifications' => false,
+        ],
+        [
+            'username' => 'readonly',
+            'full_name' => 'مدقق حسابات (Readonly)',
+            'email' => 'readonly@ikram.test',
+            'role' => 'readonly',
+            'can_receive_notifications' => false,
+        ],
+    ];
+
+    $results = [];
+    foreach ($rolesConfig as $conf) {
+        $user = \App\Models\User::updateOrCreate(
+            ['username' => $conf['username']],
+            [
+                'full_name' => $conf['full_name'],
+                'email' => $conf['email'],
+                'password' => \Illuminate\Support\Facades\Hash::make('admin123'),
+                'role' => $conf['role'],
+                'is_active' => true,
+                'can_receive_notifications' => $conf['can_receive_notifications'],
+                'permissions' => [
+                    'can_receive_notifications' => $conf['can_receive_notifications'],
+                    'role' => $conf['role'],
+                ],
+            ]
+        );
+        $results[] = [
+            'username' => $user->username,
+            'role' => $user->role,
+            'is_active' => $user->is_active,
+        ];
     }
-    $user->password = \Illuminate\Support\Facades\Hash::make('admin123');
-    $user->is_active = true;
-    $user->save();
 
     return response()->json([
         'success' => true,
-        'message' => 'Admin user reset to admin / admin123 successfully',
-        'user' => [
-            'id' => $user->id,
-            'username' => $user->username,
-            'is_active' => $user->is_active,
-            'role' => $user->role,
-        ],
-        'db_host' => config('database.connections.pgsql.host'),
-        'db_database' => config('database.connections.pgsql.database'),
+        'message' => 'All 5 system roles reset to username / admin123 successfully',
+        'users' => $results,
     ]);
 });
 

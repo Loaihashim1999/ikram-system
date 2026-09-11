@@ -25,10 +25,8 @@ esac
 
 echo "Running Laravel Migrations..."
 php /var/www/html/artisan migrate --force
-if [ "$RUN_SEEDS" = "true" ]; then
-  echo "Running Database Seeders..."
-  php /var/www/html/artisan db:seed --class=DatabaseSeeder --force
-fi
+echo "Running Database Seeders (Ensuring admin & system roles exist)..."
+php /var/www/html/artisan db:seed --class=DatabaseSeeder --force || true
 
 echo "Clearing Caches..."
 php /var/www/html/artisan config:clear || true
