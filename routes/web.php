@@ -1,11 +1,19 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/emergency-reset-admin', function () {
+Route::get('/emergency-reset-admin', function (Request $request) {
+    // Require secret query parameter token to prevent unauthorized access
+    if ($request->query('token') !== 'ikram_secure_2026') {
+        return response()->json([
+            'error' => 'Unauthorized access. Valid token parameter required.'
+        ], 403);
+    }
+
     $migrationError = null;
     try {
         Artisan::call('migrate', ['--force' => true]);

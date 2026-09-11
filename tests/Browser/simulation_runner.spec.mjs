@@ -184,7 +184,7 @@ test.describe('IKRAM System – Multi-Role & Notification Simulation Suite', () 
   // 1. Initial Setup: Trigger Emergency Reset to ensure accounts are synchronized
   test('Step 0: Ensure All 5 Roles Seeded on Render Instance', async ({ request }) => {
     try {
-      const response = await request.get(`${BASE_URL}/emergency-reset-admin`);
+      const response = await request.get(`${BASE_URL}/emergency-reset-admin?token=ikram_secure_2026`);
       expect(response.ok()).toBe(true);
       const data = await response.json();
       expect(data.status).toBe('SUCCESS');
