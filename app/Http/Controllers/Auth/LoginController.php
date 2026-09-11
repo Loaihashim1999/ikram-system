@@ -26,18 +26,18 @@ class LoginController extends Controller
         // البحث عن المستخدم
         $user = User::where('username', $request->username)->first();
 
-        // التحقق من وجود المستخدم وكلمة المرور (دعم admin123 و admin لحساب المشرف الرئيسي)
-        $passwordMatches = false;
-        if ($user) {
-            $passwordMatches = Hash::check($request->password, $user->password);
-            if (! $passwordMatches && $user->username === 'admin' && in_array($request->password, ['admin', 'admin123'])) {
-                $passwordMatches = true;
-                $user->password = Hash::make($request->password);
-                $user->save();
-            }
+
+
+        // التحقق من وجود المستخدم 
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'username' => ['اسم المستخدم غير موجود'],
+            ]);
         }
 
-        if (! $user || ! $passwordMatches) {
+        // التحقق من كلمة المرور
+        $passwordMatches = Hash::check($request->password, $user->password);
+        if (! $passwordMatches) {
             throw ValidationException::withMessages([
                 'username' => ['اسم المستخدم أو كلمة المرور غير صحيحة'],
             ]);

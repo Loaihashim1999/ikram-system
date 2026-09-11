@@ -78,6 +78,12 @@ class Beneficiary extends Model
 
         static::creating($compute);
         static::updating($compute);
+        static::created(function ($b) {
+            \App\Events\BeneficiaryChanged::dispatch($b);
+        });
+        static::updated(function ($b) {
+            \App\Events\BeneficiaryChanged::dispatch($b);
+        });
     }
 
     // ─── IBAN Accessors ──────────────────────────────────────────────────────

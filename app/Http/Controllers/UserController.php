@@ -154,4 +154,48 @@ class UserController extends Controller
 
         return response()->json(['data' => $drivers]);
     }
+
+    /**
+     * Grant or revoke notification receiving privileges for a user (Admin only).
+     */
+    public function toggleNotifications(Request $request, string $id): JsonResponse
+    {
+        if ($request->user()?->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'ليس لديك الصلاحيات المطلوبة (خاص بمدير النظام).'
+            ], 403);
+        }
+
+        $user = User::findOrFail($id);
+
+        $currentState = $user->canReceiveNotifications();
+        $newState = $request->has('can_receive_notifications')
+            ? (bool) $request->input('can_receive_notifications')
+            : !$currentState;
+
+        $user->can_receive_notifications = $newState;
+        $permissions = $user->permissions ?? [];
+        $permissions['can_receive_notifications'] = $newState;
+        $user->permissions = $permissions;
+        $user->save();
+
+        try {
+            AuditLog::create([
+                'user_id' => $request->user()?->id,
+                'action' => 'TOGGLE_NOTIFICATIONS',
+                'details' => "تعديل صلاحية الإشعارات للمستخدم {$user->username} إلى: " . ($newState ? 'مفعل' : 'معطل'),
+            ]);
+        } catch (\Exception $e) {}
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث صلاحية استقبال الإشعارات بنجاح.',
+            'user' => [
+                'id' => $user->id,
+                'username' => $user->username,
+                'can_receive_notifications' => $newState,
+            ]
+        ]);
+    }
 }

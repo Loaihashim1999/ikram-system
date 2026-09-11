@@ -99,33 +99,33 @@ function App() {
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={getHomePath()} replace />} />
 
       {/* Dashboard */}
-      <Route path="/dashboard" element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<Dashboard />} />} />
+      <Route path="/dashboard" element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly']} element={<Dashboard />} />} />
 
       {/* Beneficiaries */}
-      <Route path="/beneficiaries"              element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<BeneficiaryList />} />} />
-      <Route path="/beneficiaries/add-citizen"  element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<AddBeneficiaryPage />} />} />
-      <Route path="/beneficiaries/add-resident" element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<AddBeneficiaryPage />} />} />
-      <Route path="/beneficiaries/import"       element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<BeneficiaryImportPage />} />} />
-      <Route path="/beneficiaries/:id"          element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<BeneficiaryDetails />} />} />
-      <Route path="/beneficiaries/:id/edit"     element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<EditBeneficiaryPage />} />} />
+      <Route path="/beneficiaries"              element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'readonly']} element={<BeneficiaryList />} />} />
+      <Route path="/beneficiaries/add-citizen"  element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff']} element={<AddBeneficiaryPage />} />} />
+      <Route path="/beneficiaries/add-resident" element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff']} element={<AddBeneficiaryPage />} />} />
+      <Route path="/beneficiaries/import"       element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception']} element={<BeneficiaryImportPage />} />} />
+      <Route path="/beneficiaries/:id"          element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'readonly']} element={<BeneficiaryDetails />} />} />
+      <Route path="/beneficiaries/:id/edit"     element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff']} element={<EditBeneficiaryPage />} />} />
 
       {/* Daily Beneficiaries (Consolidated Module) */}
-      <Route path="/daily-beneficiaries"                  element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<DailyBeneficiariesPage />} />} />
-      <Route path="/daily-beneficiaries/add"              element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<DailyBeneficiaryForm />} />} />
+      <Route path="/daily-beneficiaries"                  element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'readonly']} element={<DailyBeneficiariesPage />} />} />
+      <Route path="/daily-beneficiaries/add"              element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff']} element={<DailyBeneficiaryForm />} />} />
       <Route path="/daily-beneficiaries/receiving"        element={<Navigate to="/daily-beneficiaries?tab=deliveries" replace />} />
       <Route path="/daily-beneficiaries/inventory"        element={<Navigate to="/daily-beneficiaries?tab=inventory" replace />} />
-      <Route path="/daily-beneficiaries/:id"              element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<DailyBeneficiaryDetails />} />} />
-      <Route path="/daily-beneficiaries/:id/edit"         element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<DailyBeneficiaryForm />} />} />
+      <Route path="/daily-beneficiaries/:id"              element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'readonly']} element={<DailyBeneficiaryDetails />} />} />
+      <Route path="/daily-beneficiaries/:id/edit"         element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff']} element={<DailyBeneficiaryForm />} />} />
 
       {/* Support Submission Page - Redirect to Delivery */}
       <Route path="/send-support"               element={<Navigate to="/delivery" replace />} />
       <Route path="/distributions"              element={<Navigate to="/delivery" replace />} />
 
       {/* Neighborhood Representatives */}
-      <Route path="/representatives"            element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<NeighborhoodRepsPage />} />} />
+      <Route path="/representatives"            element={<Guard allowedRoles={['admin', 'assistant_admin', 'staff']} element={<NeighborhoodRepsPage />} />} />
 
       {/* Receiver Page (Accessible to All Roles) */}
-      <Route path="/receiver"                   element={<Guard allowedRoles={['admin', 'assistant_admin', 'delivery_driver', 'driver']} element={<ReceiverPage />} />} />
+      <Route path="/receiver"                   element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly', 'delivery_driver', 'driver']} element={<ReceiverPage />} />} />
 
       {/* Staff */}
       <Route path="/staff"          element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<StaffListPage />} />} />
@@ -135,15 +135,15 @@ function App() {
       <Route path="/staff/:id/edit" element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<EditStaffPage />} />} />
 
       {/* Warehouse */}
-      <Route path="/warehouse"    element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<Warehouse />} />} />
+      <Route path="/warehouse"    element={<Guard allowedRoles={['admin', 'assistant_admin', 'warehouse', 'staff', 'readonly']} element={<Warehouse />} />} />
 
       {/* Delivery */}
-      <Route path="/delivery"          element={<Guard allowedRoles={['admin', 'assistant_admin', 'delivery_driver', 'driver']} element={<DeliveryPage />} />} />
-      <Route path="/driver/deliveries" element={<Guard allowedRoles={['admin', 'assistant_admin', 'delivery_driver', 'driver']} element={<DriverDashboard />} />} />
+      <Route path="/delivery"          element={<Guard allowedRoles={['admin', 'assistant_admin', 'staff', 'delivery_driver', 'driver']} element={<DeliveryPage />} />} />
+      <Route path="/driver/deliveries" element={<Guard allowedRoles={['admin', 'assistant_admin', 'staff', 'delivery_driver', 'driver']} element={<DriverDashboard />} />} />
 
       {/* Governance (formerly Statistics) */}
-      <Route path="/governance"   element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<GovernancePage />} />} />
-      <Route path="/statistics"   element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<GovernancePage />} />} />
+      <Route path="/governance"   element={<Guard allowedRoles={['admin', 'assistant_admin', 'readonly']} element={<GovernancePage />} />} />
+      <Route path="/statistics"   element={<Guard allowedRoles={['admin', 'assistant_admin', 'readonly']} element={<GovernancePage />} />} />
 
       {/* Audit & Logs (Admin only) */}
       <Route path="/audit"            element={<Guard allowedRoles={['admin']} element={<AuditPage />} />} />

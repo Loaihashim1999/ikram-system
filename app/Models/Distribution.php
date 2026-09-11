@@ -38,6 +38,17 @@ class Distribution extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected static function booted()
+    {
+        static::created(function ($dist) {
+            \App\Services\NotificationService::notifyAll(
+                'aid_distributed',
+                "تم تسجيل عملية توزيع مساعدات جديدة برقم: {$dist->id}",
+                $dist
+            );
+        });
+    }
+
     // العلاقات
     public function beneficiary(): BelongsTo
     {

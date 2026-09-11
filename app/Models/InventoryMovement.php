@@ -26,6 +26,13 @@ class InventoryMovement extends Model
                 $model->{$model->getKeyName()} = (string) Str::uuid();
             }
         });
+        static::created(function ($movement) {
+            \App\Services\NotificationService::notifyAll(
+                'stock_changed',
+                "تم تسجيل حركة مخزون جديدة: نوع الحركة ({$movement->type}) بمقدار ({$movement->quantity})",
+                $movement
+            );
+        });
     }
 
     public function item()

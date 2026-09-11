@@ -30,3 +30,5 @@ app/google/google-credentials.json
 scratch/
 scratch_users.php
 ikram_db
+playwright-report/
+test-results/

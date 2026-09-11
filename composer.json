@@ -15,6 +15,7 @@
         "laravel/tinker": "^3.0",
         "mpdf/mpdf": "^8.3",
         "phpoffice/phpspreadsheet": "^5.9",
+        "sentry/sentry-laravel": "^4.27",
         "simplesoftwareio/simple-qrcode": "^4.2"
     },
     "require-dev": {

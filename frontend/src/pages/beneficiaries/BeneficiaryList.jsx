@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import * as XLSX from "xlsx";
 import beneficiaryApi from "../../api/beneficiaries";
 import distributionApi from "../../api/distributions";
@@ -81,6 +82,8 @@ const makeInitialForm = (type = "citizen") => ({
 });
 
 export default function BeneficiaryList() {
+  const { user } = useAuth();
+  const isReadOnly = user?.role === 'readonly';
   const [items, setItems]               = useState([]);
   const [loading, setLoading]           = useState(true);
   const [search, setSearch]             = useState("");
@@ -499,23 +502,27 @@ ${qrUrl}`;
                 تقديم الدعم
               </Button>
 
-              <Button
-                variant="primary"
-                size="sm"
-                icon={UserPlus}
-                onClick={() => openAddModalWithType("citizen")}
-              >
-                إضافة مواطن
-              </Button>
+              {!isReadOnly && (
+                <>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={UserPlus}
+                    onClick={() => openAddModalWithType("citizen")}
+                  >
+                    إضافة مواطن
+                  </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                icon={UserPlus}
-                onClick={() => openAddModalWithType("resident")}
-              >
-                إضافة مقيم
-              </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={UserPlus}
+                    onClick={() => openAddModalWithType("resident")}
+                  >
+                    إضافة مقيم
+                  </Button>
+                </>
+              )}
 
               <Button
                 variant="outline"
@@ -701,27 +708,31 @@ ${qrUrl}`;
                         >
                           <Eye className="w-4 h-4" />
                         </Link>
-                        <Link
-                          to={`/beneficiaries/${b.id}/edit`}
-                          className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl border border-amber-200 cursor-pointer transition-all"
-                          title="تعديل البيانات"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Link>
-                        <button
-                          onClick={() => setBenToToggle(b)}
-                          className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl border border-emerald-200 cursor-pointer transition-all"
-                          title="تعديل حالة المستفيد (نشط / موقوف)"
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setBenToDelete({ id: b.id, name: b.full_name || b.name })}
-                          className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200 cursor-pointer transition-all"
-                          title="حذف المستفيد نهائياً"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {!isReadOnly && (
+                          <>
+                            <Link
+                              to={`/beneficiaries/${b.id}/edit`}
+                              className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl border border-amber-200 cursor-pointer transition-all"
+                              title="تعديل البيانات"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Link>
+                            <button
+                              onClick={() => setBenToToggle(b)}
+                              className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl border border-emerald-200 cursor-pointer transition-all"
+                              title="تعديل حالة المستفيد (نشط / موقوف)"
+                            >
+                              <RefreshCw className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setBenToDelete({ id: b.id, name: b.full_name || b.name })}
+                              className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200 cursor-pointer transition-all"
+                              title="حذف المستفيد نهائياً"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

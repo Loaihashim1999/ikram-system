@@ -13,24 +13,75 @@ Route::get('/emergency-reset-admin', function () {
         $migrationError = $e->getMessage();
     }
 
-    $user = User::updateOrCreate(
-        ['username' => 'admin'],
+    $rolesConfig = [
         [
-            'full_name' => 'System Administrator',
+            'username' => 'admin',
+            'full_name' => 'مدير النظام (Admin)',
             'email' => 'admin@ikram.test',
-            'password' => Hash::make('admin123'),
             'role' => 'admin',
-            'is_active' => true,
-        ]
-    );
+            'can_receive_notifications' => true,
+        ],
+        [
+            'username' => 'reception',
+            'full_name' => 'موظف الاستقبال (Reception)',
+            'email' => 'reception@ikram.test',
+            'role' => 'reception',
+            'can_receive_notifications' => true,
+        ],
+        [
+            'username' => 'staff',
+            'full_name' => 'موظف العمليات (Staff)',
+            'email' => 'staff@ikram.test',
+            'role' => 'staff',
+            'can_receive_notifications' => false,
+        ],
+        [
+            'username' => 'warehouse',
+            'full_name' => 'أمين المستودع (Warehouse)',
+            'email' => 'warehouse@ikram.test',
+            'role' => 'warehouse',
+            'can_receive_notifications' => false,
+        ],
+        [
+            'username' => 'readonly',
+            'full_name' => 'مدقق حسابات (Readonly)',
+            'email' => 'readonly@ikram.test',
+            'role' => 'readonly',
+            'can_receive_notifications' => false,
+        ],
+    ];
+
+    $results = [];
+    foreach ($rolesConfig as $conf) {
+        $user = User::updateOrCreate(
+            ['username' => $conf['username']],
+            [
+                'full_name' => $conf['full_name'],
+                'email' => $conf['email'],
+                'password' => Hash::make('admin123'),
+                'role' => $conf['role'],
+                'is_active' => true,
+                'can_receive_notifications' => $conf['can_receive_notifications'],
+                'permissions' => [
+                    'can_receive_notifications' => $conf['can_receive_notifications'],
+                    'role' => $conf['role'],
+                ],
+            ]
+        );
+
+        $results[] = [
+            'username' => $user->username,
+            'role' => $user->role,
+            'can_receive_notifications' => $user->canReceiveNotifications(),
+            'action' => $user->wasRecentlyCreated ? 'CREATED' : 'UPDATED',
+        ];
+    }
 
     return response()->json([
         'status' => 'SUCCESS',
-        'action' => $user->wasRecentlyCreated ? 'CREATED' : 'UPDATED',
-        'username' => $user->username,
-        'role' => $user->role,
         'migration_status' => $migrationError ? 'ERROR: ' . $migrationError : 'MIGRATED_OR_UP_TO_DATE',
-        'message' => 'Admin account ready with password admin123'
+        'message' => 'All 5 roles seeded with password admin123',
+        'users' => $results,
     ]);
 });
 

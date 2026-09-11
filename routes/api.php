@@ -97,6 +97,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [LoginController::class, 'me']);
     Route::post('/logout', [LogoutController::class, 'logout']);
 
+    // ── إشعارات المستفيدين ──────────────────────────────────────────────────────
+    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/{id}/mark-as-read', [App\Http\Controllers\NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllRead']);
+
     // ── المستفيدون ──────────────────────────────────────────────────────────
     Route::get('/beneficiaries/check-national-id/{nationalId}',
         [BeneficiaryController::class, 'checkNationalId']);
@@ -156,6 +162,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/inventory/{id}/adjust', [InventoryController::class, 'adjustStock']);
 
     // ── إدارة المستخدمين ─────────────────────────────────────────
+    Route::post('/users/{id}/toggle-notifications', [UserController::class, 'toggleNotifications']);
     Route::apiResource('users', UserController::class);
 
     // ── إعدادات النظام ─────────────────────────────────────────

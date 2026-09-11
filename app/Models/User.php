@@ -25,6 +25,7 @@ class User extends Authenticatable
         'role',
         'permissions',
         'is_active',
+        'can_receive_notifications',
     ];
 
     protected $hidden = [
@@ -35,6 +36,7 @@ class User extends Authenticatable
     protected $casts = [
         'password' => 'hashed',
         'is_active' => 'boolean',
+        'can_receive_notifications' => 'boolean',
         'permissions' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -55,4 +57,35 @@ class User extends Authenticatable
     {
         return $this->hasMany(AuditLog::class);
     }
+    /**
+     * Determine if the user has a given permission.
+     * Admin role has full access.
+     */
+    public function hasPermission(string $permission): bool
+    {
+        // Admin role bypass
+        if ($this->role === 'admin') {
+            return true;
+        }
+        // Permissions stored as JSON array in `permissions` attribute
+        $permissions = $this->permissions ?? [];
+        return in_array($permission, $permissions);
+    }
+
+    /**
+     * Check if user is eligible to receive operations alerts.
+     * Admin always receives notifications; other roles require can_receive_notifications = true.
+     */
+    public function canReceiveNotifications(): bool
+    {
+        if ($this->role === 'admin') {
+            return true;
+        }
+        if (isset($this->attributes['can_receive_notifications'])) {
+            return (bool) $this->attributes['can_receive_notifications'];
+        }
+        $perms = $this->permissions ?? [];
+        return !empty($perms['can_receive_notifications']);
+    }
 }
+
