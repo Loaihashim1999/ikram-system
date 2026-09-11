@@ -23,15 +23,17 @@ class LoginController extends Controller
             'password' => 'required|string',
         ]);
 
-        // البحث عن المستخدم
-        $user = User::where('username', $request->username)->first();
+        $loginInput = trim($request->username);
 
-
+        // البحث عن المستخدم باسم المستخدم أو البريد الإلكتروني (غير حساس لحالة الأحرف)
+        $user = User::whereRaw('LOWER(username) = ?', [strtolower($loginInput)])
+            ->orWhereRaw('LOWER(email) = ?', [strtolower($loginInput)])
+            ->first();
 
         // التحقق من وجود المستخدم 
         if (! $user) {
             throw ValidationException::withMessages([
-                'username' => ['اسم المستخدم غير موجود'],
+                'username' => ['اسم المستخدم أو البريد الإلكتروني غير موجود'],
             ]);
         }
 
@@ -46,7 +48,7 @@ class LoginController extends Controller
         // التحقق من أن الحساب نشط
         if (! $user->is_active) {
             throw ValidationException::withMessages([
-                'username' => ['هذا الحساب معطل. تواصل مع管理员.'],
+                'username' => ['هذا الحساب معطل. تواصل مع مسؤول النظام.'],
             ]);
         }
 
