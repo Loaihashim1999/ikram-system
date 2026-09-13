@@ -1,1 +1,0 @@
-import{m as e}from"./index-vvtzVnRM.js";var t={list:(t={})=>e.get(`/distributions`,{params:t}),get:t=>e.get(`/distributions/${t}`),create:t=>e.post(`/distributions`,t),markReceived:t=>e.put(`/distributions/${t}/received`),sendWhatsapp:t=>e.post(`/distributions/${t}/whatsapp`)};export{t};

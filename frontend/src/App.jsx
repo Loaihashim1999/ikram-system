@@ -139,7 +139,7 @@ function App() {
       <Route path="*" element={<Navigate to={user ? getHomePath() : "/login"} replace />} />
     </Routes>
     </Suspense>
-    <ErrorButton />
+    {import.meta.env.DEV && <ErrorButton />}
     </>
   );
 }
