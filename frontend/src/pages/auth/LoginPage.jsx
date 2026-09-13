@@ -176,7 +176,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-4 flex justify-center">
-          <ErrorButton />
+          {import.meta.env.DEV && <ErrorButton />}
         </div>
 
         <div className="mt-8 text-center text-[11px] text-[#9CA3AF] border-t border-[#E5E2D9] pt-4">

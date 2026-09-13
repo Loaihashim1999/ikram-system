@@ -1,0 +1,1 @@
+import{p as e}from"./index-C6nc5vl5.js";var t={list:(t={})=>e.get(`/staff`,{params:t}),get:t=>e.get(`/staff/${t}`),create:t=>e.post(`/staff`,t),update:(t,n)=>e.put(`/staff/${t}`,n),remove:t=>e.delete(`/staff/${t}`),importExcel:t=>e.post(`/staff/import`,t,{headers:{"Content-Type":`multipart/form-data`}})};export{t};

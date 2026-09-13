@@ -1,0 +1,1 @@
+import{p as e}from"./index-C6nc5vl5.js";var t={list:(t={})=>e.get(`/distributions`,{params:t}),get:t=>e.get(`/distributions/${t}`),create:t=>e.post(`/distributions`,t),markReceived:t=>e.put(`/distributions/${t}/received`),sendWhatsapp:t=>e.post(`/distributions/${t}/whatsapp`)};export{t};
