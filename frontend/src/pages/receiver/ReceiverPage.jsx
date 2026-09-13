@@ -5,7 +5,7 @@ import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
 import QrScannerModal from "../../components/common/QrScannerModal";
 import StatusBadge from "../../components/ui/StatusBadge";
-import { QrCode, Search, CheckCircle2, FileText, UserCheck, ShieldAlert, ArrowRight, AlertTriangle, XCircle, Clock } from "lucide-react";
+import { QrCode, Search, CheckCircle2, FileText, UserCheck, AlertTriangle, XCircle, Clock } from "lucide-react";
 
 export default function ReceiverPage() {
   const [code, setCode] = useState("");
@@ -27,7 +27,9 @@ export default function ReceiverPage() {
           deliveredAt: storedUsed[targetCode].delivered_at,
         };
       }
-    } catch {}
+    } catch {
+      // Ignore a malformed local QR cache and rely on the authoritative API status.
+    }
 
     const backendStatus = String(itemData?.status || "").toLowerCase();
     if (backendStatus === "delivered" || backendStatus === "used") {
@@ -92,7 +94,9 @@ export default function ReceiverPage() {
           recipient: recipient?.full_name || recipient?.name || "مستفيد",
         };
         localStorage.setItem("ikram_used_qr_codes", JSON.stringify(storedUsed));
-      } catch {}
+      } catch {
+        // Delivery is already confirmed by the API; local cache failure is non-fatal.
+      }
     } catch (err) {
       alert(err.response?.data?.message || "حدث خطأ أثناء تأكيد الاستلام.");
     } finally {

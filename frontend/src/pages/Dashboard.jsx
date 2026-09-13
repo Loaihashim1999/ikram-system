@@ -17,7 +17,6 @@ import {
   UserCheck,
   ShieldCheck,
   QrCode,
-  ScrollText,
   Clock,
   HeartHandshake,
 } from 'lucide-react';

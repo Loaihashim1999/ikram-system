@@ -8,8 +8,7 @@ import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
 import StatusBadge from "../../components/ui/StatusBadge";
 import {
-  Trash2, Edit3, Check, X, Shield, ShieldAlert, Truck, UserCheck,
-  Briefcase, User, UserPlus, Globe, RefreshCw, Copy, Eye, EyeOff, AlertTriangle, FileSpreadsheet
+  Trash2, Edit3, Shield, Truck, UserCheck, UserPlus, Globe, RefreshCw, Copy, Eye, EyeOff, AlertTriangle, FileSpreadsheet
 } from "lucide-react";
 import { exportArrayToExcel } from "../../utils/excelExport";
 
@@ -300,7 +299,9 @@ export default function UsersPage() {
       const attempts = JSON.parse(localStorage.getItem(FAILED_ATTEMPTS_KEY) || '{}');
       delete attempts[clean];
       localStorage.setItem(FAILED_ATTEMPTS_KEY, JSON.stringify(attempts));
-    } catch {}
+    } catch {
+      // A malformed browser-only lock cache must not block server reactivation.
+    }
 
     // Send API update if available
     try {

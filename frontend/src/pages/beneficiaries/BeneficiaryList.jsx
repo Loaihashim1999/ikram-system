@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import * as XLSX from "xlsx";
 import beneficiaryApi from "../../api/beneficiaries";
@@ -8,13 +8,12 @@ import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
-import IconButton from "../../components/ui/IconButton";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
 import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
-import { Users, UserPlus, FileSpreadsheet, Search, Eye, Edit, Trash2, Package, RefreshCw, Send, X, FileText, QrCode, CheckCircle2, XCircle, Upload, ArrowRight, Download, Home, DollarSign, Plus } from "lucide-react";
+import { UserPlus, FileSpreadsheet, Search, Eye, Edit, Trash2, Package, RefreshCw, Send, FileText, CheckCircle2, XCircle, Upload, Download, Plus } from "lucide-react";
 import { exportArrayToExcel } from "../../utils/excelExport";
 
 const DISPATCH_STEPS = ["اختيار المستفيدين", "اختيار سلة الدعم", "تحديد الموعد", "مراجعة وإرسال"];
@@ -77,11 +76,11 @@ const makeInitialForm = (type = "citizen") => ({
   social_security_amount: "",
   retirement_pension: "",
   family_support: "",
-  housing_type: "rent",
   status: "active",
 });
 
 export default function BeneficiaryList() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isReadOnly = user?.role === 'readonly';
   const [items, setItems]               = useState([]);
@@ -141,7 +140,7 @@ export default function BeneficiaryList() {
   const loadData = () => {
     setLoading(true);
     Promise.all([
-      beneficiaryApi.list({ per_page: 500 }),
+      beneficiaryApi.list({ per_page: -1, all: true }),
       api.get("/inventory").catch(() => ({ data: { data: [] } })),
     ])
       .then(([res, invRes]) => {
@@ -537,9 +536,9 @@ ${qrUrl}`;
                 variant="outline"
                 size="sm"
                 icon={FileSpreadsheet}
-                onClick={() => setShowImportModal(true)}
+                onClick={() => navigate('/beneficiaries/import')}
               >
-                استيراد Excel
+                استيراد ذكي
               </Button>
             </div>
           }

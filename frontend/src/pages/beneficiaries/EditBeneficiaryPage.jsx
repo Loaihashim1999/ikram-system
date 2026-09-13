@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getBeneficiary, updateBeneficiary } from '../../api/beneficiaries';
 import MainLayout from '../../components/layout/MainLayout';
 import { calculateIncomeAndClassification } from '../../utils/financialCalculations';
@@ -7,7 +7,7 @@ import PageHeader from '../../components/ui/PageHeader';
 import Button from '../../components/ui/Button';
 import { 
   Loader2, Save, X, User, MapPin, Users, DollarSign, FileText, 
-  Plus, Trash2, Shield, CheckCircle2, ArrowRight, Upload, AlertCircle, Calculator 
+  Plus, Trash2, Calculator
 } from 'lucide-react';
 
 const FAMILY_STATUS_OPTIONS = [

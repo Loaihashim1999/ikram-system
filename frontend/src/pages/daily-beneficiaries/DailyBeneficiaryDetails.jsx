@@ -10,15 +10,12 @@ import {
   getDailyBeneficiary,
   deleteDailyBeneficiary,
   uploadDocument,
-  deleteDocument,
   getDailyInventory,
   createDailyReceivingTransaction,
 } from "../../api/dailyBeneficiaries";
 import {
-  ArrowRight,
   User,
   Phone,
-  CreditCard,
   MapPin,
   Calendar,
   Package,
@@ -29,10 +26,7 @@ import {
   Printer,
   CheckCircle2,
   Plus,
-  Clock,
   Eye,
-  Download,
-  AlertCircle,
   FileCheck,
 } from "lucide-react";
 import { getDocumentPdfUrl } from "../../utils/documentUrl";

@@ -15,8 +15,11 @@ export default function PageHeader({
   badge,
   breadcrumbs = [],
   actions,
+  action,
   className = '',
 }) {
+  const actionContent = actions ?? action;
+  const badgeText = typeof badge === 'object' ? badge.text : badge;
   return (
     <div className={`flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-2 border-b border-[#E5E2D9] ${className}`} dir="rtl">
       {/* Right side: Breadcrumbs, Title, and Description */}
@@ -49,7 +52,7 @@ export default function PageHeader({
           </h1>
           {badge && (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EBF4EA] text-[#3F6B3A] border border-[#A5D6A7]">
-              {badge}
+              {badgeText}
             </span>
           )}
         </div>
@@ -63,9 +66,9 @@ export default function PageHeader({
       </div>
 
       {/* Left side: Actions Slot */}
-      {actions && (
+      {actionContent && (
         <div className="flex items-center gap-2.5 flex-wrap shrink-0">
-          {actions}
+          {actionContent}
         </div>
       )}
     </div>

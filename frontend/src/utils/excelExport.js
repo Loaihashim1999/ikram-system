@@ -107,6 +107,14 @@ export async function exportApiDataToExcel({
     throw new Error("لا توجد سجلات تطابق خيارات البحث والتصفية المحددة للتصدير.");
   }
 
+  const paginator = resData?.data?.last_page ? resData.data : resData;
+  if (paginator.last_page > 1) {
+    for (let page = 2; page <= paginator.last_page; page++) {
+      const next = await api.get(endpoint, { params: { ...exportParams, page } });
+      const payload = next.data?.data?.data ? next.data.data : next.data;
+      records.push(...(payload.data || []));
+    }
+  }
   const transformedData = transform ? records.map(transform) : records;
   exportArrayToExcel({ filename, sheetName, data: transformedData });
   return records.length;

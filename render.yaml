@@ -11,7 +11,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: "true"
+        value: "false"
       - key: LOG_CHANNEL
         value: stderr
       - key: SESSION_DRIVER
@@ -19,7 +19,7 @@ services:
       - key: CACHE_STORE
         value: file
       - key: APP_KEY
-        value: "base64:7vG8S4v8g0uV1zT5mQ2wE4rT6yU8iO0pA1sD3fF5gH7="
+        sync: false
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST

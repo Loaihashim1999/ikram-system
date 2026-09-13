@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@sentry/react": "^10.74.0",
     "@tanstack/react-query": "^5.101.4",
     "axios": "^1.19.0",
     "clsx": "^2.1.1",
@@ -39,6 +40,7 @@
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
+    "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.7.0",
     "jsdom": "^26.0.0",
     "postcss": "^8.5.26",

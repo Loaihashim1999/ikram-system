@@ -1,3 +1,4 @@
+import { downloadDocument } from '../../utils/documentUrl';
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
@@ -10,11 +11,12 @@ import Scrim from "../../components/overlays/Scrim";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import ReceiptHistoryTimeline from "../../components/common/ReceiptHistoryTimeline";
 import {
-  MapPin, UserPlus, FileSpreadsheet, Send, FileText, ShieldCheck,
+  MapPin, UserPlus, FileSpreadsheet, Send, FileText,
   RefreshCw, Eye, Edit3, Trash2, X, Download, Users, FileArchive,
-  Building2, Phone, Calendar, Hash, CheckCircle2, Package, Mail, Award
+  Building2, CheckCircle2, Package, Award
 } from "lucide-react";
 import { exportArrayToExcel } from "../../utils/excelExport";
+import SmartExcelImport from "../../components/common/SmartExcelImport";
 
 export default function NeighborhoodRepsPage() {
   const [reps, setReps] = useState([]);
@@ -29,6 +31,7 @@ export default function NeighborhoodRepsPage() {
 
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingRep, setEditingRep] = useState(null);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [selectedRep, setSelectedRep] = useState(null);
@@ -340,7 +343,7 @@ export default function NeighborhoodRepsPage() {
       link.remove();
     } catch {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com');
-      window.open(`${baseUrl}/api/neighborhood-reps/${repId}/export-excel`, '_blank');
+      await downloadDocument(`${baseUrl}/api/neighborhood-reps/${repId}/export-excel`);
     }
   };
 
@@ -429,6 +432,7 @@ export default function NeighborhoodRepsPage() {
           breadcrumbs={[{ label: "الجهات المستفيدة" }]}
           actions={
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" icon={FileSpreadsheet} onClick={() => setShowImportModal(true)}>استيراد ذكي</Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -449,6 +453,13 @@ export default function NeighborhoodRepsPage() {
             </div>
           }
         />
+
+        {showImportModal && <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowImportModal(false)}>
+          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between mb-5"><div><h2 className="text-xl font-bold">الاستيراد الذكي للجهات المستفيدة</h2><p className="text-sm text-gray-500">طابق أعمدة الملف ثم استورد جميع السجلات.</p></div><button onClick={() => setShowImportModal(false)}><X /></button></div>
+            <SmartExcelImport entity="organizations" onComplete={loadData} />
+          </div>
+        </div>}
 
         {/* Search and Filters Bar */}
         <div className="flex flex-wrap items-center gap-3 mb-6 bg-white p-4 rounded-2xl border border-border-light shadow-sm">

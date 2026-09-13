@@ -289,33 +289,52 @@ class PdfExportController extends Controller
      */
     public function exportWeeklyComprehensiveReport(Request $request)
     {
-        // Use AnalyticsController logic to get complete aggregated metrics
-        $analyticsCtrl = app(AnalyticsController::class);
-        $analyticsResponse = $analyticsCtrl->index($request);
-        $analytics = $analyticsResponse->getData(true);
+        $report = app(\App\Services\GovernanceReportService::class)->build($request);
+        $html = view('pdf.weekly_comprehensive_report', compact('report'))->render();
+        $mpdf = $this->createMpdf('P');
+        $mpdf->WriteHTML($html);
+        $pdf = $mpdf->Output('', 'S');
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="governance-report.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
 
-        try {
-            $html = view('pdf.weekly_comprehensive_report', [
-                'analytics' => $analytics,
-            ])->render();
-
-            $mpdf = $this->createMpdf('L');
-            $mpdf->WriteHTML($html);
-
-            $periodLabel = $analytics['period']['start_date'] . '_to_' . $analytics['period']['end_date'];
-
-            return response($mpdf->Output('', 'S'), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => "inline; filename=\"التقرير_الشامل_{$periodLabel}.pdf\"",
-            ]);
-        } catch (\Throwable $e) {
-            $html = view('pdf.weekly_comprehensive_report', [
-                'analytics' => $analytics,
-            ])->render();
-
-            return response($html . '<script>window.onload = function() { window.print(); };</script>', 200, [
-                'Content-Type' => 'text/html; charset=utf-8',
-            ]);
+    public function exportComprehensiveExcel(Request $request)
+    {
+        $report = app(\App\Services\GovernanceReportService::class)->build($request);
+        $workbook = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $cover = $workbook->getActiveSheet()->setTitle('Report');
+        $cover->fromArray([
+            ['IKRAM Governance report'],
+            ['From', $report['analytics']['period']['start_date']],
+            ['To', $report['analytics']['period']['end_date']],
+            ['Generated', $report['generated_at']],
+            ['Scope', 'snapshot = current records; period = selected dates'],
+            ['Privacy', 'Credentials, banking and document paths excluded'],
+        ]);
+        $report['datasets'] = ['analysis_indicators' => $report['indicators'], 'monthly_trend' => $report['timeline']] + $report['datasets'];
+        foreach ($report['datasets'] as $name => $rows) {
+            $sheet = $workbook->createSheet()->setTitle(substr($name, 0, 31));
+            $sheet->setRightToLeft(true);
+            if (!$rows) { $sheet->setCellValue('A1', 'No matching records'); continue; }
+            $headers = array_keys(reset($rows));
+            $sheet->fromArray($headers, null, 'A1');
+            $rowNumber = 2;
+            foreach ($rows as $row) {
+                foreach (array_values($row) as $col => $value) {
+                    $sheet->setCellValueExplicit([$col + 1, $rowNumber], is_scalar($value) ? (string)$value : json_encode($value, JSON_UNESCAPED_UNICODE), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                }
+                $rowNumber++;
+            }
+            $sheet->freezePane('A2');
+            $sheet->setAutoFilter($sheet->calculateWorksheetDimension());
+            $sheet->getStyle('1:1')->getFont()->setBold(true);
+            foreach (range(1, count($headers)) as $column) $sheet->getColumnDimensionByColumn($column)->setWidth(22);
         }
+        return response()->streamDownload(function () use ($workbook) {
+            (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($workbook))->save('php://output');
+        }, 'governance-data.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Cache-Control' => 'private, no-store']);
     }
 }

@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Bell, LogOut, User, Menu, KeyRound, ChevronDown } from 'lucide-react';
-import NotificationCenter from './NotificationCenter';
 import ChangePasswordModal from '../common/ChangePasswordModal';
 import logoImg from '../../assets/logo.png';
 
+const NotificationCenter = lazy(() => import('./NotificationCenter'));
 
 export default function TopBar({ onMenuClick }) {
   const { user: authUser, logout } = useAuth();
@@ -141,7 +141,11 @@ export default function TopBar({ onMenuClick }) {
       </header>
 
       {/* Centralized Notification Center Component */}
-      <NotificationCenter isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
+      {isNotifOpen && (
+        <Suspense fallback={null}>
+          <NotificationCenter isOpen onClose={() => setIsNotifOpen(false)} />
+        </Suspense>
+      )}
 
       {/* Change Password Modal */}
       <ChangePasswordModal

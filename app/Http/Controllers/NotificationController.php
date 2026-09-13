@@ -1,106 +1,27 @@
 <?php
-
 namespace App\Http\Controllers;
-
 use App\Models\Notification;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-
 class NotificationController extends Controller
 {
-    /**
-     * List all notifications for the authenticated user.
-     * Admin always receives alerts; other users only if canReceiveNotifications() is true.
-     */
-    public function index(Request $request)
-    {
-        $user = $request->user();
-
-        if (!$user || !$user->canReceiveNotifications()) {
-            return response()->json([]);
-        }
-
-        $notifications = Notification::where(function ($q) use ($user) {
-            $q->where('recipient_id', $user->id);
-            if ($user->role === 'admin') {
-                $q->orWhere('recipient_type', 'admin');
-            }
-        })
-        ->latest()
-        ->take(50)
-        ->get();
-
-        return response()->json($notifications);
+    private function records(Request $request) {
+        abort_unless($request->user()->canReceiveNotifications(), 403);
+        return Notification::where('recipient_id', $request->user()->id)->where('recipient_type', 'staff');
     }
-
-    /**
-     * Get unread notifications count.
-     */
-    public function unreadCount(Request $request)
-    {
-        $user = $request->user();
-
-        if (!$user || !$user->canReceiveNotifications()) {
-            return response()->json(['unread_count' => 0]);
-        }
-
-        $count = Notification::where(function ($q) use ($user) {
-            $q->where('recipient_id', $user->id);
-            if ($user->role === 'admin') {
-                $q->orWhere('recipient_type', 'admin');
-            }
-        })
-        ->where('status', 'unread')
-        ->count();
-
-        return response()->json(['unread_count' => $count]);
+    public function index(Request $request) {
+        $request->validate(['category' => 'nullable|in:warehouse_expiry,system_event,security', 'page' => 'nullable|integer|min:1']);
+        return response()->json($this->records($request)->when($request->category, fn($q, $category) => $q->where('category', $category))->latest()->orderBy('id')->paginate(50));
     }
-
-    /**
-     * Mark a single notification as read.
-     */
-    public function markAsRead($id)
-    {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['status' => 'unauthorized'], 401);
-        }
-
-        $notification = Notification::where('id', $id)
-            ->where(function ($q) use ($user) {
-                $q->where('recipient_id', $user->id);
-                if ($user->role === 'admin') {
-                    $q->orWhere('recipient_type', 'admin');
-                }
-            })
-            ->first();
-
-        if ($notification) {
-            $notification->update(['status' => 'sent']); // or 'read'
-        }
-
-        return response()->json(['status' => 'marked as read']);
+    public function unreadCount(Request $request) {
+        return response()->json(['unread_count' => $this->records($request)->whereNull('read_at')->count()]);
     }
-
-    /**
-     * Mark all notifications as read.
-     */
-    public function markAllRead()
-    {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['status' => 'unauthorized'], 401);
-        }
-
-        Notification::where(function ($q) use ($user) {
-            $q->where('recipient_id', $user->id);
-            if ($user->role === 'admin') {
-                $q->orWhere('recipient_type', 'admin');
-            }
-        })
-        ->where('status', 'unread')
-        ->update(['status' => 'sent']);
-
-        return response()->json(['status' => 'all marked as read']);
+    public function markAsRead(Request $request, $id) {
+        $notification = $this->records($request)->findOrFail($id);
+        if (!$notification->read_at) $notification->update(['read_at' => now()]);
+        return response()->json(['success' => true]);
+    }
+    public function markAllRead(Request $request) {
+        $this->records($request)->whereNull('read_at')->update(['read_at' => now()]);
+        return response()->json(['success' => true]);
     }
 }

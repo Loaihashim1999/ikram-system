@@ -22,6 +22,10 @@ class NeighborhoodRepController extends Controller
             $s = $request->search;
             $query->where(function ($q) use ($s) {
                 $q->where('full_name', 'like', "%{$s}%")
+                    ->orWhere('organization_name', 'like', "%{$s}%")
+                    ->orWhere('license_number', 'like', "%{$s}%")
+                    ->orWhere('contact_person', 'like', "%{$s}%")
+                    ->orWhere('email', 'like', "%{$s}%")
                     ->orWhere('district_name', 'like', "%{$s}%")
                     ->orWhere('city', 'like', "%{$s}%")
                     ->orWhere('national_id', 'like', "%{$s}%")
@@ -42,7 +46,7 @@ class NeighborhoodRepController extends Controller
         // Calculate actual linked families and receipt count for each representative
         foreach ($reps as $r) {
             $words = array_filter(explode(' ', str_replace(['حي', 'والكعكية', 'و', '-', '/'], ' ', $r->district_name)));
-            $queryB = Beneficiary::where(function($q) use ($r, $words) {
+            $queryB = Beneficiary::where(function ($q) use ($r, $words) {
                 $q->where('district', 'like', "%{$r->district_name}%");
                 foreach ($words as $w) {
                     if (mb_strlen($w) > 2) {
@@ -84,6 +88,11 @@ class NeighborhoodRepController extends Controller
 
         $validated = $request->validate([
             'full_name' => 'required|string|max:150',
+            'organization_name' => 'nullable|string|max:150',
+            'organization_type' => 'nullable|string|max:100',
+            'license_number' => 'nullable|string|max:50',
+            'contact_person' => 'nullable|string|max:150',
+            'email' => 'nullable|email|max:150',
             'phone' => 'required|string|max:20',
             'national_id' => 'nullable|string|max:20',
             'date_of_birth' => 'nullable|date',
@@ -169,7 +178,7 @@ class NeighborhoodRepController extends Controller
 
         $words = array_filter(explode(' ', str_replace(['حي', 'والكعكية', 'و', '-', '/'], ' ', $rep->district_name)));
         $linkedBeneficiaries = Beneficiary::with(['dependents'])
-            ->where(function($q) use ($rep, $words) {
+            ->where(function ($q) use ($rep, $words) {
                 $q->where('district', 'like', "%{$rep->district_name}%");
                 foreach ($words as $w) {
                     if (mb_strlen($w) > 2) {
@@ -210,6 +219,11 @@ class NeighborhoodRepController extends Controller
 
         $validated = $request->validate([
             'full_name' => 'sometimes|required|string|max:150',
+            'organization_name' => 'nullable|string|max:150',
+            'organization_type' => 'nullable|string|max:100',
+            'license_number' => 'nullable|string|max:50',
+            'contact_person' => 'nullable|string|max:150',
+            'email' => 'nullable|email|max:150',
             'phone' => 'sometimes|required|string|max:20',
             'national_id' => 'nullable|string|max:20',
             'date_of_birth' => 'nullable|date',

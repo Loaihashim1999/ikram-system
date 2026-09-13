@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import beneficiaryApi from "../../api/beneficiaries";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
@@ -7,9 +7,8 @@ import { calculateIncomeAndClassification } from "../../utils/financialCalculati
 import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
 import {
-  CheckCircle2, AlertCircle, Info, Shield, Save, FileText,
-  UserCheck, MapPin, DollarSign, Users, Calculator, ArrowRight,
-  Home, HelpCircle
+  CheckCircle2, AlertCircle, Save, FileText,
+  UserCheck, Users, Calculator
 } from "lucide-react";
 
 /* ═══════════════════════ خيارات وحالات الأسرة ═══════════════════════ */

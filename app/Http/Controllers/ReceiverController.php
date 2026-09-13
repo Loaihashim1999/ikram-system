@@ -26,6 +26,7 @@ class ReceiverController extends Controller
             ->first();
 
         if ($dist) {
+            if (in_array(request()->user()->role, ['driver', 'delivery_driver'])) abort_unless($dist->driver_id === request()->user()->id, 403);
             return response()->json([
                 'success' => true,
                 'type' => 'regular',
@@ -39,6 +40,7 @@ class ReceiverController extends Controller
             ->first();
 
         if ($repDist) {
+            if (in_array(request()->user()->role, ['driver', 'delivery_driver'])) abort_unless($repDist->driver_id === request()->user()->id, 403);
             return response()->json([
                 'success' => true,
                 'type' => 'representative',
@@ -62,6 +64,8 @@ class ReceiverController extends Controller
         $dist = Distribution::with('beneficiary')->where('barcode_code', $code)->first();
 
         if ($dist) {
+            if (in_array(request()->user()->role, ['driver', 'delivery_driver'])) abort_unless($dist->driver_id === request()->user()->id, 403);
+            if ($dist->status === 'delivered') return response()->json(['success' => false, 'message' => 'تم الاستلام مسبقاً'], 409);
             $dist->update([
                 'status' => 'delivered',
                 'delivered_at' => now(),
@@ -105,6 +109,7 @@ class ReceiverController extends Controller
 
         $repDist = RepDistribution::with('representative')->where('barcode_code', $code)->first();
         if ($repDist) {
+            if (in_array(request()->user()->role, ['driver', 'delivery_driver'])) abort_unless($repDist->driver_id === request()->user()->id, 403);
             $repDist->update(['status' => 'delivered']);
             $repName = $repDist->representative->full_name ?? 'مندوب الحي';
 

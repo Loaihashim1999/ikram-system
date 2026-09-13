@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class NeighborhoodRep extends Model
 {
@@ -19,13 +20,18 @@ class NeighborhoodRep extends Model
         parent::boot();
         static::creating(function ($model) {
             if (empty($model->{$model->getKeyName()})) {
-                $model->{$model->getKeyName()} = (string) \Illuminate\Support\Str::uuid();
+                $model->{$model->getKeyName()} = (string) Str::uuid();
             }
         });
     }
 
     protected $fillable = [
         'full_name',
+        'organization_name',
+        'organization_type',
+        'license_number',
+        'contact_person',
+        'email',
         'phone',
         'national_id',
         'date_of_birth',

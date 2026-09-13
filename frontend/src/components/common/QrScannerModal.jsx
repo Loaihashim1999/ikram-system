@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { QrCode, Search, X, Camera, AlertCircle } from "lucide-react";
+import { Search, X, Camera, AlertCircle } from "lucide-react";
 
 export default function QrScannerModal({ isOpen, onClose, onScanSuccess }) {
   const [manualCode, setManualCode] = useState("");

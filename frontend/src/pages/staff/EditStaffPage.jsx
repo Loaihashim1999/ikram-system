@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import staffApi from "../../api/staffApi";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
 import {
-  Briefcase, Home, Users, FileText, Save, ArrowRight, Plus, Trash2
+  Briefcase, Home, Users, FileText, Save, Plus, Trash2
 } from "lucide-react";
 
 const RELATIONSHIP_OPTIONS = [

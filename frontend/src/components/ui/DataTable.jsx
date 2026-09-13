@@ -1,4 +1,3 @@
-import React from 'react';
 import LoadingState from './LoadingState';
 import EmptyState from './EmptyState';
 import TablePagination from './TablePagination';

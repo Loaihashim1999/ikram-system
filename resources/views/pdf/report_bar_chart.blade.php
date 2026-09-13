@@ -1,0 +1,4 @@
+@php($maximum = max(1, max(array_values($values ?: [0]))))
+<table class="chart-table"><thead><tr><th>{{ $label ?? 'الفئة' }}</th><th>العدد</th><th>مقارنة الأعداد (من 0 إلى {{ $maximum }})</th></tr></thead><tbody>
+@forelse($values as $name=>$count)<tr><td style="width:34%">{{ $name }}</td><td style="width:12%">{{ $count }}</td><td style="width:54%"><svg width="260" height="22" viewBox="0 0 260 22"><rect x="0" y="2" width="260" height="18" fill="#f1eee6" /><rect x="0" y="2" width="{{ 260*$count/$maximum }}" height="18" fill="#355B30" /></svg></td></tr>@empty<tr><td colspan="3">لا توجد بيانات في النطاق المحدد</td></tr>@endforelse
+</tbody></table>

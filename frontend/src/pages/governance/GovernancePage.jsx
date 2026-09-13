@@ -1,14 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import * as XLSX from "xlsx";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
 import Toast from "../../components/ui/Toast";
 import { getAnalytics } from "../../api/dailyBeneficiaries";
-import { getDocumentPdfUrl } from "../../utils/documentUrl";
+import { getDocumentPdfUrl, downloadDocument } from "../../utils/documentUrl";
 import { ColumnChart, LineChart, FunnelChart, PieChart } from "./GovernanceCharts";
 import {
-  ShieldCheck,
   BarChart3,
   TrendingUp,
   Users,
@@ -16,20 +14,15 @@ import {
   FileSpreadsheet,
   Download,
   Calendar,
-  Filter,
   CheckCircle2,
-  Clock,
   Building2,
   UserCheck,
   AlertTriangle,
-  ArrowUpDown,
   Printer,
   Truck,
   Briefcase,
   MapPin,
   Layers,
-  ChevronLeft,
-  Search,
 } from "lucide-react";
 
 export default function GovernancePage() {
@@ -76,7 +69,11 @@ export default function GovernancePage() {
       }
     } catch (err) {
       console.error(err);
-      setToast({ show: true, message: "فشل في تحميل بيانات الحوكمة والتحليلات", type: "error" });
+      setToast({
+        show: true,
+        message: err.response?.data?.message || "فشل في تحميل بيانات الحوكمة والتحليلات",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -87,93 +84,32 @@ export default function GovernancePage() {
   }, [periodType, selectedDate, startDate, endDate, selectedMonth, selectedYear]);
 
   // Handle Export to Excel
-  const handleExportExcel = () => {
-    if (!analytics) return;
-
-    const wb = XLSX.utils.book_new();
-
-    // 1. Sheet: KPIs Summary
-    const kpiData = [
-      { "المؤشر": "إجمالي المستفيدين المسجلين (عام + يومي)", "القيمة": analytics.kpis?.grand_total_beneficiaries || 0 },
-      { "المؤشر": "إجمالي المستفيدين الذين استلموا مساعدات", "القيمة": analytics.kpis?.grand_total_served || 0 },
-      { "المؤشر": "إجمالي السلال الموزعة بالكامل", "القيمة": analytics.kpis?.grand_total_baskets || 0 },
-      { "المؤشر": "المستفيدون العامون", "القيمة": analytics.beneficiaries?.total || 0 },
-      { "المؤشر": "المستفيدون العامون الذين استلموا", "القيمة": analytics.beneficiaries?.received_count || 0 },
-      { "المؤشر": "المستفيدون العامون الذين لم يستلموا", "القيمة": analytics.beneficiaries?.not_received_count || 0 },
-      { "المؤشر": "المستفيدون اليوميون", "القيمة": analytics.daily_beneficiaries?.total || 0 },
-      { "المؤشر": "المستفيدون اليوميون الذين استلموا", "القيمة": analytics.daily_beneficiaries?.received_count || 0 },
-      { "المؤشر": "عمليات الاستلام اليومي", "القيمة": analytics.daily_beneficiaries?.transactions_count || 0 },
-      { "المؤشر": "سلال المستفيدين اليوميين", "القيمة": analytics.daily_beneficiaries?.baskets_distributed || 0 },
-      { "المؤشر": "عدد الأسر المستفيدة", "القيمة": analytics.beneficiaries?.families_count || 0 },
-      { "المؤشر": "عدد الأفراد المستفيدين", "القيمة": analytics.beneficiaries?.individuals_count || 0 },
-    ];
-    const wsKpi = XLSX.utils.json_to_sheet(kpiData);
-    wsKpi["!dir"] = "rtl";
-    XLSX.utils.book_append_sheet(wb, wsKpi, "المؤشرات الإجمالية");
-
-    // 2. Sheet: Neighborhoods
-    if (analytics.neighborhoods?.list?.length > 0) {
-      const nhRows = analytics.neighborhoods.list.map((nh, i) => ({
-        "#": i + 1,
-        "الحي السكني": nh.neighborhood,
-        "المستفيدون العامون": nh.general_beneficiaries,
-        "المستفيدون اليوميون": nh.daily_beneficiaries,
-        "إجمالي المستفيدين": nh.total_beneficiaries,
-        "الأسر المتعففة": nh.families_count,
-        "السلال الموزعة": nh.baskets_distributed,
-        "الجهات الشريكة": nh.organizations_count,
-      }));
-      const wsNh = XLSX.utils.json_to_sheet(nhRows);
-      wsNh["!dir"] = "rtl";
-      XLSX.utils.book_append_sheet(wb, wsNh, "تحليلات الأحياء");
+  const handleExportExcel = async () => {
+    try {
+      await downloadDocument(pdfComprehensiveUrl.replace('/pdf?', '/excel?'), 'governance-data.xlsx');
+      setToast({ show: true, message: 'تم تصدير جميع البيانات المطابقة', type: 'success' });
+    } catch (err) {
+      setToast({
+        show: true,
+        message: err.response?.data?.message || 'تعذر تصدير البيانات',
+        type: 'error',
+      });
     }
-
-    // 3. Sheet: Organizations
-    if (analytics.organizations?.list?.length > 0) {
-      const orgRows = analytics.organizations.list.map((org, i) => ({
-        "#": i + 1,
-        "اسم الجهة / المندوب": org.organization_name,
-        "الحي": org.neighborhood,
-        "الجوال": org.phone,
-        "المستفيدون التابعون": org.beneficiaries_count,
-        "الأسر التابعة": org.families_count,
-        "السلال المستلمة": org.baskets_received,
-      }));
-      const wsOrg = XLSX.utils.json_to_sheet(orgRows);
-      wsOrg["!dir"] = "rtl";
-      XLSX.utils.book_append_sheet(wb, wsOrg, "الجهات ومندوبو الأحياء");
-    }
-
-    // 4. Sheet: Drivers
-    if (analytics.delivery?.drivers?.length > 0) {
-      const drvRows = analytics.delivery.drivers.map((drv, i) => ({
-        "#": i + 1,
-        "اسم السائق": drv.name,
-        "الجوال": drv.phone,
-        "إجمالي التوصيلات": drv.total_deliveries,
-        "التوصيلات المكتملة": drv.completed_deliveries,
-        "المستفيدون المخدومون": drv.beneficiaries_served,
-        "نسبة النجاح": `${drv.success_rate}%`,
-      }));
-      const wsDrv = XLSX.utils.json_to_sheet(drvRows);
-      wsDrv["!dir"] = "rtl";
-      XLSX.utils.book_append_sheet(wb, wsDrv, "أداء التوصيل والسائقين");
-    }
-
-    XLSX.writeFile(wb, `تقرير_الحوكمة_والتحليلات_${analytics.period?.start_date}_${analytics.period?.end_date}.xlsx`);
-    setToast({ show: true, message: "تم تصدير ملف الإكسل الشامل بنجاح", type: "success" });
   };
 
   // PDF Export URLs
   const pdfComprehensiveUrl = useMemo(() => {
-    const params = new URLSearchParams({
-      period_type: periodType,
-      start_date: startDate,
-      end_date: endDate,
-      date: selectedDate,
-      month: selectedMonth,
-      year: selectedYear,
-    });
+    const params = new URLSearchParams({ period_type: periodType });
+    if (periodType === 'daily') params.set('date', selectedDate);
+    if (periodType === 'weekly' || periodType === 'custom') {
+      params.set('start_date', startDate);
+      params.set('end_date', endDate);
+    }
+    if (periodType === 'monthly') {
+      params.set('month', selectedMonth);
+      params.set('year', selectedYear);
+    }
+    if (periodType === 'yearly') params.set('year', selectedYear);
     return getDocumentPdfUrl(`/reports/comprehensive/pdf?${params.toString()}`);
   }, [periodType, startDate, endDate, selectedDate, selectedMonth, selectedYear]);
 

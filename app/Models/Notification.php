@@ -15,18 +15,20 @@ class Notification extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'id',
+        'id', 'category', 'title', 'read_at', 'event_key',
         'recipient_type',
         'recipient_id',
         'related_record_type',
         'related_record_id',
         'message_body',
+        'action_url',
         'status',
         'provider_response',
         'sent_at',
     ];
 
     protected $casts = [
+        'read_at' => 'datetime',
         'sent_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

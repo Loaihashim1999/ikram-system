@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { BarChart3, TrendingUp, Filter, PieChart as PieIcon, Layers, Users, CheckCircle2, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { BarChart3, TrendingUp, Filter, PieChart as PieIcon } from "lucide-react";
 
 /**
  * ══════════════════════════════════════════════════════════════════════════════

@@ -88,6 +88,7 @@ class InventoryController extends Controller
             }
 
             DB::transaction(function () use ($request, $item) {
+                $item = InventoryItem::whereKey($item->id)->lockForUpdate()->firstOrFail();
                 if ($request->type === 'out' && $item->current_quantity < $request->quantity) {
                     throw new \Exception('الكمية المراد صرفها أكبر من المخزون المتاح');
                 }
@@ -112,6 +113,8 @@ class InventoryController extends Controller
                 'message' => 'تم تعديل المخزون بنجاح',
                 'data' => $item->fresh(),
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

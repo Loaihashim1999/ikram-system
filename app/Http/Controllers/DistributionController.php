@@ -21,6 +21,7 @@ class DistributionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Distribution::with(['beneficiary', 'basket', 'driver']);
+        if (in_array($request->user()->role, ['driver', 'delivery_driver'])) $query->where('driver_id', $request->user()->id);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -48,6 +49,7 @@ class DistributionController extends Controller
     public function show(string $id): JsonResponse
     {
         $dist = Distribution::with(['beneficiary', 'basket', 'driver'])->findOrFail($id);
+        if (in_array(request()->user()->role, ['driver', 'delivery_driver'])) abort_unless($dist->driver_id === request()->user()->id, 403);
 
         return response()->json(['data' => $dist]);
     }

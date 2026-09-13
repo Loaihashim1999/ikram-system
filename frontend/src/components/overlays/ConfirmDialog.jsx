@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertTriangle, Trash2, X, CheckCircle2 } from 'lucide-react';
 import Scrim from './Scrim';
 
@@ -11,6 +10,7 @@ import Scrim from './Scrim';
 export default function ConfirmDialog({
   isOpen,
   onClose,
+  onCancel,
   onConfirm,
   title = "تأكيد الإجراء",
   message = "هل أنت متأكد من رغبتك في متابعة هذا الإجراء؟",
@@ -19,8 +19,11 @@ export default function ConfirmDialog({
   cancelLabel = "إلغاء",
   cancelText,
   loading = false,
+  isLoading,
   type = "danger", // 'danger' | 'warning' | 'info' | 'success'
 }) {
+  const close = onClose ?? onCancel;
+  const busy = isLoading ?? loading;
   const finalConfirmLabel = confirmText || confirmLabel;
   const finalCancelLabel = cancelText || cancelLabel;
 
@@ -53,7 +56,7 @@ export default function ConfirmDialog({
   const ActionIcon = currentType.Icon;
 
   return (
-    <Scrim isOpen={isOpen} onClose={!loading ? onClose : undefined} zIndex="z-50">
+    <Scrim isOpen={isOpen} onClose={!busy ? close : undefined} zIndex="z-50">
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none" dir="rtl">
         {/* Surface */}
         <div
@@ -67,8 +70,8 @@ export default function ConfirmDialog({
               <ActionIcon className="w-6 h-6" />
             </div>
             <button
-              onClick={onClose}
-              disabled={loading}
+              onClick={close}
+              disabled={busy}
               className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
               aria-label="إغلاق"
             >
@@ -82,8 +85,8 @@ export default function ConfirmDialog({
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E5E2D9]">
             <button
               type="button"
-              onClick={onClose}
-              disabled={loading}
+              onClick={close}
+              disabled={busy}
               className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
             >
               {finalCancelLabel}
@@ -92,15 +95,15 @@ export default function ConfirmDialog({
             <button
               type="button"
               onClick={onConfirm}
-              disabled={loading}
+              disabled={busy}
               className={`px-5 py-2.5 rounded-xl text-white font-extrabold text-xs shadow-sm flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 ${currentType.btnBg}`}
             >
-              {loading ? (
+              {busy ? (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <ActionIcon className="w-4 h-4" />
               )}
-              <span>{loading ? "جاري التنفيذ..." : finalConfirmLabel}</span>
+              <span>{busy ? "جاري التنفيذ..." : finalConfirmLabel}</span>
             </button>
           </div>
         </div>

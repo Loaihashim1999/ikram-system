@@ -1,108 +1,35 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import NotificationCenter from '../components/layout/NotificationCenter';
-import { NotificationProvider, useNotifications } from '../context/NotificationContext';
-
-// Helper component to interact with NotificationContext in tests
-function NotificationTestHarness({ initialNotifications = [] }) {
-  const { notifications, unreadCount, addNotification, markAsRead, markAllAsRead } = useNotifications();
-
-  React.useEffect(() => {
-    initialNotifications.forEach(n => addNotification(n));
-  }, []);
-
-  return (
-    <div>
-      <div data-testid="unread-count">{unreadCount}</div>
-      <NotificationCenter />
-      <button
-        data-testid="add-alert-btn"
-        onClick={() => addNotification({
-          type: 'warehouse_expiry',
-          title: 'تنبيه انتهاء صلاحية',
-          message: 'الصنف أرز بسمتي قارب على الانتهاء',
-          priority: 'high',
-        })}
-      >
-        إضافة تنبيه
-      </button>
-      <button data-testid="mark-all-read-btn" onClick={markAllAsRead}>
-        قراءة الكل
-      </button>
-    </div>
-  );
-}
-
-const localStorageMock = (() => {
-  let store = {};
-  return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => { store[key] = String(value); },
-    clear: () => { store = {}; },
-    removeItem: (key) => { delete store[key]; },
-  };
-})();
-
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-  writable: true,
-});
-
-describe('NotificationCenter & Warehouse Alert Rules', () => {
+import { NotificationProvider } from '../context/NotificationContext';
+import api from '../api/axios';
+vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1', role: 'admin' } }) }));
+vi.mock('../api/axios', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+describe('Persistent Notification Center', () => {
+  let read;
   beforeEach(() => {
-    window.localStorage.clear();
+    read = false; vi.clearAllMocks();
+    api.get.mockImplementation(async (url) => ({ data: url === '/settings' ? { data: {} } : url.includes('unread-count') ? { unread_count: read ? 0 : 1 } : {
+      data: [{ id: 'n1', message_body: 'تنبيه المخزون', category: 'warehouse_expiry', read_at: read ? '2026-09-13' : null, created_at: '2026-09-13' }], last_page: 1 } }));
+    api.post.mockImplementation(async () => { read = true; return { data: { success: true } }; });
   });
-
-  it('renders notification bell icon', () => {
-    render(
-      <NotificationProvider>
-        <NotificationCenter />
-      </NotificationProvider>
-    );
-
-    const bellBtn = screen.getByRole('button', { name: /مركز الإشعارات والتنبيهات/i });
-    expect(bellBtn).toBeInTheDocument();
+  it('loads server records, filters tabs and persists mark all read', async () => {
+    render(<MemoryRouter><NotificationProvider><NotificationCenter /></NotificationProvider></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /مركز الإشعارات والتنبيهات/ }));
+    await waitFor(() => expect(screen.getAllByText('تنبيه المخزون').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByText('الأمان'));
+    expect(screen.getByText('لا توجد إشعارات مطابقة')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('المستودع والصلاحية'));
+    expect(screen.getAllByText('تنبيه المخزون').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByTitle('تحديد الكل كمقروء'));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/notifications/mark-all-read'));
+    await waitFor(() => expect(screen.getByText('جميع الإشعارات مقروءة')).toBeInTheDocument());
   });
-
-  it('displays unread badge count when notifications exist', () => {
-    render(
-      <NotificationProvider>
-        <NotificationTestHarness
-          initialNotifications={[
-            { id: 'n1', title: 'إشعار 1', message: 'محتوى 1', type: 'info' },
-            { id: 'n2', title: 'إشعار 2', message: 'محتوى 2', type: 'warehouse_expiry', priority: 'high' },
-          ]}
-        />
-      </NotificationProvider>
-    );
-
-    const badge = screen.getByTestId('unread-count');
-    expect(Number(badge.textContent)).toBeGreaterThanOrEqual(2);
-  });
-
-  it('opens notification panel on bell click and marks all as read', () => {
-    render(
-      <NotificationProvider>
-        <NotificationTestHarness
-          initialNotifications={[
-            { id: 'n1', title: 'تنبيه هام', message: 'يوجد صنف قارب على الانتهاء', type: 'warehouse_expiry' },
-          ]}
-        />
-      </NotificationProvider>
-    );
-
-    const bellBtn = screen.getByRole('button', { name: /مركز الإشعارات والتنبيهات/i });
-    fireEvent.click(bellBtn);
-
-    expect(screen.getByText(/مركز الإشعارات/i)).toBeInTheDocument();
-    expect(screen.getByText('يوجد صنف قارب على الانتهاء')).toBeInTheDocument();
-
-
-    const markAllBtn = screen.getByTestId('mark-all-read-btn');
-    fireEvent.click(markAllBtn);
-
-    const badge = screen.getByTestId('unread-count');
-    expect(Number(badge.textContent)).toBe(0);
+  it('shows API errors instead of pretending history is empty', async () => {
+    api.get.mockRejectedValue(new Error('offline'));
+    render(<MemoryRouter><NotificationProvider><NotificationCenter /></NotificationProvider></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /مركز الإشعارات والتنبيهات/ }));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('تعذر تحديث الإشعارات'));
   });
 });

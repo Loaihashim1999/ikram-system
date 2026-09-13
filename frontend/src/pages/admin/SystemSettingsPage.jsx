@@ -3,7 +3,7 @@ import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
-import { Settings, Save, AlertCircle, CheckCircle2, Package, ShieldCheck } from "lucide-react";
+import { Save, AlertCircle, CheckCircle2, Package, ShieldCheck } from "lucide-react";
 
 export default function SystemSettingsPage() {
   const [form, setForm] = useState({

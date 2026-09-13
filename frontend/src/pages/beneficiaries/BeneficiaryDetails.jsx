@@ -6,13 +6,11 @@ import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
 import {
   User,
-  MapPin,
   Users,
   DollarSign,
   FileText,
   Package,
   ExternalLink,
-  ArrowRight,
   Edit
 } from "lucide-react";
 import ReceiptHistoryTimeline from "../../components/common/ReceiptHistoryTimeline";

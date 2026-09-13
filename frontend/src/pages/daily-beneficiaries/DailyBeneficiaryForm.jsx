@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
 import Toast from "../../components/ui/Toast";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
@@ -16,14 +16,11 @@ import {
 import api from "../../api/axios";
 import {
   UserPlus,
-  ArrowRight,
   Save,
-  CheckCircle2,
   AlertCircle,
   Upload,
   FileText,
   Trash2,
-  Download,
   Eye,
   FileCheck,
   UserCheck,
@@ -32,7 +29,7 @@ import {
 export default function DailyBeneficiaryForm() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const isEdit = Boolean(id);
+  const isEdit = Boolean(id && id !== 'add');
 
   const [formData, setFormData] = useState({
     full_name: "",

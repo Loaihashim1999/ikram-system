@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * Unified StatusBadge component conforming to Ikram Association design tokens.

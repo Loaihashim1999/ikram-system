@@ -10,9 +10,9 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import FormField from '../../components/ui/FormField';
 import { useNotifications } from '../../context/NotificationContext';
 import {
-  Package, AlertTriangle, TrendingUp, Plus, Edit, Trash2,
-  ArrowUpCircle, ArrowDownCircle, X, Loader2, Search, RefreshCw,
-  Calendar, Filter, Clock, CheckCircle2, FileSpreadsheet
+  Package, AlertTriangle, Plus, Trash2,
+  ArrowUpCircle, Loader2, Search, RefreshCw,
+  Calendar, Clock, CheckCircle2, FileSpreadsheet
 } from 'lucide-react';
 import { exportArrayToExcel } from '../../utils/excelExport';
 

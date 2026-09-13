@@ -10,6 +10,8 @@ class InventoryItem extends Model
 {
     use HasFactory;
 
+    protected $appends = ['stock_status'];
+
     protected $keyType = 'string';
 
     public $incrementing = false;

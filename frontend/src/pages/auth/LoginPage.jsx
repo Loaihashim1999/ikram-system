@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Lock, User, AlertTriangle, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
+import ErrorButton from '../../components/ErrorButton';
 
 const FAILED_ATTEMPTS_KEY = 'ikram_failed_login_attempts';
 const LOCKED_ACCOUNTS_KEY = 'ikram_locked_accounts';
@@ -173,6 +174,10 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+
+        <div className="mt-4 flex justify-center">
+          <ErrorButton />
+        </div>
 
         <div className="mt-8 text-center text-[11px] text-[#9CA3AF] border-t border-[#E5E2D9] pt-4">
           نظام مشفر ومحمي وفق معايير الحوكمة لجمعية إكرام © 2026

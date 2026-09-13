@@ -29,7 +29,8 @@ class BeneficiaryController extends Controller
         if ($request->input('type') === 'employee' || $request->input('priority') === 'employee') {
             $query->where(fn ($q) => $q->where('is_employee', true)->orWhere('priority', 'employee'));
         } else {
-            $query->where('is_employee', false)->where('priority', '!=', 'employee');
+            $query->where(fn ($q) => $q->where('is_employee', false)->orWhereNull('is_employee'))
+                ->where(fn ($q) => $q->where('priority', '!=', 'employee')->orWhereNull('priority'));
         }
 
         if ($request->filled('type') && ! in_array($request->type, ['employee', 'all'])) {

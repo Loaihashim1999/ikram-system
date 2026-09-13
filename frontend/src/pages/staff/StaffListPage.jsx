@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import staffApi from "../../api/staffApi";
 import distributionApi from "../../api/distributions";
@@ -11,7 +11,7 @@ import FilterableTableHeader from "../../components/common/FilterableTableHeader
 import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
-import { Eye, Edit, Trash2, RefreshCw, X, FileText, Users, Home, Briefcase, Package, Send, QrCode, UserPlus, FileSpreadsheet, Upload, Download, CheckCircle2, XCircle, Plus, Search } from "lucide-react";
+import { Eye, Edit, Trash2, RefreshCw, FileText, Send, UserPlus, FileSpreadsheet, Upload, Download, Plus, Search } from "lucide-react";
 import { exportArrayToExcel } from "../../utils/excelExport";
 
 const statusLabels = {
@@ -43,6 +43,7 @@ const initialAddForm = {
 };
 
 export default function StaffListPage() {
+  const navigate = useNavigate();
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -101,7 +102,7 @@ export default function StaffListPage() {
   const loadData = () => {
     setLoading(true);
     Promise.all([
-      staffApi.list(),
+      staffApi.list({ per_page: -1, all: true }),
       api.get("/inventory").catch(() => ({ data: { data: [] } })),
     ])
       .then(([res, invRes]) => {
@@ -433,9 +434,9 @@ ${qrUrl}`;
                 variant="outline"
                 size="sm"
                 icon={FileSpreadsheet}
-                onClick={() => setShowImportModal(true)}
+                onClick={() => navigate('/staff/import')}
               >
-                استيراد Excel
+                استيراد ذكي
               </Button>
             </div>
           }

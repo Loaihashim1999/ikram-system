@@ -4,7 +4,7 @@ import staffApi from "../../api/staffApi";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
-import { Briefcase, Home, Users, FileText, ArrowRight, Package, Edit } from "lucide-react";
+import { Briefcase, Home, Users, FileText, Package, Edit } from "lucide-react";
 
 export default function StaffDetailsPage() {
   const { id } = useParams();

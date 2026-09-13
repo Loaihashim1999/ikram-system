@@ -9,7 +9,7 @@ use App\Models\DailyInventoryItem;
 use App\Models\DailyInventoryMovement;
 use App\Models\DailyReceivingTransaction;
 use App\Models\Distribution;
-use App\Models\Driver;
+use App\Models\User;
 use App\Models\InventoryItem;
 use App\Models\InventoryMovement;
 use App\Models\NeighborhoodRep;
@@ -28,10 +28,33 @@ class AnalyticsController extends Controller
     public function index(Request $request): JsonResponse
     {
         $periodType = $request->get('period_type', 'custom'); // daily, weekly, monthly, yearly, custom
+        $rules = ['period_type' => 'nullable|in:daily,weekly,monthly,yearly,custom'];
+
+        if ($periodType === 'daily') {
+            $rules['date'] = 'nullable|date_format:Y-m-d';
+        } elseif (in_array($periodType, ['weekly', 'custom'], true)) {
+            $rules['start_date'] = 'nullable|date_format:Y-m-d';
+            $rules['end_date'] = 'nullable|date_format:Y-m-d|after_or_equal:start_date';
+        } elseif ($periodType === 'monthly') {
+            $rules['month'] = 'nullable|integer|between:1,12';
+            $rules['year'] = 'nullable|integer|between:1900,2100';
+        } elseif ($periodType === 'yearly') {
+            $rules['year'] = 'nullable|integer|between:1900,2100';
+        }
+
+        $request->validate($rules, [
+            'period_type.in' => 'نوع الفترة المحددة غير صالح.',
+            '*.date_format' => 'صيغة التاريخ يجب أن تكون سنة-شهر-يوم.',
+            'end_date.after_or_equal' => 'تاريخ النهاية يجب أن يساوي تاريخ البداية أو يأتي بعده.',
+            'month.between' => 'الشهر يجب أن يكون بين 1 و12.',
+            'year.between' => 'السنة المحددة خارج النطاق المقبول.',
+        ]);
         $today = Carbon::today();
 
         // التحقق من صحة تواريخ النطاق الزمني
-        if ($request->filled('start_date') && $request->filled('end_date')) {
+        if (in_array($periodType, ['weekly', 'custom'], true)
+            && $request->filled('start_date')
+            && $request->filled('end_date')) {
             try {
                 $sTest = Carbon::parse($request->start_date)->startOfDay();
                 $eTest = Carbon::parse($request->end_date)->endOfDay();
@@ -275,9 +298,9 @@ class AnalyticsController extends Controller
         // 7. تحليلات التوصيل والسائقين (Delivery & Driver Analytics)
         // ══════════════════════════════════════════════════════════════════════
         $totalDeliveries = Distribution::whereBetween('scheduled_at', [$startDate, $endDate])->count();
-        $totalDrivers = Driver::count();
+        $totalDrivers = User::whereIn('role', ['driver', 'delivery_driver'])->count();
 
-        $driversPerformance = Driver::all()->map(function ($driver) use ($startDate, $endDate) {
+        $driversPerformance = User::whereIn('role', ['driver', 'delivery_driver'])->get()->map(function ($driver) use ($startDate, $endDate) {
             $deliveriesQuery = Distribution::where('driver_id', $driver->id)
                 ->whereBetween('scheduled_at', [$startDate, $endDate]);
 
@@ -287,13 +310,13 @@ class AnalyticsController extends Controller
 
             return [
                 'id' => $driver->id,
-                'name' => $driver->name,
+                'name' => $driver->full_name,
                 'phone' => $driver->phone,
                 'status' => $driver->status ?? 'active',
                 'total_deliveries' => $total,
                 'completed_deliveries' => $delivered,
                 'beneficiaries_served' => $uniqueBeneficiaries,
-                'success_rate' => $total > 0 ? round(($delivered / $total) * 100, 1) : 100,
+                'success_rate' => $total > 0 ? round(($delivered / $total) * 100, 1) : null,
             ];
         });
 
@@ -329,17 +352,9 @@ class AnalyticsController extends Controller
         $lineChartTimeline = [];
         $tCursor = $startDate->copy()->startOfMonth();
         $tEnd = $endDate->copy()->endOfMonth();
-        if ($tCursor->diffInMonths($tEnd) < 2) {
-            $tCursor = $today->copy()->subMonths(5)->startOfMonth();
-            $tEnd = $today->copy()->endOfMonth();
-        }
-        if ($tCursor->diffInMonths($tEnd) > 12) {
-            $tCursor = $tEnd->copy()->subMonths(11)->startOfMonth();
-        }
-
         while ($tCursor->lte($tEnd)) {
-            $mStart = $tCursor->copy()->startOfMonth();
-            $mEnd = $tCursor->copy()->endOfMonth();
+            $mStart = $tCursor->copy()->startOfMonth()->max($startDate);
+            $mEnd = $tCursor->copy()->endOfMonth()->min($endDate);
 
             $regCount = Beneficiary::whereBetween('created_at', [$mStart, $mEnd])->count();
             $distCount = Distribution::whereBetween('scheduled_at', [$mStart, $mEnd])
@@ -372,7 +387,7 @@ class AnalyticsController extends Controller
                 'percentage' => 100,
             ],
             [
-                'stage' => 'المعتمدون للاستحقاق',
+                'stage' => 'النشطون حالياً (ليس قرار استحقاق مستقل)',
                 'count' => $approvedCount,
                 'percentage' => round(($approvedCount / $totalRegistered) * 100, 1),
             ],
@@ -412,7 +427,7 @@ class AnalyticsController extends Controller
             ],
             'charts' => [
                 'column_chart' => [
-                    'title' => 'إجمالي المستفيدين حسب فئات الاستحقاق',
+                    'title' => 'فئات المستفيدين — لقطة حالية',
                     'data' => $columnChartData,
                 ],
                 'line_chart' => [
@@ -424,7 +439,7 @@ class AnalyticsController extends Controller
                     'stages' => $funnelStages,
                 ],
                 'pie_chart' => [
-                    'title' => 'توزيع المستفيدين حسب صفة الإقامة',
+                    'title' => 'صفة الإقامة — لقطة حالية',
                     'data' => $pieChartData['by_citizenship'],
                     'secondary_data' => $pieChartData['by_family_type'],
                 ],

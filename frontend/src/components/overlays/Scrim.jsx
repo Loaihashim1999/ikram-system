@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 
 /**
  * Standard Scrim / Backdrop overlay component conforming to Ikram UX/UI rules:

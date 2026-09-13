@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import * as XLSX from 'xlsx';
-import { Package, Download, Printer, Calendar, MapPin, User, CheckCircle2, Clock } from 'lucide-react';
+import { Package, Download, Printer, Calendar, MapPin, User, Clock } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
 
 /**

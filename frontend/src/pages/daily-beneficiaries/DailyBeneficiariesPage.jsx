@@ -15,10 +15,8 @@ import {
   Boxes,
   UserPlus,
   FileSpreadsheet,
-  TrendingUp,
   Package,
   Clock,
-  AlertTriangle,
   ArrowRight,
   ShieldCheck,
 } from "lucide-react";

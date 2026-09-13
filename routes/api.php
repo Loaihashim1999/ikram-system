@@ -27,100 +27,10 @@ Route::get('/', function () {
         'version' => '1.0.0'
     ]);
 });
-Route::post('/login', [LoginController::class, 'login'])->name('login');
+Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:6,1')->name('login');
 
-Route::get('/fix-admin', function () {
-    $rolesConfig = [
-        [
-            'username' => 'admin',
-            'full_name' => 'مدير النظام (Admin)',
-            'email' => 'admin@ikram.test',
-            'role' => 'admin',
-            'can_receive_notifications' => true,
-        ],
-        [
-            'username' => 'reception',
-            'full_name' => 'موظف الاستقبال (Reception)',
-            'email' => 'reception@ikram.test',
-            'role' => 'reception',
-            'can_receive_notifications' => true,
-        ],
-        [
-            'username' => 'staff',
-            'full_name' => 'موظف العمليات (Staff)',
-            'email' => 'staff@ikram.test',
-            'role' => 'staff',
-            'can_receive_notifications' => false,
-        ],
-        [
-            'username' => 'warehouse',
-            'full_name' => 'أمين المستودع (Warehouse)',
-            'email' => 'warehouse@ikram.test',
-            'role' => 'warehouse',
-            'can_receive_notifications' => false,
-        ],
-        [
-            'username' => 'readonly',
-            'full_name' => 'مدقق حسابات (Readonly)',
-            'email' => 'readonly@ikram.test',
-            'role' => 'readonly',
-            'can_receive_notifications' => false,
-        ],
-    ];
-
-    $results = [];
-    foreach ($rolesConfig as $conf) {
-        $user = \App\Models\User::updateOrCreate(
-            ['username' => $conf['username']],
-            [
-                'full_name' => $conf['full_name'],
-                'email' => $conf['email'],
-                'password' => \Illuminate\Support\Facades\Hash::make('admin123'),
-                'role' => $conf['role'],
-                'is_active' => true,
-                'can_receive_notifications' => $conf['can_receive_notifications'],
-                'permissions' => [
-                    'can_receive_notifications' => $conf['can_receive_notifications'],
-                    'role' => $conf['role'],
-                ],
-            ]
-        );
-        $results[] = [
-            'username' => $user->username,
-            'role' => $user->role,
-            'is_active' => $user->is_active,
-        ];
-    }
-
-    return response()->json([
-        'success' => true,
-        'message' => 'All 5 system roles reset to username / admin123 successfully',
-        'users' => $results,
-    ]);
-});
-
-Route::get('/seed-test-data', function () {
-    try {
-        \Illuminate\Support\Facades\Artisan::call('db:seed', [
-            '--class' => 'ComprehensiveTestDataSeeder',
-            '--force' => true,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Comprehensive test data seeded successfully!',
-            'output' => \Illuminate\Support\Facades\Artisan::output(),
-        ]);
-    } catch (\Throwable $e) {
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-        ], 500);
-    }
-});
-
+// ─── المسارات المحمية ──────────────────────────────────────────────────────
+Route::middleware(['auth:sanctum', \App\Http\Middleware\ModulePermission::class])->group(function () {
 // تصدير PDF العام وتنزيل الشيتات
 Route::get('/documents/individual-receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
 Route::get('/documents/receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
@@ -129,11 +39,11 @@ Route::get('/documents/rep-receipt/{id}/pdf', [PdfExportController::class, 'expo
 Route::get('/documents/staff-receipt/{id}/pdf', [PdfExportController::class, 'exportStaffReceipt']);
 Route::get('/documents/daily-receiving/{id}/pdf', [PdfExportController::class, 'exportDailyReceivingVoucher']);
 Route::get('/reports/daily/pdf', [PdfExportController::class, 'exportDailyReport']);
+Route::get('/reports/comprehensive/excel', [PdfExportController::class, 'exportComprehensiveExcel']);
 Route::get('/reports/comprehensive/pdf', [PdfExportController::class, 'exportWeeklyComprehensiveReport']);
 Route::get('/neighborhood-reps/{id}/export-excel', [NeighborhoodRepController::class, 'exportLinkedBeneficiariesExcel']);
 
-// ─── المسارات المحمية ──────────────────────────────────────────────────────
-Route::middleware('auth:sanctum')->group(function () {
+
 
     // المصادقة
     Route::get('/me', [LoginController::class, 'me']);
@@ -175,6 +85,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── الموظفون ─────────────────────────────────────────────────────────────
     Route::post('/staff/import', [StaffController::class, 'importExcel']);
     Route::apiResource('staff', StaffController::class);
+
+    Route::post('/smart-import/{entity}/preview', [App\Http\Controllers\SmartImportController::class, 'preview']);
+    Route::post('/smart-import/{entity}', [App\Http\Controllers\SmartImportController::class, 'store']);
 
     // تابعون للموظف
     Route::post('/staff/{staff}/dependents', [StaffController::class, 'storeDependent']);

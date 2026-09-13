@@ -1,58 +1,54 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
-// Auth
-import LoginPage from './pages/auth/LoginPage';
+import ErrorButton from './components/ErrorButton';
 
-// Layout & Dashboard
-import Dashboard from './pages/Dashboard';
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AddBeneficiaryPage = lazy(() => import('./pages/beneficiaries/AddBeneficiaryPage'));
+const BeneficiaryList = lazy(() => import('./pages/beneficiaries/BeneficiaryList'));
+const BeneficiaryDetails = lazy(() => import('./pages/beneficiaries/BeneficiaryDetails'));
+const EditBeneficiaryPage = lazy(() => import('./pages/beneficiaries/EditBeneficiaryPage'));
+const BeneficiaryImportPage = lazy(() => import('./pages/beneficiaries/BeneficiaryImportPage'));
+const DailyBeneficiariesPage = lazy(() => import('./pages/daily-beneficiaries/DailyBeneficiariesPage'));
+const DailyBeneficiaryForm = lazy(() => import('./pages/daily-beneficiaries/DailyBeneficiaryForm'));
+const DailyBeneficiaryDetails = lazy(() => import('./pages/daily-beneficiaries/DailyBeneficiaryDetails'));
+const StaffListPage = lazy(() => import('./pages/staff/StaffListPage'));
+const StaffDetailsPage = lazy(() => import('./pages/staff/StaffDetailsPage'));
+const AddStaffPage = lazy(() => import('./pages/staff/AddStaffPage'));
+const EditStaffPage = lazy(() => import('./pages/staff/EditStaffPage'));
+const StaffImportPage = lazy(() => import('./pages/staff/StaffImportPage'));
+const Warehouse = lazy(() => import('./pages/warehouse/Warehouse'));
+const DeliveryPage = lazy(() => import('./pages/delivery/DeliveryPage'));
+const DriverDashboard = lazy(() => import('./pages/delivery/DriverDashboard'));
+const NeighborhoodRepsPage = lazy(() => import('./pages/representatives/NeighborhoodRepsPage'));
+const ReceiverPage = lazy(() => import('./pages/receiver/ReceiverPage'));
+const GovernancePage = lazy(() => import('./pages/governance/GovernancePage'));
+const AuditPage = lazy(() => import('./pages/audit/AuditPage'));
+const SystemSettingsPage = lazy(() => import('./pages/admin/SystemSettingsPage'));
+const UsersPage = lazy(() => import('./pages/admin/Users'));
+const AssistantAdminDashboard = lazy(() => import('./pages/admin/AssistantAdminDashboard'));
 
-// Beneficiaries
-import AddBeneficiaryPage    from './pages/beneficiaries/AddBeneficiaryPage';
-import BeneficiaryList       from './pages/beneficiaries/BeneficiaryList';
-import BeneficiaryDetails    from './pages/beneficiaries/BeneficiaryDetails';
-import EditBeneficiaryPage   from './pages/beneficiaries/EditBeneficiaryPage';
-import BeneficiaryImportPage from './pages/beneficiaries/BeneficiaryImportPage';
+function RouteFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F5F0]" role="status" aria-label="جارٍ تحميل الصفحة">
+      <div className="w-12 h-12 border-4 border-[#C9A24A] border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
-// Daily Beneficiaries
-import DailyBeneficiariesPage from './pages/daily-beneficiaries/DailyBeneficiariesPage';
-import DailyBeneficiariesList from './pages/daily-beneficiaries/DailyBeneficiariesList';
-import DailyBeneficiaryForm from './pages/daily-beneficiaries/DailyBeneficiaryForm';
-import DailyBeneficiaryDetails from './pages/daily-beneficiaries/DailyBeneficiaryDetails';
-import DailyBeneficiaryReceivingPage from './pages/daily-beneficiaries/DailyBeneficiaryReceivingPage';
-import DailyInventoryPage from './pages/daily-beneficiaries/DailyInventoryPage';
-
-// Staff
-import StaffListPage    from './pages/staff/StaffListPage';
-import StaffDetailsPage from './pages/staff/StaffDetailsPage';
-import AddStaffPage     from './pages/staff/AddStaffPage';
-import EditStaffPage    from './pages/staff/EditStaffPage';
-import StaffImportPage   from './pages/staff/StaffImportPage';
-
-// Warehouse / Inventory
-import Warehouse from './pages/warehouse/Warehouse';
-
-// Support Submission & Delivery
-import SendSupportPage from './pages/delivery/SendSupportPage';
-import DeliveryPage from './pages/delivery/DeliveryPage';
-import DriverDashboard from './pages/delivery/DriverDashboard';
-
-// Neighborhood Representatives
-import NeighborhoodRepsPage from './pages/representatives/NeighborhoodRepsPage';
-
-// Receiver Page (QR Scanner)
-import ReceiverPage from './pages/receiver/ReceiverPage';
-
-// Governance (formerly Statistics)
-import GovernancePage from './pages/governance/GovernancePage';
-
-// Audit & Logs
-import AuditPage from './pages/audit/AuditPage';
-
-// Admin & Settings
-import SystemSettingsPage from './pages/admin/SystemSettingsPage';
-import UsersPage from './pages/admin/Users';
-import AssistantAdminDashboard from './pages/admin/AssistantAdminDashboard';
+function Guard({ element, allowedRoles = [] }) {
+  const { user: authenticatedUser } = useAuth();
+  const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = authenticatedUser || (storedUser.id ? storedUser : null);
+  const role = user?.role;
+  if (!user) return <Navigate to="/login" replace />;
+  if (allowedRoles.length > 0 && !allowedRoles.includes(role) && role !== 'admin') {
+    return <Navigate to={role === 'delivery_driver' || role === 'driver' ? '/delivery' : '/dashboard'} replace />;
+  }
+  return element;
+}
 
 function App() {
   const { user: authUser, loading } = useAuth();
@@ -69,23 +65,6 @@ function App() {
     );
   }
 
-  // Guard enforcing login and role permissions
-  const Guard = ({ element, allowedRoles = [] }) => {
-    if (!user) return <Navigate to="/login" replace />;
-
-    // Drivers restricted to /delivery and /receiver ONLY
-    if ((role === 'delivery_driver' || role === 'driver') && !['delivery_driver', 'driver'].includes(role)) {
-      return <Navigate to="/delivery" replace />;
-    }
-
-    if (allowedRoles.length > 0 && !allowedRoles.includes(role) && role !== 'admin') {
-      // Redirect assistant supervisor if trying to access admin pages
-      return <Navigate to="/dashboard" replace />;
-    }
-
-    return element;
-  };
-
   // Determine initial landing page after login based on role
   const getHomePath = () => {
     if (role === 'delivery_driver' || role === 'driver') return '/delivery';
@@ -94,6 +73,8 @@ function App() {
   };
 
   return (
+    <>
+    <Suspense fallback={<RouteFallback />}>
     <Routes>
       {/* Auth */}
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={getHomePath()} replace />} />
@@ -157,6 +138,9 @@ function App() {
       {/* Default Fallback */}
       <Route path="*" element={<Navigate to={user ? getHomePath() : "/login"} replace />} />
     </Routes>
+    </Suspense>
+    <ErrorButton />
+    </>
   );
 }
 

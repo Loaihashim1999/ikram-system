@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * Standardized IconButton for DataTables and action bars.

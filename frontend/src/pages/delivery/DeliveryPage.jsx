@@ -8,7 +8,7 @@ import Button from "../../components/ui/Button";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
 import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
-import { Eye, Edit3, Trash2, RefreshCw, X, FileText, Download, UserCheck, ShieldAlert, Award, FileArchive, Users, Plus, Send, Truck, Package, Calendar, QrCode, CheckCircle2, XCircle, FileSpreadsheet } from "lucide-react";
+import { Eye, Edit3, Trash2, RefreshCw, X, FileText, Users, Send, Package, CheckCircle2, XCircle, FileSpreadsheet } from "lucide-react";
 import { exportArrayToExcel } from "../../utils/excelExport";
 
 const DISPATCH_STEPS = ["اختيار المستفيدين / الجهات المستفيدة", "اختيار السائق المعتمد", "اختيار سلة الدعم", "تحديد الموعد", "مراجعة وإرسال"];
@@ -70,9 +70,9 @@ export default function DeliveryPage() {
   const loadAllData = () => {
     setLoading(true);
     Promise.all([
-      beneficiaryApi.list({ per_page: 500 }),
+      beneficiaryApi.list({ per_page: -1, all: true }),
       api.get("/neighborhood-reps").catch(() => ({ data: { data: [] } })),
-      distributionApi.list({ per_page: 500 }),
+      distributionApi.list({ per_page: -1, all: true }),
       api.get("/drivers").catch(() => ({ data: { data: [] } })),
       api.get("/inventory").catch(() => ({ data: { data: [] } })),
     ]).then(([bRes, repsRes, dRes, driversRes, invRes]) => {

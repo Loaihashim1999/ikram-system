@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import beneficiaryApi from "../../api/beneficiaries";
 import distributionApi from "../../api/distributions";
 import MainLayout from "../../components/layout/MainLayout";
-import { UserCheck, CheckCircle2, Clock, AlertCircle, FileText } from "lucide-react";
+import { UserCheck, CheckCircle2, Clock, FileText } from "lucide-react";
 
 export default function AssistantAdminDashboard() {
   const [beneficiaries, setBeneficiaries] = useState([]);

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -26,7 +26,9 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       const isLoginRequest = error.config?.url?.includes('/login');
-      if (!isLoginRequest) {
+      const sentAuthorization = error.config?.headers?.Authorization;
+      const currentToken = localStorage.getItem('token');
+      if (!isLoginRequest && currentToken && sentAuthorization === `Bearer ${currentToken}`) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         if (window.location.pathname !== '/login') {

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../context/NotificationContext';
 import Scrim from '../overlays/Scrim';
 import Dialog from '../overlays/Dialog';
 import {
-  Bell, CheckCheck, Trash2, AlertTriangle, Info,
-  Package, ShieldAlert, CheckCircle2, Clock, X, Eye
+  Bell, CheckCheck, AlertTriangle, Info,
+  Package, ShieldAlert, CheckCircle2, Clock, X
 } from 'lucide-react';
 
 export default function NotificationCenter({
@@ -12,6 +13,7 @@ export default function NotificationCenter({
   onClose: controlledOnClose,
   showTrigger = false,
 }) {
+  const navigate = useNavigate();
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isControlled = controlledIsOpen !== undefined;
   const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
@@ -22,7 +24,7 @@ export default function NotificationCenter({
     unreadCount,
     markAsRead,
     markAllAsRead,
-    clearNotifications,
+    error,
   } = useNotifications();
 
   const [filterType, setFilterType] = useState('all'); // 'all' | 'warehouse_expiry' | 'system_event' | 'security'
@@ -68,10 +70,10 @@ export default function NotificationCenter({
     <>
       {(!isControlled || showTrigger) && triggerBtn}
       {isOpen && (
-        <Scrim isOpen={isOpen} onClose={onClose} zIndex="z-40">
+        <Scrim isOpen={isOpen} onClose={onClose} zIndex="z-[70]">
 
         <div
-          className="fixed top-16 left-2 sm:left-6 z-50 w-full max-w-sm sm:max-w-md bg-white rounded-2xl shadow-2xl border border-[#E5E2D9] overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-150"
+          className="fixed top-16 left-2 sm:left-6 z-[80] w-[calc(100%-1rem)] max-w-sm sm:max-w-md bg-white rounded-2xl shadow-2xl border border-[#E5E2D9] overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-150"
           dir="rtl"
           onClick={(e) => e.stopPropagation()}
         >
@@ -148,6 +150,7 @@ export default function NotificationCenter({
             </button>
           </div>
 
+          {error && <p role="alert" className="p-3 text-sm text-red-700">{error}</p>}
           {/* Notifications List */}
           <div className="overflow-y-auto flex-1 divide-y divide-[#E5E2D9]">
             {filtered.length === 0 ? (
@@ -199,14 +202,7 @@ export default function NotificationCenter({
           {/* Footer */}
           {notifications.length > 0 && (
             <div className="p-2.5 border-t border-[#E5E2D9] bg-[#FAF8F5] flex items-center justify-between text-xs">
-              <button
-                type="button"
-                onClick={clearNotifications}
-                className="text-[11px] text-[#C24B3F] hover:underline font-bold flex items-center gap-1"
-              >
-                <Trash2 size={13} />
-                مسح جميع الإشعارات
-              </button>
+
               <span className="text-[11px] text-[#6B7280]">
                 إجمالي: {notifications.length} إشعار
               </span>
@@ -225,14 +221,10 @@ export default function NotificationCenter({
           subtitle={`تاريخ الإشعار: ${new Date(selectedNotif.createdAt).toLocaleString('ar-SA')}`}
           icon={AlertTriangle}
           maxWidth="max-w-lg"
-          footer={
-            <button
-              onClick={() => setSelectedNotif(null)}
-              className="px-5 py-2 bg-[#FAF8F5] border border-[#E5E2D9] text-[#111827] rounded-xl font-bold text-xs hover:bg-gray-100"
-            >
-              إغلاق
-            </button>
-          }
+          footer={<div className="flex gap-2">
+            {selectedNotif.actionUrl && <button onClick={() => { navigate(selectedNotif.actionUrl); setSelectedNotif(null); onClose(); }} className="px-5 py-2 bg-[#3F6B3A] text-white rounded-xl font-bold text-xs">فتح السجل</button>}
+            <button onClick={() => setSelectedNotif(null)} className="px-5 py-2 bg-[#FAF8F5] border border-[#E5E2D9] text-[#111827] rounded-xl font-bold text-xs hover:bg-gray-100">إغلاق</button>
+          </div>}
         >
           <div className="space-y-3 text-xs text-[#1F2937]" dir="rtl">
             <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E5E2D9]">

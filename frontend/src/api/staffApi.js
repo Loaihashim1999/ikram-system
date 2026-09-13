@@ -1,7 +1,7 @@
 import api from "./axios";
 
 const staffApi = {
-  list:   () => api.get("/staff"),
+  list:   (params = {}) => api.get("/staff", { params }),
   get:    (id) => api.get(`/staff/${id}`),
   create: (data) => api.post("/staff", data),
   update: (id, data) => api.put(`/staff/${id}`, data),

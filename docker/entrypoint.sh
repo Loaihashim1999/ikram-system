@@ -1,4 +1,5 @@
 #!/bin/sh
+set -eu
 
 echo "Ensuring storage, logs, cache and database permissions..."
 mkdir -p /var/www/html/storage/framework/views \
@@ -18,15 +19,13 @@ echo "Checking Application Key..."
 case "$APP_KEY" in
   base64:*) echo "APP_KEY is set correctly." ;;
   *)
-    echo "Generating new Laravel APP_KEY..."
-    php /var/www/html/artisan key:generate --force
+    echo "A persistent APP_KEY must be configured before startup." >&2
+    exit 1
     ;;
 esac
 
 echo "Running Laravel Migrations..."
 php /var/www/html/artisan migrate --force
-echo "Running Database Seeders (Ensuring admin & system roles exist)..."
-php /var/www/html/artisan db:seed --class=DatabaseSeeder --force || true
 
 echo "Clearing Caches..."
 php /var/www/html/artisan config:clear || true

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 /**
@@ -22,6 +21,7 @@ export default function Button({
   className = '',
   type = 'button',
   onClick,
+  as: Component = 'button',
   ...props
 }) {
   const baseClasses = 'inline-flex items-center justify-center font-bold transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none rounded-xl';
@@ -46,9 +46,9 @@ export default function Button({
   const isDisabled = disabled || loading;
 
   return (
-    <button
-      type={type}
-      disabled={isDisabled}
+    <Component
+      {...(Component === 'button' ? { type, disabled: isDisabled } : {})}
+      aria-disabled={Component !== 'button' && isDisabled ? true : undefined}
       onClick={onClick}
       className={`${baseClasses} ${sizeClasses[size] || sizeClasses.md} ${variantClasses[variant] || variantClasses.primary} ${className}`}
       {...props}
@@ -57,6 +57,6 @@ export default function Button({
       {!loading && Icon && iconPosition === 'start' && <Icon className="w-4 h-4 shrink-0" />}
       <span>{children}</span>
       {!loading && Icon && iconPosition === 'end' && <Icon className="w-4 h-4 shrink-0" />}
-    </button>
+    </Component>
   );
 }

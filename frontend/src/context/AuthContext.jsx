@@ -48,16 +48,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   const fetchUser = async () => {
+    const requestToken = localStorage.getItem('token');
     try {
       const response = await api.get('/me');
+      if (localStorage.getItem('token') !== requestToken) return;
       const userData = response.data.data;
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
     } catch (error) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setToken(null);
-      setUser(null);
+      if (error.response?.status === 401 && localStorage.getItem('token') === requestToken) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -70,6 +74,18 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   }, [token]);
+
+  useEffect(() => {
+    const sync = (event) => {
+      if (event.key === 'token' || event.key === 'user') {
+        setToken(localStorage.getItem('token'));
+        try { setUser(JSON.parse(localStorage.getItem('user') || 'null')); }
+        catch { setUser(null); }
+      }
+    };
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout, loading }}>

@@ -4,8 +4,7 @@ import distributionApi from "../../api/distributions";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
-import Button from "../../components/ui/Button";
-import { Truck, Phone, MapPin, CheckCircle, QrCode, Search } from "lucide-react";
+import { Phone, MapPin, CheckCircle, QrCode } from "lucide-react";
 
 export default function DriverDashboard() {
   const [activeTab, setActiveTab] = useState("special_needs"); // 'special_needs' | 'representatives'
