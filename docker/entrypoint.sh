@@ -27,6 +27,9 @@ esac
 echo "Running Laravel Migrations..."
 php /var/www/html/artisan migrate --force
 
+echo "Ensuring Production Administrator..."
+php /var/www/html/artisan app:ensure-production-admin
+
 echo "Clearing Caches..."
 php /var/www/html/artisan config:clear || true
 php /var/www/html/artisan route:clear || true
