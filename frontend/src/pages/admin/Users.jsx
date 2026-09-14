@@ -246,6 +246,9 @@ export default function UsersPage() {
       if (!payload.password && editingUser) {
         delete payload.password;
       }
+      if (payload.role === "driver" || payload.role === "delivery_driver") {
+        delete payload.permissions;
+      }
 
       if (editingUser) {
         await api.put(`/users/${editingUser.id}`, payload);
@@ -655,7 +658,11 @@ export default function UsersPage() {
             </div>
 
             {/* Permissions Matrix */}
-            <div className="pt-2">
+            {(form.role === "driver" || form.role === "delivery_driver") ? (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
+                صلاحيات السائق ثابتة: يرى مهامه المسندة إليه فقط، ويؤكد التسليم عبر QR أو رمز التحقق اليدوي.
+              </div>
+            ) : <div className="pt-2">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-extrabold text-xs text-[#111827]">مصفوفة الصلاحيات المخصصة للمستخدم:</h4>
                 <div className="flex items-center gap-1">
@@ -738,7 +745,7 @@ export default function UsersPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </div>}
           </form>
         </Dialog>
 

@@ -23,7 +23,8 @@ export function NotificationProvider({ children }) {
       }
       if (owner !== localStorage.getItem('token')) return;
       setNotifications(rows.map(n => ({ id: n.id, title: n.title || n.message_body, message: n.message_body, type: n.category,
-        actionUrl: n.action_url, isRead: !!n.read_at, createdAt: n.created_at, details: {} })));
+        actionUrl: n.action_url, isRead: !!n.read_at, createdAt: n.created_at,
+        relatedRecordType: n.related_record_type, relatedRecordId: n.related_record_id })));
       setUnreadCount(count.data.unread_count);
       setError('');
     } catch { setError('تعذر تحديث الإشعارات. ستتم إعادة المحاولة.'); }
@@ -45,7 +46,7 @@ export function NotificationProvider({ children }) {
     catch { setError('تعذر حفظ حالة القراءة'); }
   };
   return <NotificationContext.Provider value={{ notifications, unreadCount, error, refresh, thresholdDays, markAsRead, markAllAsRead,
-    checkWarehouseExpirations: refresh, canViewWarehouseAlerts: () => !!enabled }}>
+    checkWarehouseExpirations: refresh, canViewWarehouseAlerts: () => !!enabled, notificationEnabled: !!enabled }}>
     {children}
   </NotificationContext.Provider>;
 }

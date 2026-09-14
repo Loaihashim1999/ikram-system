@@ -4,7 +4,7 @@ import api from './axios';
 const beneficiaryApi = {
   list:   (params = {}) => api.get('/beneficiaries', { params }),
   get:    (id)          => api.get(`/beneficiaries/${id}`),
-  create: (data)        => api.post('/beneficiaries', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  create: (data)        => api.post('/beneficiaries', data, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 30000 }),
   update: (id, data)    => {
     // If sending FormData with files, use POST (or append _method: PUT) to avoid PHP multipart PUT payload bug
     if (data instanceof FormData) {

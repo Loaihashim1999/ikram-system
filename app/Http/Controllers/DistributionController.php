@@ -16,6 +16,21 @@ use Illuminate\Support\Str;
 
 class DistributionController extends Controller
 {
+    public function driverDeliveries(Request $request): JsonResponse
+    {
+        abort_unless(User::isDriverRole($request->user()?->role), 403);
+
+        $beneficiaryDeliveries = Distribution::with(['beneficiary', 'basket'])
+            ->where('driver_id', $request->user()->id)->latest()->get();
+        $representativeDeliveries = \App\Models\RepDistribution::with(['representative', 'basket'])
+            ->where('driver_id', $request->user()->id)->latest()->get();
+
+        return response()->json(['data' => [
+            'beneficiary_deliveries' => $beneficiaryDeliveries,
+            'representative_deliveries' => $representativeDeliveries,
+        ]]);
+    }
+
     // ─── Index ───────────────────────────────────────────────────────────────
 
     public function index(Request $request): JsonResponse

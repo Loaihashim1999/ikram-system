@@ -272,25 +272,27 @@ export default function BeneficiaryDetailsPage() {
             {/* TAB 3: Financial & Income */}
             {activeTab === "financial" && (
               <div className="space-y-4 text-xs">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <InfoBox label="الراتب الشهري الفعلي" value={b.monthly_salary ? `${b.monthly_salary} ريال` : "0 ريال"} />
-                  <InfoBox label="مبلغ الضمان الاجتماعي" value={b.social_security_amount ? `${b.social_security_amount} ريال` : "0 ريال"} />
-                  <InfoBox label="مبلغ حساب المواطن" value={b.citizen_account_amount ? `${b.citizen_account_amount} ريال` : "0 ريال"} />
-                  <InfoBox label="المعاش التقاعدي" value={b.retirement_pension ? `${b.retirement_pension} ريال` : "0 ريال"} />
-                  <InfoBox label="دعم الأسرة والأقارب" value={b.family_support ? `${b.family_support} ريال` : "0 ريال"} />
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-2">مصادر الدخل المحددة:</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {[["salary", "monthly_salary", "الراتب الشهري"], ["social_security", "social_security_amount", "الضمان الاجتماعي"], ["citizen_account", "citizen_account_amount", "حساب المواطن"], ["retirement", "retirement_pension", "المعاش التقاعدي"], ["family_support", "family_support", "دعم الأسرة والأقارب"]]
+                      .filter(([source]) => (b.income_sources || []).includes(source))
+                      .map(([source, field, label]) => <InfoBox key={source} label={label} value={`${parseFloat(b[field] || 0).toLocaleString()} ريال`} />)
+                    }
+                    {(!b.income_sources || b.income_sources.length === 0) && <InfoBox label="مصادر الدخل" value="لا توجد مصادر محددة" />}
+                  </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-4 rounded-2xl flex items-center justify-between shadow-md">
-                  <div>
-                    <span className="text-[11px] font-bold block opacity-90">إجمالي الدخل الشهري المحسوب بالنظام:</span>
-                    <span className="text-xl font-bold font-mono">
-                      {parseFloat(b.total_income || 0).toLocaleString()} ريال سعودي
-                    </span>
-                  </div>
-                  <div className="bg-white/20 px-3 py-1.5 rounded-xl text-xs font-bold border border-white/30">
-                    الفئة: {b.priority === "first_class" ? "درجة أولى" : "درجة ثانية"}
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <InfoBox label="إجمالي الدخل الشهري قبل الإيجار" value={`${parseFloat(b.total_income || 0).toLocaleString()} ريال`} />
+                  <InfoBox label="الإيجار السنوي" value={`${parseFloat(b.annual_rent_amount || 0).toLocaleString()} ريال`} />
+                  <InfoBox label="الإيجار الشهري" value={`${parseFloat(b.monthly_rent || 0).toLocaleString()} ريال`} />
+                  <div className="bg-emerald-50 p-4 rounded-2xl border-2 border-emerald-600">
+                    <span className="text-emerald-800 block text-[11px] font-bold">صافي الدخل الشهري بعد الإيجار</span>
+                    <strong className="text-xl font-mono text-emerald-800">{parseFloat(b.net_income || 0).toLocaleString()} ريال</strong>
                   </div>
                 </div>
+                <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-3 rounded-2xl text-xs font-bold">الفئة: {b.priority === "first_class" ? "درجة أولى" : "درجة ثانية"}</div>
               </div>
             )}
 

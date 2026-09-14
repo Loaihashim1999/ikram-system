@@ -29,10 +29,11 @@ class BeneficiaryTest extends TestCase
             'citizen_account_amount' => 500.00,
             'retirement_pension' => 300.00,
             'family_support' => 200.00,
+            'income_sources' => ['salary', 'social_security', 'citizen_account', 'retirement', 'family_support'],
         ]);
 
-        // Citizen formula: monthly_salary (2000) + social_security (1000) + citizen_account (500) + retirement_pension (300) = 3800
-        $this->assertEquals(3800.00, (float) $beneficiary->total_income);
+        // Citizen formula includes every explicitly selected valid source.
+        $this->assertEquals(4000.00, (float) $beneficiary->total_income);
 
         $resident = Beneficiary::create([
             'beneficiary_type' => 'resident',
@@ -43,6 +44,7 @@ class BeneficiaryTest extends TestCase
             'monthly_salary' => 2000.00,
             'family_support' => 500.00,
             'social_security_amount' => 1000.00, // Should not be added for resident
+            'income_sources' => ['salary', 'family_support', 'social_security'],
         ]);
 
         // Resident formula: monthly_salary (2000) + family_support (500) = 2500
@@ -60,6 +62,7 @@ class BeneficiaryTest extends TestCase
             'phone' => '0551234567',
             'category_id' => $category->id,
             'monthly_salary' => 1500.00,
+            'income_sources' => ['salary'],
         ]);
 
         $this->assertEquals(1500.00, (float) $beneficiary->total_income);
@@ -67,6 +70,7 @@ class BeneficiaryTest extends TestCase
         $beneficiary->update([
             'monthly_salary' => 2500.00,
             'social_security_amount' => 500.00,
+            'income_sources' => ['salary', 'social_security'],
         ]);
 
         $this->assertEquals(3000.00, (float) $beneficiary->refresh()->total_income);

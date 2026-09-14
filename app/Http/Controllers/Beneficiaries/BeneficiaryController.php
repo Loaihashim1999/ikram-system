@@ -75,6 +75,7 @@ class BeneficiaryController extends Controller
             $this->normalizeInputs($request);
 
             $validated = $request->validate($this->rules(), $this->messages());
+            $validated = $this->sanitizeFinancialSources($validated);
 
             if (empty($validated['full_name']) && ! empty($request->input('name'))) {
                 $validated['full_name'] = $request->input('name');
@@ -99,8 +100,8 @@ class BeneficiaryController extends Controller
             $validated['total_income'] = $financials['total_income'];
             $validated['monthly_rent'] = $financials['monthly_rent'];
             $validated['net_income'] = $financials['net_income'];
-            $validated['priority'] = $validated['priority'] ?? $financials['priority'];
-            $validated['category_id'] = $validated['category_id'] ?? $financials['category_id'];
+            $validated['priority'] = $financials['priority'];
+            $validated['category_id'] = $financials['category_id'];
 
             $validated = array_merge($validated, $this->handleUploads($request));
 
@@ -246,6 +247,7 @@ class BeneficiaryController extends Controller
 
             $rules = $this->rules($beneficiary->id);
             $validated = $request->validate($rules, $this->messages());
+            $validated = $this->sanitizeFinancialSources($validated, $beneficiary);
 
             if (! empty($request->input('iban'))) {
                 $validated['iban_encrypted'] = Crypt::encryptString($request->input('iban'));
@@ -261,8 +263,8 @@ class BeneficiaryController extends Controller
             $validated['total_income'] = $financials['total_income'];
             $validated['monthly_rent'] = $financials['monthly_rent'];
             $validated['net_income'] = $financials['net_income'];
-            $validated['priority'] = $validated['priority'] ?? $financials['priority'];
-            $validated['category_id'] = $validated['category_id'] ?? $financials['category_id'];
+            $validated['priority'] = $financials['priority'];
+            $validated['category_id'] = $financials['category_id'];
 
             DB::transaction(function () use ($beneficiary, $validated, $request) {
                 $beneficiary->update($validated);
@@ -649,7 +651,7 @@ class BeneficiaryController extends Controller
             'district' => 'required|string|max:100',
             'street' => 'required|string|max:150',
             'nationality' => 'required_if:beneficiary_type,resident|nullable|string|max:100',
-            'date_of_birth' => 'nullable|string',
+            'date_of_birth' => 'required|date|before_or_equal:today',
             'place_of_birth' => 'nullable|string|max:100',
             'profession' => 'nullable|string|max:100',
             
@@ -677,6 +679,7 @@ class BeneficiaryController extends Controller
 
             // ─── البيانات المالية (Financial Information) ───
             'income_sources' => 'nullable|array',
+            'income_sources.*' => 'string|in:salary,retirement,citizen_account,social_security,family_support',
             'monthly_salary' => 'nullable|numeric|min:0',
             'citizen_account_amount' => 'nullable|numeric|min:0',
             'social_security_amount' => 'nullable|numeric|min:0',
@@ -718,6 +721,9 @@ class BeneficiaryController extends Controller
             'district.required' => 'الحي السكني مطلوب.',
             'street.required' => 'الشارع أو العنوان التفصيلي مطلوب.',
             'nationality.required_if' => 'الجنسية مطلوبة للمستفيد المقيم.',
+            'date_of_birth.required' => 'تاريخ الميلاد مطلوب.',
+            'date_of_birth.date' => 'تاريخ الميلاد غير صالح.',
+            'date_of_birth.before_or_equal' => 'تاريخ الميلاد لا يمكن أن يكون في المستقبل.',
 
             // بيانات الأسرة والسكن
             'family_status.required' => 'الحالة الأسرية مطلوبة.',
@@ -733,6 +739,30 @@ class BeneficiaryController extends Controller
             'retirement_pension.min' => 'معاش التقاعد لا يمكن أن يكون سالباً.',
             'family_support.min' => 'دعم الأسرة لا يمكن أن يكون سالباً.',
         ];
+    }
+
+    private function sanitizeFinancialSources(array $validated, ?Beneficiary $existing = null): array
+    {
+        $type = $validated['beneficiary_type'] ?? $existing?->beneficiary_type ?? 'citizen';
+        $allowed = $type === 'resident'
+            ? ['salary', 'family_support']
+            : ['salary', 'retirement', 'citizen_account', 'social_security', 'family_support'];
+        $sources = array_values(array_intersect($allowed, $validated['income_sources'] ?? []));
+        $validated['income_sources'] = $sources;
+
+        foreach ([
+            'salary' => 'monthly_salary',
+            'retirement' => 'retirement_pension',
+            'citizen_account' => 'citizen_account_amount',
+            'social_security' => 'social_security_amount',
+            'family_support' => 'family_support',
+        ] as $source => $field) {
+            if (! in_array($source, $sources, true)) {
+                $validated[$field] = 0;
+            }
+        }
+
+        return $validated;
     }
 
     private function handleUploads(Request $request, ?Beneficiary $existing = null): array

@@ -18,7 +18,7 @@ return new class extends Migration
             }
             $table->foreignUuid('beneficiary_id')->constrained('beneficiaries')->cascadeOnDelete();
             $table->foreignUuid('basket_id')->constrained('baskets')->cascadeOnDelete();
-            $table->foreignUuid('assigned_by')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('assigned_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('scheduled_at');
             $table->string('pickup_location', 255)->nullable();
             $table->string('barcode_code', 100)->unique();

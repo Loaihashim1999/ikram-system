@@ -3,6 +3,7 @@ import {
   calculateEligibleIncome,
   classifyBeneficiary,
   calculateBeneficiaryFinancials,
+  calculateIncomeAndClassification,
 } from '../utils/financialCalculations';
 
 describe('Financial Calculations and Beneficiary Classification Rules', () => {
@@ -126,4 +127,20 @@ describe('Financial Calculations and Beneficiary Classification Rules', () => {
       expect(summary.formulaText).toBe('الدخل الإجمالي (6000) - الإيجار (2500) = الدخل المحتسب (3500 ريال)');
     });
   });
+
+  describe('Selected financial sources', () => {
+    it('ignores stale deselected values and recalculates rent immediately', () => {
+      const result = calculateIncomeAndClassification({ beneficiaryType: 'citizen', selectedIncomeSources: ['salary', 'family_support'], monthlySalary: 3000, familySupport: 500, citizenAccountAmount: 9000, housingType: 'rent', annualRentAmount: 12000 });
+      expect(result.totalGrossIncome).toBe(3500);
+      expect(result.monthlyRent).toBe(1000);
+      expect(result.netAvailableIncome).toBe(2500);
+    });
+
+    it('keeps residents in second degree', () => {
+      const result = calculateIncomeAndClassification({ beneficiaryType: 'resident', selectedIncomeSources: ['salary', 'social_security'], monthlySalary: 1000, socialSecurityAmount: 9000 });
+      expect(result.totalGrossIncome).toBe(1000);
+      expect(result.priority).toBe('second_class');
+    });
+  });
+
 });

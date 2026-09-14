@@ -530,7 +530,13 @@ export default function DailyInventoryPage({ embedded = false }) {
                                 }`}
                               >
                                 {new Date(item.expiry_date).toLocaleDateString("ar-SA")}
-                                {item.is_expired && " (منتهي)"}
+                                <span className="block mt-1">
+                                  {item.expiry_status === "expired"
+                                    ? "منتهي الصلاحية"
+                                    : item.expiry_status === "near_expiry"
+                                    ? `قارب على الانتهاء — متبقي ${item.remaining_days} يوم`
+                                    : `صالح — متبقي ${item.remaining_days} يوم`}
+                                </span>
                               </span>
                             ) : (
                               <span className="text-slate-400">-</span>

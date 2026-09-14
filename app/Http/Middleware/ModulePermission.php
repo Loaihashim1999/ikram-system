@@ -32,7 +32,7 @@ class ModulePermission
                 'organizations' => 'representatives',
                 default => null,
             },
-            'documents' => str_contains($path, 'daily-receiving') ? 'daily_beneficiaries' : (str_contains($path, 'staff-receipt') ? 'staff' : (str_contains($path, 'rep-receipt') ? 'representatives' : 'beneficiaries')),
+            'documents' => str_contains($path, 'daily-receiving') ? 'daily_beneficiaries' : (str_contains($path, 'staff-receipt') ? 'staff' : (str_contains($path, 'rep-receipt') ? 'representatives' : (str_contains($path, 'individual-receipt') || str_contains($path, '/receipt/') ? 'delivery' : 'beneficiaries'))),
             default => null,
         };
         // Account administration is explicitly reserved to the administrator in the existing controller.
@@ -41,10 +41,13 @@ class ModulePermission
         if ($request->isMethod('PUT') || $request->isMethod('PATCH') || preg_match('~/(adjust|confirm|dispatch|status|received|whatsapp)(/|$)~', $path)
             || ($request->isMethod('POST') && preg_match('~^api/(beneficiaries|neighborhood-reps)/[^/]+$~', $path))) $action = 'edit';
         if ($segment === 'settings' && !$request->isMethod('GET')) $action = 'edit';
+        if (str_contains($path, '/import') || $segment === 'smart-import') $action = 'import';
+        if (str_contains($path, 'export') || str_ends_with($path, '/excel')) $action = 'export';
+        if ($segment === 'documents') $action = 'issue_document';
         if ($user->role === 'readonly' && $action !== 'view') abort(403);
         if (in_array($user->role, ['driver', 'delivery_driver'])) {
             abort_unless(in_array($module, ['delivery', 'receiver']), 403);
-            abort_if($module === 'delivery' && $action !== 'view', 403);
+            abort_if($module === 'delivery' && ! in_array($action, ['view', 'issue_document'], true), 403);
         }
         // Role access mirrors frontend/src/App.jsx; nested permissions can further restrict it.
         $roles = match ($module) {

@@ -162,10 +162,7 @@ export default function NotificationCenter({
               filtered.map((item) => (
                 <div
                   key={item.id}
-                  onClick={() => {
-                    markAsRead(item.id);
-                    setSelectedNotif(item);
-                  }}
+                  onClick={() => setSelectedNotif(item)}
                   className={`p-3.5 flex items-start gap-3 hover:bg-[#FAF8F5] transition-colors cursor-pointer text-right ${
                     !item.isRead ? 'bg-[#FAF8F5]/60 font-semibold' : 'opacity-85'
                   }`}
@@ -221,7 +218,8 @@ export default function NotificationCenter({
           subtitle={`تاريخ الإشعار: ${new Date(selectedNotif.createdAt).toLocaleString('ar-SA')}`}
           icon={AlertTriangle}
           maxWidth="max-w-lg"
-          footer={<div className="flex gap-2">
+          footer={<div className="flex gap-2 flex-wrap">
+            {!selectedNotif.isRead && <button onClick={async () => { await markAsRead(selectedNotif.id); setSelectedNotif({ ...selectedNotif, isRead: true }); }} className="px-5 py-2 bg-[#C9A24A] text-white rounded-xl font-bold text-xs">تحديد كمقروء</button>}
             {selectedNotif.actionUrl && <button onClick={() => { navigate(selectedNotif.actionUrl); setSelectedNotif(null); onClose(); }} className="px-5 py-2 bg-[#3F6B3A] text-white rounded-xl font-bold text-xs">فتح السجل</button>}
             <button onClick={() => setSelectedNotif(null)} className="px-5 py-2 bg-[#FAF8F5] border border-[#E5E2D9] text-[#111827] rounded-xl font-bold text-xs hover:bg-gray-100">إغلاق</button>
           </div>}
@@ -230,6 +228,8 @@ export default function NotificationCenter({
             <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E5E2D9]">
               <p className="leading-relaxed font-medium">{selectedNotif.message}</p>
             </div>
+
+            {selectedNotif.relatedRecordId && <div className="p-3 bg-white rounded-xl border border-[#E5E2D9] text-[11px] text-[#6B7280]"><strong>مرجع السجل:</strong> <span className="font-mono">{selectedNotif.relatedRecordId}</span></div>}
 
             {selectedNotif.type === 'warehouse_expiry' && selectedNotif.details && (
               <div className="space-y-2 border border-[#E5E2D9] rounded-xl p-3 bg-amber-50/30">

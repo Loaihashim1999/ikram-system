@@ -16,7 +16,7 @@ return new class extends Migration
             if (Schema::getConnection()->getDriverName() === 'pgsql') {
                 $idCol->default(\DB::raw('gen_random_uuid()'));
             }
-            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('action', 100);
             $table->string('target_table', 100);
             $table->uuid('target_id');

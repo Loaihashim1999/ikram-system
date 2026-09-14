@@ -14,7 +14,7 @@ return new class extends Migration
             $table->enum('type', ['in', 'out']); // in: إضافة, out: صرف
             $table->integer('quantity');
             $table->string('reason')->nullable(); // سبب الحركة
-            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

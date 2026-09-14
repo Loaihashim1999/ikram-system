@@ -55,6 +55,11 @@ class RepDistribution extends Model
         return $this->belongsTo(NeighborhoodRep::class, 'rep_id');
     }
 
+    public function representative(): BelongsTo
+    {
+        return $this->rep();
+    }
+
     public function basket(): BelongsTo
     {
         return $this->belongsTo(Basket::class);

@@ -27,6 +27,7 @@ const CITIZEN_INCOME_OPTIONS = [
   { value: "social_security",  label: "ضمان اجتماعي" },
   { value: "retirement",       label: "معاش تقاعدي" },
   { value: "citizen_account",  label: "حساب المواطن" },
+  { value: "family_support",   label: "دعم الأسرة من الأقارب" },
 ];
 
 const RESIDENT_INCOME_OPTIONS = [
@@ -162,12 +163,19 @@ export default function AddBeneficiaryPage() {
   };
 
   const toggleIncome = (val) => {
-    setForm((f) => ({
-      ...f,
-      income_sources: f.income_sources.includes(val)
-        ? f.income_sources.filter((v) => v !== val)
-        : [...f.income_sources, val],
-    }));
+    const amountFields = {
+      salary: "monthly_salary", social_security: "social_security_amount",
+      retirement: "retirement_pension", citizen_account: "citizen_account_amount",
+      family_support: "family_support",
+    };
+    setForm((f) => {
+      const removing = f.income_sources.includes(val);
+      return {
+        ...f,
+        income_sources: removing ? f.income_sources.filter((v) => v !== val) : [...f.income_sources, val],
+        ...(removing ? { [amountFields[val]]: "" } : {}),
+      };
+    });
   };
 
   const addDependent = () => setDependents((d) => [...d, { ...INITIAL_DEPENDENT }]);
@@ -195,6 +203,7 @@ export default function AddBeneficiaryPage() {
       citizenAccountAmount: form.citizen_account_amount,
       retirementPension: form.retirement_pension,
       familySupport: form.family_support,
+      selectedIncomeSources: form.income_sources,
       housingType: form.housing_type,
       annualRentAmount: form.annual_rent_amount,
       monthlyRentAmount: form.monthly_rent_amount,
@@ -276,8 +285,8 @@ export default function AddBeneficiaryPage() {
       gross_income: calcResult.totalGrossIncome,
       monthly_rent: calcResult.monthlyRent,
       net_income: calcResult.eligibleIncome,
-      priority: form.manual_override && form.priority ? form.priority : calcResult.priority,
-      category: form.manual_override && form.priority ? form.priority : calcResult.category,
+      priority: calcResult.priority,
+      category: calcResult.category,
     };
 
     // Explicitly delete any banking info from payload to prevent sending

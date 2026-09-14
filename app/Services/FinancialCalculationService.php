@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Category;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class FinancialCalculationService
@@ -18,9 +17,18 @@ class FinancialCalculationService
     {
         $type = strtolower($data['beneficiary_type'] ?? 'citizen');
         $isCitizen = ($type === 'citizen');
+        $allowedSources = $isCitizen
+            ? ['salary', 'retirement', 'citizen_account', 'social_security', 'family_support']
+            : ['salary', 'family_support'];
+        $selectedSources = array_values(array_intersect(
+            $allowedSources,
+            is_array($data['income_sources'] ?? null) ? $data['income_sources'] : []
+        ));
 
         // تنظيف وتحويل المدخلات المالية بأمان (منع القيم السالبة وتفادي null)
-        $salary = max(0, (float) ($data['monthly_salary'] ?? 0));
+        $amount = static fn (string $source, string $field): float => in_array($source, $selectedSources, true)
+            ? max(0, (float) ($data[$field] ?? 0)) : 0.0;
+        $salary = $amount('salary', 'monthly_salary');
         $annualRent = max(0, (float) ($data['annual_rent_amount'] ?? 0));
         $monthlyRentDirect = max(0, (float) ($data['monthly_rent'] ?? ($data['monthly_rent_amount'] ?? 0)));
         $housingType = $data['housing_type'] ?? 'rent';
@@ -39,14 +47,15 @@ class FinancialCalculationService
         $totalIncome = 0.0;
         if ($isCitizen) {
             // المواطن: الراتب + التقاعد + حساب المواطن + الضمان الاجتماعي
-            $pension = max(0, (float) ($data['retirement_pension'] ?? 0));
-            $citizenAccount = max(0, (float) ($data['citizen_account_amount'] ?? 0));
-            $socialSecurity = max(0, (float) ($data['social_security_amount'] ?? 0));
+            $pension = $amount('retirement', 'retirement_pension');
+            $citizenAccount = $amount('citizen_account', 'citizen_account_amount');
+            $socialSecurity = $amount('social_security', 'social_security_amount');
+            $familySupport = $amount('family_support', 'family_support');
 
-            $totalIncome = $salary + $pension + $citizenAccount + $socialSecurity;
+            $totalIncome = $salary + $pension + $citizenAccount + $socialSecurity + $familySupport;
         } else {
             // المقيم: الراتب + دعم الأسرة
-            $familySupport = max(0, (float) ($data['family_support'] ?? 0));
+            $familySupport = $amount('family_support', 'family_support');
 
             $totalIncome = $salary + $familySupport;
         }
@@ -74,29 +83,7 @@ class FinancialCalculationService
      */
     private function determinePriority(array $data, float $netIncome, bool $isCitizen): string
     {
-        // 1. إذا كان موظفاً
-        if (! empty($data['is_employee'])) {
-            return 'employee';
-        }
-
-        // 2. ذوو الاحتياجات الخاصة
-        if (! empty($data['has_special_needs']) || ! empty($data['is_special_needs'])) {
-            return 'special_needs';
-        }
-
-        // 3. كبار السن
-        if (! empty($data['date_of_birth'])) {
-            try {
-                $dob = Carbon::parse($data['date_of_birth']);
-                $elderlyAge = (int) (DB::table('settings')->where('key', 'elderly_min_age')->value('value') ?? 60);
-                if ($dob->age >= $elderlyAge) {
-                    return 'elderly';
-                }
-            } catch (\Throwable) {
-            }
-        }
-
-        // 4. التصنيف المالي
+        // درجة الاستحقاق محصورة في الأولى والثانية، والسمات الأخرى مستقلة.
         $firstMax = (float) (DB::table('settings')->where('key', 'first_class_max_income')->value('value') ?? 3000);
         $secondMax = (float) (DB::table('settings')->where('key', 'second_class_max_income')->value('value') ?? 6000);
 

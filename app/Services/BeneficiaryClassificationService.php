@@ -20,10 +20,11 @@ class BeneficiaryClassificationService
         float $citizenAccountAmount = 0,
         bool $hasSpecialNeeds = false
     ): string {
-        if ($hasSpecialNeeds) {
-            $category = Category::where('name', 'ذوي الاحتياجات الخاصة')->first();
-
-            return $category ? $category->id : Category::first()->id;
+        if ($beneficiaryType === 'resident') {
+            return Category::firstOrCreate(
+                ['name' => 'درجة ثانية'],
+                ['description' => 'فئة تلقائية بالنظام', 'basket_entitlement_per_period' => 1]
+            )->id;
         }
 
         // 1. جلب الحد الأقصى المسموح به من الإعدادات (الافتراضي 4000)

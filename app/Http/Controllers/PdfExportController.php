@@ -8,6 +8,7 @@ use App\Models\DailyReceivingTransaction;
 use App\Models\Distribution;
 use App\Models\NeighborhoodRep;
 use App\Models\Staff;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Mpdf\Mpdf;
@@ -55,6 +56,9 @@ class PdfExportController extends Controller
         }
 
         $beneficiary = $distribution->beneficiary;
+        if (User::isDriverRole(request()->user()?->role)) {
+            abort_unless($distribution->driver_id === request()->user()->id, 403);
+        }
 
         try {
             $html = view('pdf.individual_receipt', [

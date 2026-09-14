@@ -63,6 +63,7 @@ class BeneficiaryControllerTest extends TestCase
             'full_name' => 'عبدالله خالد',
             'national_id' => '1000000002',
             'phone' => '0500000002',
+            'date_of_birth' => '1990-01-01',
             'category_id' => $this->category->id,
             'monthly_salary' => 2500,
             'city' => 'الرياض',
@@ -155,4 +156,53 @@ class BeneficiaryControllerTest extends TestCase
             'name' => 'ياسر محمد',
         ]);
     }
+    public function test_backend_recalculates_selected_sources_and_rejects_resident_first_degree(): void
+    {
+        Sanctum::actingAs($this->user);
+        Category::firstOrCreate(['name' => 'درجة ثانية'], ['description' => 'الفئة الثانية']);
+
+        $response = $this->postJson('/api/beneficiaries', [
+            'beneficiary_type' => 'resident', 'full_name' => 'TEST RESIDENT',
+            'national_id' => '2999999991', 'phone' => '0509999991',
+            'date_of_birth' => '1990-01-01', 'nationality' => 'TEST',
+            'city' => 'مكة', 'district' => 'TEST', 'street' => 'TEST',
+            'family_status' => 'poor', 'family_members_count' => 2,
+            'housing_type' => 'rent', 'annual_rent_amount' => 12000,
+            'income_sources' => ['salary', 'family_support'],
+            'monthly_salary' => 3000, 'family_support' => 500,
+            'social_security_amount' => 9000, 'priority' => 'first_class',
+        ])->assertCreated();
+
+        $response->assertJsonPath('data.priority', 'second_class')
+            ->assertJsonPath('data.total_income', '3500.00')
+            ->assertJsonPath('data.monthly_rent', '1000.00')
+            ->assertJsonPath('data.net_income', '2500.00')
+            ->assertJsonPath('data.social_security_amount', '0.00');
+    }
+
+    public function test_deselected_stale_income_is_cleared_on_update(): void
+    {
+        Sanctum::actingAs($this->user);
+        Category::firstOrCreate(['name' => 'درجة ثانية'], ['description' => 'الفئة الثانية']);
+        $beneficiary = Beneficiary::create([
+            'beneficiary_type' => 'citizen', 'full_name' => 'TEST CITIZEN',
+            'national_id' => '1999999991', 'phone' => '0509999992', 'date_of_birth' => '1990-01-01',
+            'city' => 'مكة', 'district' => 'TEST', 'street' => 'TEST', 'family_status' => 'poor',
+            'family_members_count' => 2, 'housing_type' => 'own',
+            'income_sources' => ['salary', 'citizen_account'], 'monthly_salary' => 2000,
+            'citizen_account_amount' => 1000,
+        ]);
+
+        $this->putJson('/api/beneficiaries/'.$beneficiary->id, [
+            'beneficiary_type' => 'citizen', 'full_name' => 'TEST CITIZEN',
+            'national_id' => '1999999991', 'phone' => '0509999992', 'date_of_birth' => '1990-01-01',
+            'city' => 'مكة', 'district' => 'TEST', 'street' => 'TEST', 'family_status' => 'poor',
+            'family_members_count' => 2, 'housing_type' => 'own',
+            'income_sources' => ['salary'], 'monthly_salary' => 2000,
+            'citizen_account_amount' => 1000,
+        ])->assertOk()->assertJsonPath('data.total_income', '2000.00');
+
+        $this->assertDatabaseHas('beneficiaries', ['id' => $beneficiary->id, 'citizen_account_amount' => 0]);
+    }
+
 }

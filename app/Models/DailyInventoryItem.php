@@ -33,13 +33,15 @@ class DailyInventoryItem extends Model
         'current_quantity' => 'integer',
         'reserved_quantity' => 'integer',
         'min_threshold' => 'integer',
-        'expiry_date' => 'date',
+        'expiry_date' => 'date:Y-m-d',
     ];
 
     protected $appends = [
         'available_quantity',
         'is_low_stock',
         'is_expired',
+        'remaining_days',
+        'expiry_status',
     ];
 
     public function movements(): HasMany
@@ -64,6 +66,30 @@ class DailyInventoryItem extends Model
 
     public function getIsExpiredAttribute(): bool
     {
-        return $this->expiry_date ? Carbon::parse($this->expiry_date)->isPast() : false;
+        return $this->expiry_status === 'expired';
+    }
+
+    public function getRemainingDaysAttribute(): ?int
+    {
+        if (! $this->expiry_date) {
+            return null;
+        }
+
+        return Carbon::today()->diffInDays($this->expiry_date->copy()->startOfDay(), false);
+    }
+
+    public function getExpiryStatusAttribute(): ?string
+    {
+        if (! $this->expiry_date) {
+            return null;
+        }
+
+        if ($this->remaining_days <= 0) {
+            return 'expired';
+        }
+
+        $threshold = max(0, (int) \App\Models\Setting::get('warehouse_alert_threshold_days', 10));
+
+        return $this->remaining_days <= $threshold ? 'near_expiry' : 'valid';
     }
 }

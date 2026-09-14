@@ -52,7 +52,7 @@ return new class extends Migration
             $table->foreignUuid('category_id')->constrained('categories')->cascadeOnDelete();
             $table->boolean('has_special_needs')->default(false);
             $table->enum('status', ['active', 'suspended', 'under_review'])->default('active');
-            $table->foreignUuid('created_by')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
             // ... (الحقول السابقة تبقى كما هي)

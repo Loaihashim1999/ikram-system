@@ -46,6 +46,7 @@ export default function GovernancePage() {
 
   // Search filter inside sub-tables
   const [tableSearch, setTableSearch] = useState("");
+  const [inventoryDrilldown, setInventoryDrilldown] = useState(null);
 
   // Toast & Validation Error
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
@@ -874,31 +875,61 @@ export default function GovernancePage() {
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
+                    <button type="button" onClick={() => setInventoryDrilldown("expired")} className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
                       <span className="text-red-600 block font-semibold">منتهية الصلاحية</span>
                       <strong className="text-xl font-bold text-red-700 mt-1 block">
                         {analytics.inventory?.expiry_alerts?.expired_count || 0}
                       </strong>
-                    </div>
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                    </button>
+                    <button type="button" onClick={() => setInventoryDrilldown("in_7_days")} className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
                       <span className="text-amber-700 block font-semibold">تنتهي خلال 7 أيام</span>
                       <strong className="text-xl font-bold text-amber-800 mt-1 block">
                         {analytics.inventory?.expiry_alerts?.in_7_days_count || 0}
                       </strong>
-                    </div>
-                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+                    </button>
+                    <button type="button" onClick={() => setInventoryDrilldown("in_30_days")} className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
                       <span className="text-yellow-700 block font-semibold">تنتهي خلال 30 يوماً</span>
                       <strong className="text-xl font-bold text-yellow-800 mt-1 block">
                         {analytics.inventory?.expiry_alerts?.in_30_days_count || 0}
                       </strong>
-                    </div>
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                    </button>
+                    <button type="button" onClick={() => setInventoryDrilldown("in_60_days")} className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
                       <span className="text-blue-700 block font-semibold">تنتهي خلال 60 يوماً</span>
                       <strong className="text-xl font-bold text-blue-800 mt-1 block">
                         {analytics.inventory?.expiry_alerts?.in_60_days_count || 0}
                       </strong>
-                    </div>
+                    </button>
                   </div>
+
+                  {inventoryDrilldown && (
+                    <div className="border rounded-xl overflow-hidden" data-testid="inventory-expiry-drilldown">
+                      <div className="flex items-center justify-between bg-slate-50 px-4 py-3 border-b">
+                        <strong className="text-sm">الأصناف المطابقة للمؤشر المحدد</strong>
+                        <button type="button" onClick={() => setInventoryDrilldown(null)} className="text-xs text-slate-600 underline">إغلاق</button>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-right">
+                          <thead><tr className="border-b"><th className="p-3">الصنف</th><th className="p-3">الكمية</th><th className="p-3">تاريخ الصلاحية</th></tr></thead>
+                          <tbody>
+                            {(analytics.inventory?.expiry_alerts?.[inventoryDrilldown] || []).map((item) => (
+                              <tr key={item.id} className="border-b last:border-0"><td className="p-3 font-semibold">{item.name}</td><td className="p-3">{item.current_quantity} {item.unit}</td><td className="p-3 font-mono">{String(item.expiry_date || "").slice(0, 10)}</td></tr>
+                            ))}
+                            {(analytics.inventory?.expiry_alerts?.[inventoryDrilldown] || []).length === 0 && <tr><td colSpan="3" className="p-5 text-center text-slate-500">لا توجد أصناف مطابقة.</td></tr>}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white border rounded-xl shadow-sm p-5 space-y-4">
+                  <div><h3 className="font-bold text-slate-800 text-sm">استهلاك الأصناف خلال الفترة المحددة</h3><p className="text-xs text-slate-500 mt-1">النسبة هي حصة الصنف من إجمالي الكمية المنصرفة في المستودع نفسه خلال الفترة.</p></div>
+                  {[['المستودع المركزي', analytics.inventory?.main?.consumption], ['مستودع المستفيدين اليوميين', analytics.inventory?.daily?.consumption]].map(([label, rows]) => (
+                    <div key={label} className="border rounded-lg overflow-hidden"><div className="bg-slate-50 px-3 py-2 text-xs font-bold">{label}</div><div className="divide-y">
+                      {(rows || []).map((row) => <div key={row.id} className="grid grid-cols-3 gap-2 p-3 text-xs"><span className="font-semibold">{row.name}</span><span>{row.quantity} {row.unit}</span><span>{row.share_of_period_outflow}% من المنصرف</span></div>)}
+                      {(rows || []).length === 0 && <div className="p-4 text-xs text-center text-slate-500">لا توجد حركة صرف في هذه الفترة.</div>}
+                    </div></div>
+                  ))}
                 </div>
               </div>
             )}

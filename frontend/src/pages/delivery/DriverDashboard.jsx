@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import beneficiaryApi from "../../api/beneficiaries";
 import distributionApi from "../../api/distributions";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
@@ -11,6 +10,7 @@ export default function DriverDashboard() {
   const [drivers, setDrivers] = useState([]);
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [user, setUser] = useState(null);
+  const isDriver = user?.role === "driver" || user?.role === "delivery_driver";
 
   const [beneficiaryDeliveries, setBeneficiaryDeliveries] = useState([]);
   const [repDeliveries, setRepDeliveries] = useState([]);
@@ -40,44 +40,38 @@ export default function DriverDashboard() {
 
   useEffect(() => {
     loadDriverData();
-  }, [selectedDriverId]);
+  }, [selectedDriverId, isDriver]);
 
-  const loadDriverData = () => {
+  const loadDriverData = async () => {
     setLoading(true);
-    Promise.all([
-      distributionApi.list({ per_page: 500 }),
-      api.get("/neighborhood-reps").catch(() => ({ data: { data: [] } })),
-      beneficiaryApi.list({ per_page: 500 }),
-    ]).then(([dRes, repsRes, bRes]) => {
-      const allD = Array.isArray(dRes.data?.data?.data) ? dRes.data.data.data : (Array.isArray(dRes.data?.data) ? dRes.data.data : []);
-      const allReps = repsRes.data?.data ?? [];
-      const allB = Array.isArray(bRes.data?.data?.data) ? bRes.data.data.data : (Array.isArray(bRes.data?.data) ? bRes.data.data : []);
+    try {
+      if (isDriver) {
+        const response = await api.get("/drivers/deliveries");
+        const data = response.data?.data || {};
+        setBeneficiaryDeliveries(data.beneficiary_deliveries || []);
+        setRepDeliveries((data.representative_deliveries || []).map((delivery) => ({
+          ...delivery,
+          rep: delivery.representative,
+        })));
+        return;
+      }
 
-      // Filter beneficiary distributions assigned to this driver
-      const benDistributions = allD.filter((d) => {
-        if (!selectedDriverId) return true;
-        return String(d.driver_id) === String(selectedDriverId);
-      });
-
-      setBeneficiaryDeliveries(benDistributions);
-
-      // Filter representative distributions assigned to this driver
-      const driverRepDistributions = [];
-      allReps.forEach((r) => {
-        if (r.rep_distributions && Array.isArray(r.rep_distributions)) {
-          r.rep_distributions.forEach((rd) => {
-            if (!selectedDriverId || String(rd.driver_id) === String(selectedDriverId)) {
-              driverRepDistributions.push({
-                ...rd,
-                rep: r,
-              });
-            }
-          });
-        }
-      });
-
-      setRepDeliveries(driverRepDistributions);
-    }).finally(() => setLoading(false));
+      const [dRes, repsRes] = await Promise.all([
+        distributionApi.list({ per_page: 500 }),
+        api.get("/neighborhood-reps"),
+      ]);
+      const allD = Array.isArray(dRes.data?.data?.data) ? dRes.data.data.data : (dRes.data?.data || []);
+      const allReps = repsRes.data?.data || [];
+      setBeneficiaryDeliveries(selectedDriverId ? allD.filter((d) => String(d.driver_id) === String(selectedDriverId)) : allD);
+      setRepDeliveries(allReps.flatMap((rep) => (rep.rep_distributions || [])
+        .filter((delivery) => !selectedDriverId || String(delivery.driver_id) === String(selectedDriverId))
+        .map((delivery) => ({ ...delivery, rep }))));
+    } catch {
+      setBeneficiaryDeliveries([]);
+      setRepDeliveries([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const confirmReceiptByQr = async (codeToConfirm) => {
@@ -114,10 +108,11 @@ export default function DriverDashboard() {
               <span className="text-xs text-slate-500 font-bold whitespace-nowrap">السائق المحدد:</span>
               <select
                 value={selectedDriverId}
+                disabled={isDriver}
                 onChange={(e) => setSelectedDriverId(e.target.value)}
                 className="bg-slate-50 text-slate-800 text-xs font-bold rounded-lg px-2.5 py-1.5 border border-[#E5E2D9] focus:outline-none focus:border-[#3F6B3A]"
               >
-                <option value="">جميع السائقين (عرض شمول)</option>
+                {!isDriver && <option value="">جميع السائقين (عرض شمول)</option>}
                 {drivers.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.full_name || d.name} ({d.phone || "—"})

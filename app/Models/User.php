@@ -42,6 +42,16 @@ class User extends Authenticatable
         'updated_at' => 'datetime',
     ];
 
+    public const DRIVER_PERMISSIONS = [
+        'delivery' => ['view' => true, 'create' => false, 'edit' => false, 'delete' => false, 'import' => false, 'export' => false, 'issue_document' => true, 'notifications' => true],
+        'receiver' => ['view' => true, 'create' => true, 'edit' => true, 'delete' => false, 'notifications' => true],
+    ];
+
+    public static function isDriverRole(?string $role): bool
+    {
+        return in_array($role, ['driver', 'delivery_driver'], true);
+    }
+
     // العلاقات
     public function beneficiaries()
     {

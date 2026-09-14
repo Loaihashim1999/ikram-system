@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 use App\Models\AuditLog;
@@ -28,7 +29,7 @@ class UserController extends Controller
             'password' => 'required|string|min:6',
             'full_name' => 'required|string|max:150',
             'phone' => 'nullable|string|max:20',
-            'role' => 'required|string|max:50',
+            'role' => ['required', Rule::in(['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly', 'driver', 'delivery_driver'])],
             'permissions' => 'nullable|array',
         ], [
             'username.unique' => 'اسم المستخدم مستخدم بالفعل في حساب آخر.',
@@ -44,7 +45,7 @@ class UserController extends Controller
             'full_name' => $validated['full_name'],
             'phone' => $validated['phone'] ?? null,
             'role' => $validated['role'],
-            'permissions' => $validated['permissions'] ?? null,
+            'permissions' => User::isDriverRole($validated['role']) ? User::DRIVER_PERMISSIONS : ($validated['permissions'] ?? null),
             'is_active' => true,
         ]);
 
@@ -73,7 +74,7 @@ class UserController extends Controller
             'username' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($user->id)],
             'email' => ['nullable', 'email', 'max:100', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => 'nullable|string|max:20',
-            'role' => 'sometimes|required|string|max:50',
+            'role' => ['sometimes', 'required', Rule::in(['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly', 'driver', 'delivery_driver'])],
             'password' => 'nullable|string|min:6',
             'is_active' => 'nullable|boolean',
             'permissions' => 'nullable|array',
@@ -116,6 +117,9 @@ class UserController extends Controller
         if (array_key_exists('permissions', $validated) && (!$currentUser || $currentUser->role === 'admin')) {
             $updateData['permissions'] = $validated['permissions'];
         }
+        if (User::isDriverRole($updateData['role'] ?? $user->role)) {
+            $updateData['permissions'] = User::DRIVER_PERMISSIONS;
+        }
         if (! empty($validated['password'])) {
             $updateData['password'] = Hash::make($validated['password']);
         }
@@ -137,20 +141,46 @@ class UserController extends Controller
         ]);
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $user = User::findOrFail($id);
-        if ($user->username === 'admin') {
-            return response()->json(['success' => false, 'message' => 'لا يمكن حذف حساب المدير الرئيسي.'], 403);
+        if ($user->username === 'admin' || $user->id === $request->user()?->id) {
+            return response()->json(['success' => false, 'message' => 'لا يمكن حذف حساب المدير الرئيسي أو الحساب الحالي.'], 403);
         }
-        $user->delete();
 
-        return response()->json(['success' => true, 'message' => 'تم حذف الحساب بنجاح.']);
+        DB::transaction(function () use ($request, $user) {
+            $user->auditLogs()->get()->each(function (AuditLog $log) use ($user) {
+                $details = $log->details ?? [];
+                $details['actor_name'] ??= $user->full_name;
+                $details['actor_role'] ??= $user->role;
+                $details['actor_username'] ??= $user->username;
+                $log->update(['details' => $details]);
+            });
+            $user->tokens()->delete();
+            $user->delete();
+            AuditLog::create([
+                'user_id' => $request->user()?->id,
+                'action' => 'DELETE_USER_ACCOUNT',
+                'target_table' => 'users',
+                'target_id' => $user->id,
+                'details' => [
+                    'deleted_username' => $user->username,
+                    'deleted_full_name' => $user->full_name,
+                    'deleted_role' => $user->role,
+                ],
+            ]);
+        });
+
+        return response()->json(['success' => true, 'message' => 'تم حذف صلاحية دخول الحساب مع الاحتفاظ بجميع سجلات الأعمال.']);
     }
 
     public function drivers(): JsonResponse
     {
-        $drivers = User::whereIn('role', ['driver', 'assistant'])->orWhere('role', 'like', '%driver%')->get();
+        $query = User::whereIn('role', ['driver', 'delivery_driver'])->where('is_active', true);
+        if (User::isDriverRole(request()->user()?->role)) {
+            $query->whereKey(request()->user()->id);
+        }
+        $drivers = $query->get();
 
         return response()->json(['data' => $drivers]);
     }

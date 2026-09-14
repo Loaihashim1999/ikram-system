@@ -10,7 +10,7 @@ const NotificationCenter = lazy(() => import('./NotificationCenter'));
 
 export default function TopBar({ onMenuClick }) {
   const { user: authUser, logout } = useAuth();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, notificationEnabled } = useNotifications();
   const navigate = useNavigate();
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -72,7 +72,7 @@ export default function TopBar({ onMenuClick }) {
         {/* Left side: Notifications, User profile & Actions */}
         <div className="flex items-center gap-2 sm:gap-4">
           {/* Notification Bell with Badge */}
-          <div className="relative">
+          {notificationEnabled && <div className="relative">
             <button
               onClick={() => setIsNotifOpen(!isNotifOpen)}
               className="relative p-2.5 rounded-xl text-[#1F2937] hover:bg-[#FAF8F5] hover:text-[#C9A24A] transition-colors border border-[#E5E2D9] cursor-pointer"
@@ -86,7 +86,7 @@ export default function TopBar({ onMenuClick }) {
                 </span>
               )}
             </button>
-          </div>
+          </div>}
 
           {/* User Profile & Dropdown */}
           <div className="relative">

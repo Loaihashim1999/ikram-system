@@ -39,7 +39,7 @@ class BeneficiaryClassificationServiceTest extends TestCase
         ]);
     }
 
-    public function test_assigns_special_needs_category_when_flag_is_true(): void
+    public function test_special_needs_flag_does_not_replace_citizen_degree(): void
     {
         $categoryId = $this->service->determineCategory(
             beneficiaryType: 'citizen',
@@ -47,7 +47,7 @@ class BeneficiaryClassificationServiceTest extends TestCase
             hasSpecialNeeds: true
         );
 
-        $this->assertEquals($this->categorySpecialNeeds->id, $categoryId);
+        $this->assertEquals($this->categoryDegree2->id, $categoryId);
     }
 
     public function test_assigns_degree_1_for_citizen_when_total_income_below_threshold(): void
@@ -76,14 +76,14 @@ class BeneficiaryClassificationServiceTest extends TestCase
         $this->assertEquals($this->categoryDegree2->id, $categoryId);
     }
 
-    public function test_assigns_degree_1_for_resident_when_salary_below_threshold(): void
+    public function test_assigns_degree_2_for_resident_even_when_salary_below_threshold(): void
     {
         $categoryId = $this->service->determineCategory(
             beneficiaryType: 'resident',
             monthlySalary: 3000
         );
 
-        $this->assertEquals($this->categoryDegree1->id, $categoryId);
+        $this->assertEquals($this->categoryDegree2->id, $categoryId);
     }
 
     public function test_assigns_degree_2_for_resident_when_salary_exceeds_threshold(): void

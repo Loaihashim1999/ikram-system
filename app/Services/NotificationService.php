@@ -18,25 +18,28 @@ class NotificationService
         try {
             $allUsers = User::where('is_active', true)->get();
             $warehouseEvent = str_starts_with($type, 'stock') || str_starts_with($type, 'warehouse');
-            $module = $warehouseEvent ? 'warehouse' : (str_starts_with($type, 'beneficiary') ? 'beneficiaries' : 'delivery');
+            $dailyInventoryEvent = $relatedModel instanceof \App\Models\DailyInventoryItem;
+            $module = $dailyInventoryEvent ? 'daily_beneficiaries' : ($warehouseEvent ? 'warehouse' : (str_starts_with($type, 'beneficiary') ? 'beneficiaries' : 'delivery'));
             $allowedRoles = [
                 'warehouse' => ['assistant_admin', 'warehouse', 'staff', 'readonly'],
+                'daily_beneficiaries' => ['assistant_admin', 'reception', 'staff', 'readonly'],
                 'beneficiaries' => ['assistant_admin', 'reception', 'staff', 'readonly'],
                 'delivery' => ['assistant_admin', 'staff', 'delivery_driver', 'driver'],
             ][$module];
             $recipients = $allUsers->filter(fn ($user) => $user->canReceiveNotifications()
                 && ($user->role === 'admin' || (in_array($user->role, $allowedRoles, true)
-                    && ($user->permissions[$module]['view'] ?? true)
-                    && ($user->permissions[$module]['notifications'] ?? true))));
+                    && ($user->permissions[$module]['view'] ?? false)
+                    && ($user->permissions[$module]['notifications'] ?? false))));
 
             $category = $warehouseEvent ? 'warehouse_expiry' : (str_starts_with($type, 'security') ? 'security' : 'system_event');
             $title = match ($module) {
-                'warehouse' => 'تنبيه المستودع',
+                'warehouse', 'daily_beneficiaries' => 'تنبيه المستودع',
                 'beneficiaries' => 'تحديث المستفيدين',
                 default => 'تحديث عمليات التوزيع',
             };
             $actionUrl = match ($module) {
                 'warehouse' => '/warehouse',
+                'daily_beneficiaries' => '/daily-beneficiaries/inventory',
                 'beneficiaries' => $relatedModel?->id ? '/beneficiaries/'.$relatedModel->id : '/beneficiaries',
                 default => '/delivery',
             };

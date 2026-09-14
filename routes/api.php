@@ -84,6 +84,7 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
 
     // ── التوزيع / الدعم ──────────────────────────────────────────────────────
     Route::get('/distributions', [DistributionController::class, 'index']);
+    Route::get('/drivers/deliveries', [DistributionController::class, 'driverDeliveries']);
     Route::post('/distributions', [DistributionController::class, 'store']);
     Route::put('/distributions/{id}/received', [DistributionController::class, 'markReceived']);
     Route::post('/distributions/{id}/whatsapp', [DistributionController::class, 'sendWhatsapp']);

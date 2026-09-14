@@ -26,6 +26,7 @@ export function calculateIncomeAndClassification({
   citizenAccountAmount = 0,
   retirementPension = 0,
   familySupport = 0,
+  selectedIncomeSources = [],
   housingType = 'rent', // 'rent' | 'own' | 'charitable_housing'
   annualRentAmount = 0,
   monthlyRentAmount = 0,
@@ -40,11 +41,13 @@ export function calculateIncomeAndClassification({
   },
 }) {
   // Safe non-negative parsing
-  const salary = Math.max(0, parseFloat(monthlySalary) || 0);
-  const social = Math.max(0, parseFloat(socialSecurityAmount) || 0);
-  const citizen = Math.max(0, parseFloat(citizenAccountAmount) || 0);
-  const pension = Math.max(0, parseFloat(retirementPension) || 0);
-  const support = Math.max(0, parseFloat(familySupport) || 0);
+  const selected = new Set(selectedIncomeSources);
+  const amount = (source, value) => selected.has(source) ? Math.max(0, parseFloat(value) || 0) : 0;
+  const salary = amount('salary', monthlySalary);
+  const social = amount('social_security', socialSecurityAmount);
+  const citizen = amount('citizen_account', citizenAccountAmount);
+  const pension = amount('retirement', retirementPension);
+  const support = amount('family_support', familySupport);
 
   // إجمالي الدخل بحسب صفة المستفيد
   let totalGrossIncome = 0;
@@ -53,7 +56,7 @@ export function calculateIncomeAndClassification({
     totalGrossIncome = salary + support;
   } else {
     // المواطن: الراتب + التقاعد + حساب المواطن + الضمان الاجتماعي
-    totalGrossIncome = salary + social + citizen + pension;
+    totalGrossIncome = salary + social + citizen + pension + support;
   }
   totalGrossIncome = Math.round(totalGrossIncome * 100) / 100;
 
@@ -115,13 +118,8 @@ export function calculateIncomeAndClassification({
     }
   }
 
-  // Priority flags
-  let priority = category;
-  if (hasSpecialNeeds) {
-    priority = 'special_needs';
-  } else if (age !== null && age >= elderlyAge) {
-    priority = 'elderly';
-  }
+  // درجة الاستحقاق تبقى الأولى أو الثانية؛ السمات تعرض منفصلة.
+  const priority = category;
 
   // Formula description
   const incomeParts = [];

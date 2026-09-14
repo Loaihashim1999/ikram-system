@@ -277,6 +277,35 @@ class AnalyticsController extends Controller
         $dailyStockOut = DailyInventoryMovement::whereBetween('created_at', [$startDate, $endDate])->where('type', 'out')->sum('quantity');
         $dailyLowStock = DailyInventoryItem::whereColumn('current_quantity', '<=', 'min_threshold')->count();
 
+        $mainLowStockItems = InventoryItem::whereColumn('current_quantity', '<=', 'min_threshold')
+            ->get(['id', 'name', 'unit', 'current_quantity', 'min_threshold']);
+        $dailyLowStockItems = DailyInventoryItem::whereColumn('current_quantity', '<=', 'min_threshold')
+            ->get(['id', 'name', 'unit', 'current_quantity', 'min_threshold']);
+
+        $mainConsumption = InventoryMovement::query()
+            ->join('inventory_items', 'inventory_items.id', '=', 'inventory_movements.inventory_item_id')
+            ->whereBetween('inventory_movements.created_at', [$startDate, $endDate])
+            ->where('inventory_movements.type', 'out')
+            ->groupBy('inventory_items.id', 'inventory_items.name', 'inventory_items.unit')
+            ->selectRaw('inventory_items.id, inventory_items.name, inventory_items.unit, SUM(inventory_movements.quantity) as quantity')
+            ->orderByDesc('quantity')->get();
+        $dailyConsumption = DailyInventoryMovement::query()
+            ->join('daily_inventory_items', 'daily_inventory_items.id', '=', 'daily_inventory_movements.daily_inventory_item_id')
+            ->whereBetween('daily_inventory_movements.created_at', [$startDate, $endDate])
+            ->where('daily_inventory_movements.type', 'out')
+            ->groupBy('daily_inventory_items.id', 'daily_inventory_items.name', 'daily_inventory_items.unit')
+            ->selectRaw('daily_inventory_items.id, daily_inventory_items.name, daily_inventory_items.unit, SUM(daily_inventory_movements.quantity) as quantity')
+            ->orderByDesc('quantity')->get();
+        $mainConsumptionTotal = (int) $mainConsumption->sum('quantity');
+        $dailyConsumptionTotal = (int) $dailyConsumption->sum('quantity');
+        $withShare = static fn ($rows, int $total) => $rows->map(static fn ($row) => [
+            'id' => $row->id,
+            'name' => $row->name,
+            'unit' => $row->unit,
+            'quantity' => (int) $row->quantity,
+            'share_of_period_outflow' => $total > 0 ? round(((int) $row->quantity / $total) * 100, 1) : 0,
+        ])->values();
+
         // تتبع الصلاحيات (Expiry Tracking)
         $expiredItems = DailyInventoryItem::whereNotNull('expiry_date')
             ->whereDate('expiry_date', '<', $today)
@@ -496,6 +525,8 @@ class AnalyticsController extends Controller
                     'stock_in' => intval($mainStockIn),
                     'stock_out' => intval($mainStockOut),
                     'low_stock_count' => $mainLowStock,
+                    'low_stock_items' => $mainLowStockItems,
+                    'consumption' => $withShare($mainConsumption, $mainConsumptionTotal),
                 ],
                 'daily' => [
                     'total_items' => $dailyTotalItems,
@@ -503,6 +534,8 @@ class AnalyticsController extends Controller
                     'stock_in' => intval($dailyStockIn),
                     'stock_out' => intval($dailyStockOut),
                     'low_stock_count' => $dailyLowStock,
+                    'low_stock_items' => $dailyLowStockItems,
+                    'consumption' => $withShare($dailyConsumption, $dailyConsumptionTotal),
                 ],
                 'expiry_alerts' => [
                     'expired' => $expiredItems,

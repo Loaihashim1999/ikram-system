@@ -177,7 +177,45 @@ The setup controller rechecks eligibility inside the transaction, locks and atom
 
 Final verification for this feature: Laravel **63/63 tests, 325 assertions PASS**; Vitest **39/39 PASS**; ESLint **PASS with zero errors/warnings**; production Vite build **PASS**; isolated Playwright first-run workflow **7/7 checks PASS**; simultaneous two-process setup race **PASS (201/403, one user)**. A local Docker image build was **NOT TESTED** because Docker is not installed in this workspace. The same Dockerfile was subsequently built and deployed successfully by Render from commit `f5accbc`: production served the new `index-D3k9RdBK.js` asset, `GET /api/setup-admin/status` returned HTTP 200 with `setup_required: true`, and a non-creating weak-credential submission returned HTTP 422 with the expected email and strong-password validation errors. Production is therefore ready for the owner to complete the one-time administrator form.
 
-The browser CRUD test is deepest for Daily Beneficiaries. Other modules have authenticated page-load coverage plus controller/API persistence and authorization tests. This is an informational coverage note and no failing behavior remains in the executed QA scope.
+## PRODUCTION BUG REPAIR — 2026-09-14
+
+### BENEFICIARY REQUIRED DATA / FINANCIAL LOGIC / CLASSIFICATION
+
+- **Problem reproduced:** the backend accepted an incomplete profile, hidden financial amounts could still affect calculations, residents could receive citizen-only sources, and the details card omitted the authoritative result. **Severity: HIGH. Result: FIXED.**
+- **Root cause:** frontend visibility and backend calculation used different source assumptions; classification input remained client-influenceable; details rendered only a subset of stored financial values.
+- **Fix:** date of birth and applicable family/profile data are validated in both layers; explicit source selection controls both visibility and server calculation; residents accept salary/family support only; annual rent is divided by 12; the backend overwrites totals and classification; residents are always second degree; the details page displays selected sources, total income, annual/monthly rent, and prominent net income. Creation requests have a 30-second timeout and always clear loading state.
+- **Tests executed:** beneficiary PHPUnit/controller/service/model tests, financial Vitest tests, full Laravel suite, full frontend suite, ESLint, production build, and authenticated route test. **Actual/retest result: PASS.**
+
+### INVENTORY EXPIRY / NOTIFICATION CENTER
+
+- **Problem reproduced:** expiry presentation lacked a single boundary rule and notification scans could not distinguish near-expiry from expired records. **Severity: HIGH. Result: FIXED.**
+- **Fix:** API and UI now persist and expose `expiry_date`, `remaining_days`, and Arabic status. The implemented boundary is: expiry today or earlier = expired; 1 through configured threshold days (including exactly 5) = near expiry; later = valid; null = no expiry status. Separate item-linked internal notifications are deduplicated per scan date. Disabled notification accounts receive HTTP 403 and no bell; notification details remain open in a stable panel with an explicit mark-read action.
+- **Tests executed:** -1, 0, 1, 3, 5, 6 days and null; create/update/reopen persistence; two repeated scans; recipient/API restrictions; Notification Center Vitest desktop component behavior. **Actual/retest result: PASS.**
+
+### GOVERNANCE ANALYTICS
+
+- **Problem:** expiry and low-stock figures did not expose their records, and period consumption lacked item detail. **Severity: MEDIUM. Result: FIXED.**
+- **Fix:** expiry KPI cards now open exact record tables; low-stock records are returned with the KPI data; item-level main/daily outflow is grouped inside the selected period. `share_of_period_outflow` is explicitly the item's quantity divided by total outflow in that same warehouse and period.
+- **Tests executed:** current-period movements plus a movement one month outside the filter; low-stock record/count matching; five-day expiry drill-down. **Actual/retest result: PASS (7 assertions).**
+
+### AUTHORIZATION / DRIVER / QR / DOCUMENTS / DATA INTEGRITY
+
+- **Problems reproduced:** driver permission payloads could request unrelated modules; driver listing/task scope was too broad; delivery confirmation lacked a locked duplicate boundary; historical user foreign keys risked business-data loss; some representative/document relations were incomplete. **Severity: CRITICAL/HIGH. Result: FIXED.**
+- **Fix:** server-owned fixed driver permissions ignore injected permissions; driver UI hides the customizable matrix and uses a current-driver task endpoint; QR and manual input resolve the same stable `barcode_code`; delivery confirmation uses a transaction/row lock and returns 409 when repeated; drivers may open only assigned individual PDFs; account deletion revokes access while nulling actor foreign keys and preserving actor name/role/username in audit details. Current account and primary administrator deletion are denied.
+- **Database changes:** existing fresh-schema foreign keys and production upgrade migration use nullable `NULL ON DELETE` actor links for beneficiaries, distributions, inventory movements, and audit logs. SQLite tests skip unsupported named-key alteration and exercise the application deletion transaction directly.
+- **Tests executed:** forged driver permissions and module API requests; assigned/unassigned task and code verification; QR/manual equivalence; duplicate confirmation; generated PDF `%PDF` signature; account deletion with beneficiary, delivery, inventory movement and audit persistence/snapshot. **Actual/retest result: PASS (24 focused assertions).**
+
+### DATA PERSISTENCE / BROWSER CONSOLE AND NETWORK
+
+- Full Laravel: **72/72 PASS, 398 assertions**.
+- Full Vitest: **42/42 PASS**.
+- ESLint: **PASS, 0 errors and 0 warnings**.
+- Production Vite build: **PASS**; initial entry 285.27 kB minified / 91.25 kB gzip.
+- Authenticated isolated Playwright: **26 checks PASS, 0 errors**, including 21 administrative/module routes, real Daily Beneficiary create/edit/refresh/search/cancel-delete/delete, Notification Center, second-tab/session refresh, and Governance/Daily Beneficiaries at 390 px and 1440 px. Console, HTTP failures, cross-origin calls, failed promises, and dynamic imports were captured as failures.
+
+WhatsApp Business/Cloud API and a 24-hour run were excluded exactly as requested. No production business record was created, changed, or deleted during destructive tests.
+
+The browser CRUD test is deepest for Daily Beneficiaries. Other modules have authenticated page-load coverage plus controller/API persistence and authorization tests. No failing behavior remains in the executed scope.
 
 ## Delivery readiness
 

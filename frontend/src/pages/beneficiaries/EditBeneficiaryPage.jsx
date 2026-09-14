@@ -60,6 +60,7 @@ export default function EditBeneficiaryPage() {
     status: "active",
     priority: "first_class",
     monthly_rent_amount: "",
+    income_sources: [],
   });
 
   const [dependents, setDependents] = useState([]);
@@ -97,7 +98,12 @@ export default function EditBeneficiaryPage() {
           family_support: b.family_support || "",
           status: b.status || "active",
           priority: b.priority || "first_class",
-          monthly_rent_amount: b.monthly_rent_amount || (b.annual_rent_amount ? Math.round(b.annual_rent_amount / 12) : ""),
+          monthly_rent_amount: b.monthly_rent || (b.annual_rent_amount ? Math.round(b.annual_rent_amount / 12) : ""),
+          income_sources: Array.isArray(b.income_sources) ? b.income_sources : [
+            b.monthly_salary > 0 && "salary", b.social_security_amount > 0 && "social_security",
+            b.citizen_account_amount > 0 && "citizen_account", b.retirement_pension > 0 && "retirement",
+            b.family_support > 0 && "family_support",
+          ].filter(Boolean),
         });
 
         // Load dependents if exists
@@ -162,6 +168,14 @@ export default function EditBeneficiaryPage() {
     }
   };
 
+  const toggleIncome = (source) => {
+    const fields = { salary: "monthly_salary", social_security: "social_security_amount", citizen_account: "citizen_account_amount", retirement: "retirement_pension", family_support: "family_support" };
+    setForm((current) => {
+      const removing = current.income_sources.includes(source);
+      return { ...current, income_sources: removing ? current.income_sources.filter((item) => item !== source) : [...current.income_sources, source], ...(removing ? { [fields[source]]: "" } : {}) };
+    });
+  };
+
   // Dependents Handlers
   const addDependent = () => {
     const updated = [...dependents, { ...INITIAL_DEPENDENT }];
@@ -190,6 +204,7 @@ export default function EditBeneficiaryPage() {
       citizenAccountAmount: form.citizen_account_amount,
       retirementPension: form.retirement_pension,
       familySupport: form.family_support,
+      selectedIncomeSources: form.income_sources,
       housingType: form.housing_type,
       annualRentAmount: form.annual_rent_amount,
       monthlyRentAmount: form.monthly_rent_amount,
@@ -530,35 +545,15 @@ export default function EditBeneficiaryPage() {
                 </button>
               </div>
 
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(form.beneficiary_type === "resident" ? [["salary", "راتب شهري"], ["family_support", "دعم الأسرة"]] : [["salary", "راتب شهري"], ["social_security", "ضمان اجتماعي"], ["citizen_account", "حساب المواطن"], ["retirement", "معاش تقاعدي"], ["family_support", "دعم الأسرة"]]).map(([source, label]) => (
+                  <button key={source} type="button" onClick={() => toggleIncome(source)} className={`px-3 py-2 rounded-xl border text-xs font-bold ${form.income_sources.includes(source) ? "bg-amber-600 text-white" : "bg-white"}`}>{label}</button>
+                ))}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div>
-                  <label className={labelCls}>الحالة الاجتماعية</label>
-                  <select
-                    name="family_status"
-                    value={form.family_status}
-                    onChange={handleChange}
-                    className={inputCls}
-                  >
-                    <option value="">-- اختر الحالة الاجتماعية --</option>
-                    {FAMILY_STATUS_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelCls}>نوع السكن</label>
-                  <select
-                    name="housing_type"
-                    value={form.housing_type}
-                    onChange={handleChange}
-                    className={inputCls}
-                  >
-                    <option value="rent">سكن مؤجر (إيجار)</option>
-                    <option value="own">سكن ملك خاص</option>
-                  </select>
-                </div>
-
+                {[["salary", "monthly_salary", "الراتب الشهري"], ["social_security", "social_security_amount", "الضمان الاجتماعي"], ["citizen_account", "citizen_account_amount", "حساب المواطن"], ["retirement", "retirement_pension", "المعاش التقاعدي"], ["family_support", "family_support", "دعم الأسرة والأقارب"]].map(([source, field, label]) => form.income_sources.includes(source) && (
+                  <div key={source}><label className={labelCls}>{label} (ريال)</label><input type="number" min="0" name={field} value={form[field]} onChange={handleChange} placeholder="0" className={inputCls + " font-mono font-bold"} /></div>
+                ))}
                 {form.housing_type === "rent" && (
                   <>
                     <div>
@@ -596,17 +591,7 @@ export default function EditBeneficiaryPage() {
 
                 <div>
                   <label className={labelCls}>تصنيف الدرجة الفئوية</label>
-                  <select
-                    name="priority"
-                    value={form.priority}
-                    onChange={handleChange}
-                    className={inputCls + " font-extrabold text-amber-900"}
-                  >
-                    <option value="first_class">درجة أولى (أولوية قصوى)</option>
-                    <option value="second_class">درجة ثانية (أولوية متوسطة)</option>
-                    <option value="special_needs">ذوو الاحتياجات الخاصة (الإعاقة)</option>
-                    <option value="elderly">كبار السن والطاعنين في السن</option>
-                  </select>
+                  <div className={inputCls + " font-extrabold text-amber-900 bg-gray-50"}>{calcResult.categoryLabel}</div>
                 </div>
 
                 <div className="flex items-center gap-2 pt-6">
