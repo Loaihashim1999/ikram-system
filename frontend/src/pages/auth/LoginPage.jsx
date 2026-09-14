@@ -64,6 +64,15 @@ export default function LoginPage() {
 
       navigate('/dashboard');
     } else {
+      if (result.status === 429) {
+        const waitSeconds = Number.parseInt(result.retryAfter, 10);
+        const waitMessage = Number.isFinite(waitSeconds)
+          ? ` انتظر ${waitSeconds} ثانية قبل المحاولة.`
+          : ' انتظر دقيقة قبل المحاولة.';
+        setError(`تم تجاوز عدد محاولات تسجيل الدخول المسموحة.${waitMessage}`);
+        return;
+      }
+
       // إذا كان المستخدم هو المشرف العام، لا يتم زيادة العداد ولا قفل الحساب
       if (isAdmin) {
         setError('اسم المستخدم أو كلمة المرور غير صحيحة. يرجى التحقق وإعادة المحاولة.');

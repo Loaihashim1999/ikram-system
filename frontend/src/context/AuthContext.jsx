@@ -29,7 +29,9 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return { 
         success: false, 
-        message: error.response?.data?.message || 'حدث خطأ أثناء تسجيل الدخول' 
+        message: error.response?.data?.message || 'حدث خطأ أثناء تسجيل الدخول',
+        status: error.response?.status,
+        retryAfter: error.response?.headers?.['retry-after'],
       };
     }
   };
