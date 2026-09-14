@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, User, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
@@ -182,6 +182,7 @@ export default function LoginPage() {
               'تسجيل الدخول الآمن'
             )}
           </button>
+          <Link to="/forgot-password" className="block text-center text-xs font-bold text-[#356137] hover:underline">نسيت كلمة المرور؟</Link>
         </form>
 
         <div className="mt-4 flex justify-center">

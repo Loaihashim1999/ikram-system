@@ -1,10 +1,14 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import api from './api/axios';
 
 import ErrorButton from './components/ErrorButton';
 
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
+const FirstAdminSetupPage = lazy(() => import('./pages/auth/FirstAdminSetupPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AddBeneficiaryPage = lazy(() => import('./pages/beneficiaries/AddBeneficiaryPage'));
 const BeneficiaryList = lazy(() => import('./pages/beneficiaries/BeneficiaryList'));
@@ -52,12 +56,19 @@ function Guard({ element, allowedRoles = [] }) {
 
 function App() {
   const { user: authUser, loading } = useAuth();
+  const [setupRequired, setSetupRequired] = useState(null);
+
+  useEffect(() => {
+    api.get('/setup-admin/status')
+      .then(({ data }) => setSetupRequired(Boolean(data.data?.setup_required)))
+      .catch(() => setSetupRequired(false));
+  }, []);
 
   const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
   const user = authUser || (savedUser.id ? savedUser : null);
   const role = user?.role || 'admin';
 
-  if (loading) {
+  if (loading || setupRequired === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F5F0]">
         <div className="w-12 h-12 border-4 border-[#C9A24A] border-t-transparent rounded-full animate-spin" />
@@ -76,8 +87,12 @@ function App() {
     <>
     <Suspense fallback={<RouteFallback />}>
     <Routes>
+      <Route path="/setup-admin" element={setupRequired ? <FirstAdminSetupPage onComplete={() => setSetupRequired(false)} /> : <Navigate to="/login" replace />} />
+      {setupRequired ? <Route path="*" element={<Navigate to="/setup-admin" replace />} /> : <>
       {/* Auth */}
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={getHomePath()} replace />} />
+      <Route path="/forgot-password" element={!user ? <ForgotPasswordPage /> : <Navigate to={getHomePath()} replace />} />
+      <Route path="/reset-password/:token" element={!user ? <ResetPasswordPage /> : <Navigate to={getHomePath()} replace />} />
 
       {/* Dashboard */}
       <Route path="/dashboard" element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly']} element={<Dashboard />} />} />
@@ -137,6 +152,7 @@ function App() {
 
       {/* Default Fallback */}
       <Route path="*" element={<Navigate to={user ? getHomePath() : "/login"} replace />} />
+      </>}
     </Routes>
     </Suspense>
     {import.meta.env.DEV && <ErrorButton />}

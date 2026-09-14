@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Distribution;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -16,8 +17,11 @@ class DistributionControllerTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected Category $category;
+
     protected Basket $basket;
+
     protected Beneficiary $beneficiary;
 
     protected function setUp(): void
@@ -27,7 +31,7 @@ class DistributionControllerTest extends TestCase
         $this->user = User::create([
             'username' => 'distributor_user',
             'full_name' => 'مسؤول التوزيع',
-            'password' => bcrypt('password123'),
+            'password' => Hash::make('password123'),
             'role' => 'admin',
             'is_active' => true,
         ]);

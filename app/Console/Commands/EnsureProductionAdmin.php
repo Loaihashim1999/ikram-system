@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class EnsureProductionAdmin extends Command
 {
@@ -42,6 +43,11 @@ class EnsureProductionAdmin extends Command
             'permissions' => [],
             'is_active' => true,
             'can_receive_notifications' => true,
+        ]);
+
+        DB::table('system_initializations')->where('key', 'first_admin')->update([
+            'completed_at' => now(),
+            'updated_at' => now(),
         ]);
 
         $this->info("Administrator '{$username}' was created.");

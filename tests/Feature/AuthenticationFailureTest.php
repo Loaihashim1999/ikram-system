@@ -2,13 +2,20 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
 
 class AuthenticationFailureTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        User::factory()->create(['role' => 'admin', 'is_active' => true]);
+    }
 
     public function test_it_fails_when_user_not_found(): void
     {
@@ -24,7 +31,7 @@ class AuthenticationFailureTest extends TestCase
     {
         $user = User::factory()->create([
             'username' => 'john',
-            'password' => bcrypt('correct'),
+            'password' => Hash::make('correct'),
         ]);
         $response = $this->postJson('/api/login', [
             'username' => 'john',
@@ -37,7 +44,7 @@ class AuthenticationFailureTest extends TestCase
     {
         $user = User::factory()->create([
             'username' => 'jane',
-            'password' => bcrypt('secret'),
+            'password' => Hash::make('secret'),
             'is_active' => false,
         ]);
         $response = $this->postJson('/api/login', [
@@ -47,4 +54,3 @@ class AuthenticationFailureTest extends TestCase
         $response->assertStatus(422);
     }
 }
-?>

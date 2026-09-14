@@ -42,6 +42,7 @@ class AuthTest extends TestCase
 
     public function test_login_fails_with_invalid_credentials(): void
     {
+        User::factory()->create(['role' => 'admin', 'is_active' => true]);
         User::create([
             'username' => 'test_user',
             'full_name' => 'مستخدم تجريبي',
@@ -61,6 +62,7 @@ class AuthTest extends TestCase
 
     public function test_login_fails_for_inactive_user(): void
     {
+        User::factory()->create(['role' => 'admin', 'is_active' => true]);
         User::create([
             'username' => 'disabled_user',
             'full_name' => 'حساب معطل',

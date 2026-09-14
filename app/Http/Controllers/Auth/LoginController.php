@@ -17,6 +17,14 @@ class LoginController extends Controller
      */
     public function login(Request $request)
     {
+        if (! User::query()->where('role', 'admin')->where('is_active', true)->exists()) {
+            return response()->json([
+                'success' => false,
+                'code' => 'SETUP_REQUIRED',
+                'message' => 'يلزم إعداد حساب المشرف الأول قبل تسجيل الدخول.',
+            ], 409);
+        }
+
         // التحقق من المدخلات
         $request->validate([
             'username' => 'required|string',
@@ -30,7 +38,7 @@ class LoginController extends Controller
             ->orWhereRaw('LOWER(email) = ?', [strtolower($loginInput)])
             ->first();
 
-        // التحقق من وجود المستخدم 
+        // التحقق من وجود المستخدم
         if (! $user) {
             throw ValidationException::withMessages([
                 'username' => ['اسم المستخدم أو البريد الإلكتروني غير موجود'],

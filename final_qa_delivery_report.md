@@ -154,6 +154,29 @@ Verification after splitting: production build PASS with no large-chunk warning;
 
 ## Remaining observations
 
+## FIRST ADMIN INITIALIZATION SECURITY
+
+| Control | Result | Executed evidence |
+|---|---|---|
+| Database-backed initialization state | PASS | Fresh isolated migrations created the singleton `first_admin` state and reported setup required. |
+| `/setup-admin` frontend route | PASS | Playwright opened a fresh isolated installation at `/login` and observed the redirect to the Arabic RTL setup form on a 390×844 viewport. |
+| Backend setup guard | PASS | Direct second POST returned 403; clearing browser state cannot alter the database flag. |
+| Administrator role and fields | PASS | The submitted name, normalized username/email, active state, notification eligibility, and existing `admin` role were asserted. |
+| Password storage | PASS | Plaintext differed from storage, the stored value began with `$argon2id$`, `Hash::check` accepted the correct password and rejected a wrong password. |
+| Password validation | PASS | Backend required confirmation, 12+ characters, mixed case, numbers, and symbols; weak input returned 422 without creating a user. |
+| Concurrent setup protection | PASS | Two simultaneous POSTs were sent through separate PHP server processes against one isolated SQLite database: responses were 201 and 403, with exactly one user created. |
+| Public registration paths | PASS | Route audit found no public registration/create-admin route; authenticated `/api/users` management remains behind Sanctum and module authorization. |
+| Login before setup | PASS | Direct login returned 409 with `SETUP_REQUIRED`; the browser displayed setup instead of login. |
+| Login after setup | PASS | Playwright reached login after creation, authenticated the new administrator, loaded Dashboard, and retained the closed setup state after reload. |
+| Password recovery before setup | PASS | Forgot/reset endpoints returned 409 and sent no recovery notification. |
+| Password recovery after setup | PASS | A registered administrator received Laravel's reset notification, reset with a strong confirmed password, revoked existing Sanctum tokens, and logged in with the new password. Unknown email received a generic response. |
+| Audit event | PASS | `FIRST_ADMIN_INITIALIZED` was persisted without a password, hash, token, or mail secret. |
+| Browser Console/Network | PASS | The isolated Playwright flow completed 7 checks with zero page exceptions or HTTP 5xx responses; mobile setup and desktop dashboard screenshots were captured. |
+
+The setup controller rechecks eligibility inside the transaction, locks and atomically claims the persistent singleton row before inserting, and records completion in the same commit. The frontend state only controls routing and presentation; direct API authorization is enforced by the database. Production secrets remain environment-driven, and the previous `admin123` repository fallback was removed. Password recovery uses Laravel's time-limited broker token rather than transmitting a password by URL, log, API response, or browser console.
+
+Final verification for this feature: Laravel **63/63 tests, 325 assertions PASS**; Vitest **39/39 PASS**; ESLint **PASS with zero errors/warnings**; production Vite build **PASS**; isolated Playwright first-run workflow **7/7 checks PASS**; simultaneous two-process setup race **PASS (201/403, one user)**. A local Docker image build was **NOT TESTED** because Docker is not installed in this workspace; the production Dockerfile now contains a deterministic Node 22 build stage so Render builds frontend assets from the same commit as Laravel.
+
 The browser CRUD test is deepest for Daily Beneficiaries. Other modules have authenticated page-load coverage plus controller/API persistence and authorization tests. This is an informational coverage note and no failing behavior remains in the executed QA scope.
 
 ## Delivery readiness

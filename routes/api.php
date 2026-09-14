@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\Auth\FirstAdminSetupController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\Auth\PasswordRecoveryController;
 use App\Http\Controllers\Beneficiaries\BeneficiaryController;
 use App\Http\Controllers\Beneficiaries\CategoryController;
 use App\Http\Controllers\DailyBeneficiaryController;
@@ -12,11 +14,14 @@ use App\Http\Controllers\DailyReceivingController;
 use App\Http\Controllers\DistributionController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\NeighborhoodRepController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PdfExportController;
 use App\Http\Controllers\ReceiverController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SmartImportController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\UserController;
+use App\Http\Middleware\ModulePermission;
 use Illuminate\Support\Facades\Route;
 
 // ─── المصادقة والتنزيلات العامة ──────────────────────────────────────────
@@ -24,36 +29,38 @@ Route::get('/', function () {
     return response()->json([
         'status' => 'online',
         'message' => 'Ikram System API Server is running',
-        'version' => '1.0.0'
+        'version' => '1.0.0',
     ]);
 });
 Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:6,1')->name('login');
+Route::get('/setup-admin/status', [FirstAdminSetupController::class, 'status'])->middleware('throttle:30,1');
+Route::post('/setup-admin', [FirstAdminSetupController::class, 'store'])->middleware('throttle:5,1');
+Route::post('/forgot-password', [PasswordRecoveryController::class, 'forgot'])->middleware('throttle:3,1');
+Route::post('/reset-password', [PasswordRecoveryController::class, 'reset'])->middleware('throttle:5,1');
 
 // ─── المسارات المحمية ──────────────────────────────────────────────────────
-Route::middleware(['auth:sanctum', \App\Http\Middleware\ModulePermission::class])->group(function () {
-// تصدير PDF العام وتنزيل الشيتات
-Route::get('/documents/individual-receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
-Route::get('/documents/receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
-Route::get('/documents/total-delivery/{id}/pdf', [PdfExportController::class, 'exportTotalDelivery']);
-Route::get('/documents/rep-receipt/{id}/pdf', [PdfExportController::class, 'exportRepresentativeReceipt']);
-Route::get('/documents/staff-receipt/{id}/pdf', [PdfExportController::class, 'exportStaffReceipt']);
-Route::get('/documents/daily-receiving/{id}/pdf', [PdfExportController::class, 'exportDailyReceivingVoucher']);
-Route::get('/reports/daily/pdf', [PdfExportController::class, 'exportDailyReport']);
-Route::get('/reports/comprehensive/excel', [PdfExportController::class, 'exportComprehensiveExcel']);
-Route::get('/reports/comprehensive/pdf', [PdfExportController::class, 'exportWeeklyComprehensiveReport']);
-Route::get('/neighborhood-reps/{id}/export-excel', [NeighborhoodRepController::class, 'exportLinkedBeneficiariesExcel']);
-
-
+Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () {
+    // تصدير PDF العام وتنزيل الشيتات
+    Route::get('/documents/individual-receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
+    Route::get('/documents/receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
+    Route::get('/documents/total-delivery/{id}/pdf', [PdfExportController::class, 'exportTotalDelivery']);
+    Route::get('/documents/rep-receipt/{id}/pdf', [PdfExportController::class, 'exportRepresentativeReceipt']);
+    Route::get('/documents/staff-receipt/{id}/pdf', [PdfExportController::class, 'exportStaffReceipt']);
+    Route::get('/documents/daily-receiving/{id}/pdf', [PdfExportController::class, 'exportDailyReceivingVoucher']);
+    Route::get('/reports/daily/pdf', [PdfExportController::class, 'exportDailyReport']);
+    Route::get('/reports/comprehensive/excel', [PdfExportController::class, 'exportComprehensiveExcel']);
+    Route::get('/reports/comprehensive/pdf', [PdfExportController::class, 'exportWeeklyComprehensiveReport']);
+    Route::get('/neighborhood-reps/{id}/export-excel', [NeighborhoodRepController::class, 'exportLinkedBeneficiariesExcel']);
 
     // المصادقة
     Route::get('/me', [LoginController::class, 'me']);
     Route::post('/logout', [LogoutController::class, 'logout']);
 
     // ── إشعارات المستفيدين ──────────────────────────────────────────────────────
-    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'index']);
-    Route::get('/notifications/unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount']);
-    Route::post('/notifications/{id}/mark-as-read', [App\Http\Controllers\NotificationController::class, 'markAsRead']);
-    Route::post('/notifications/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllRead']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
 
     // ── المستفيدون ──────────────────────────────────────────────────────────
     Route::get('/beneficiaries/check-national-id/{nationalId}',
@@ -86,8 +93,8 @@ Route::get('/neighborhood-reps/{id}/export-excel', [NeighborhoodRepController::c
     Route::post('/staff/import', [StaffController::class, 'importExcel']);
     Route::apiResource('staff', StaffController::class);
 
-    Route::post('/smart-import/{entity}/preview', [App\Http\Controllers\SmartImportController::class, 'preview']);
-    Route::post('/smart-import/{entity}', [App\Http\Controllers\SmartImportController::class, 'store']);
+    Route::post('/smart-import/{entity}/preview', [SmartImportController::class, 'preview']);
+    Route::post('/smart-import/{entity}', [SmartImportController::class, 'store']);
 
     // تابعون للموظف
     Route::post('/staff/{staff}/dependents', [StaffController::class, 'storeDependent']);

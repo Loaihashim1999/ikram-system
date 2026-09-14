@@ -1,3 +1,11 @@
+FROM node:22-alpine AS frontend-build
+
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 FROM php:8.3-fpm-alpine
 
 # Install system dependencies & PHP extensions
@@ -24,6 +32,9 @@ WORKDIR /var/www/html
 
 # Copy application code
 COPY . .
+
+# Always deploy frontend assets built from the same commit as the backend.
+COPY --from=frontend-build /app/public /var/www/html/public
 
 # Install PHP dependencies
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
