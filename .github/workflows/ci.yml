@@ -33,7 +33,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, dom, fileinfo, sqlite3, pdo_sqlite, gd, zip, xml
+          extensions: bcmath, dom, fileinfo, gd, intl, mbstring, pdo_sqlite, sqlite3, xml, zip
 
       - name: Setup Node.js Environment
         uses: actions/setup-node@v4
