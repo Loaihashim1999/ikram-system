@@ -1,4 +1,4 @@
-name: GitOps Release & Automated Rollback
+name: CI verification
 
 on:
   push:
@@ -6,78 +6,69 @@ on:
   release:
     types: [published]
 
-permissions: write-all
+permissions:
+  contents: read
 
 jobs:
-  release:
-    name: Build, Verify & Deploy
+  verify:
+    name: Build and verify
     runs-on: ubuntu-latest
     env:
       DB_CONNECTION: sqlite
 
     steps:
-      - name: Checkout Code with full history
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Record Last Known Stable Git Commit
-        id: stable_commit
-        run: |
-          PREVIOUS_SHA=$(git log --skip=1 -n 1 --format="%H")
-          echo "PREVIOUS_SHA=$PREVIOUS_SHA" >> $GITHUB_ENV
-          echo "CURRENT_SHA=${{ github.sha }}" >> $GITHUB_ENV
-
-      - name: Setup PHP Environment
+      - name: Setup PHP environment
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, dom, fileinfo, sqlite3, pdo_sqlite, gd, zip, xml
+          extensions: bcmath, dom, fileinfo, gd, intl, mbstring, pdo_pgsql, pdo_sqlite, sqlite3, xml, zip
+          coverage: none
 
-      - name: Setup Node.js Environment
+      - name: Setup Node.js environment
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install Backend Dependencies
+      - name: Install backend dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
-      - name: Install Frontend Dependencies
+      - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Build Frontend Artifacts
+      - name: Build frontend artifacts
         working-directory: frontend
         run: npm run build
 
-      - name: Prepare Application Environment
+      - name: Prepare application environment
         run: |
           cp .env.example .env
           touch database/database.sqlite
           php artisan key:generate
           php artisan migrate --force
 
-      - name: Run Backend Test Suite (Laravel)
+      - name: Run backend test suite
         run: php artisan test
 
-      - name: Run Frontend Test Suite (Vitest)
+      - name: Run frontend test suite
         working-directory: frontend
         run: npm test
 
-      - name: Start Laravel Server (Background)
+      - name: Start Laravel server
         run: php artisan serve --port=8000 &
         env:
           APP_ENV: production
           APP_DEBUG: false
 
-      - name: Synthetic Health Check Simulation (/up endpoint)
+      - name: Health check
         run: |
           echo "Waiting for server to start..."
           sleep 5
-          # محاولة فحص الرابط 5 مرات لتجنب الفشل بسبب بطء التشغيل
           for i in {1..5}; do
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/up)
             if [ "$HTTP_STATUS" -eq 200 ]; then
@@ -90,38 +81,14 @@ jobs:
           echo "Health check failed after 5 attempts."
           exit 1
 
-      - name: Create Production Release Tag (GitOps)
-        if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      - name: Report verification failure
+        if: failure()
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          TAG_NAME="release-${CURRENT_SHA:0:7}-$(date +'%Y%m%d%H%M%S')"
-          git tag $TAG_NAME
-          git push origin $TAG_NAME
-
-      - name: Automated Rollback on Failure
-        if: failure() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        run: |
-          echo "::error::[AUTOMATED ROLLBACK ACTIVATED] Build verification or health check failed!"
-          echo "=========================================================="
-          echo "  FATAL: Release verification failed for commit $CURRENT_SHA"
-          echo "  ACTION: Initiating automated rollback to previous stable commit $PREVIOUS_SHA"
-          echo "=========================================================="
-          
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # التراجع عن الالتزام (Commit) الذي تسبب في الكسر
-          if git show --no-patch --format="%p" $CURRENT_SHA | grep -q ' '; then
-            git revert --no-edit -m 1 $CURRENT_SHA
-          else
-            git revert --no-edit $CURRENT_SHA
-          fi
-          
-          git push origin HEAD:${{ github.ref_name }}
-          
-          echo "### ⚠️ Release Verification Failed - Automated Rollback Executed" >> $GITHUB_STEP_SUMMARY
-          echo "- **Failed Commit**: \`$CURRENT_SHA\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Rollback Target**: \`$PREVIOUS_SHA\`" >> $GITHUB_STEP_SUMMARY
-          
+          echo "::error::Verification failed for ${{ github.sha }}. The source branch was not modified."
+          {
+            echo "### Verification failed"
+            echo "- **Failed commit**: \`${{ github.sha }}\`"
+            echo "- **Previous commit**: \`${{ github.event.before }}\`"
+            echo "- **Status**: The workflow failed. \`main\` was not changed."
+          } >> "$GITHUB_STEP_SUMMARY"
           exit 1

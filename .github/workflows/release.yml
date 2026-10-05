@@ -1,4 +1,4 @@
-name: GitOps Release & Automated Rollback
+name: Release verification
 
 on:
   push:
@@ -7,13 +7,11 @@ on:
       - 'v*.*.*'
 
 permissions:
-  contents: write
-  deployments: write
-  statuses: write
+  contents: read
 
 jobs:
   verify-and-deploy:
-    name: Build Verification & Deployment
+    name: Build and verify
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Code
@@ -28,13 +26,13 @@ jobs:
           CURRENT_SHA="${{ github.sha }}"
           echo "previous_sha=$PREVIOUS_SHA" >> $GITHUB_OUTPUT
           echo "current_sha=$CURRENT_SHA" >> $GITHUB_OUTPUT
-          echo "Deploying commit: $CURRENT_SHA (Previous stable: $PREVIOUS_SHA)"
+          echo "Verifying commit: $CURRENT_SHA (Previous commit: $PREVIOUS_SHA)"
 
       - name: Setup PHP Environment
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, dom, fileinfo, sqlite3, pdo_sqlite, gd, pdo_pgsql, pgsql, zip, xml
+          extensions: bcmath, dom, fileinfo, gd, intl, mbstring, pdo_pgsql, pdo_sqlite, pgsql, sqlite3, xml, zip
           coverage: none
 
       - name: Setup Node.js Environment
@@ -61,6 +59,9 @@ jobs:
           echo "Running Full Test Suite..."
           php artisan migrate --force
           php artisan test
+
+          echo "Running frontend tests..."
+          cd frontend && npm test && cd ..
           
           echo "Verifying Laravel Optimization & Cache..."
           php artisan config:cache
@@ -84,32 +85,17 @@ jobs:
           fi
           echo "Health check PASSED (HTTP 200 OK)"
 
-      - name: Create Production Release Tag (GitOps)
-        if: success() && startsWith(github.ref, 'refs/tags/v')
-        run: |
-          echo "Release verified successfully! Deployment complete for ${{ github.ref_name }}"
-
-      # --- AUTOMATED ROLLBACK ENGINE ---
-      - name: Automated Rollback on Failure
+      - name: Report verification failure
         if: failure()
         env:
           PREVIOUS_SHA: ${{ steps.git_state.outputs.previous_sha }}
           CURRENT_SHA: ${{ steps.git_state.outputs.current_sha }}
         run: |
-          echo "::error::[AUTOMATED ROLLBACK ACTIVATED] Build verification or health check failed!"
-          echo "=========================================================="
-          echo "  FATAL: Release verification failed for commit $CURRENT_SHA"
-          echo "  ACTION: Initiating automated rollback to previous stable commit $PREVIOUS_SHA"
-          echo "=========================================================="
-          
-          # GitOps Rollback Tagging & State Reset Notice
-          git tag -f release-failed-${CURRENT_SHA:0:7} || true
-          echo "Rolled back release candidate state to $PREVIOUS_SHA."
-          
-          # Create rollback summary notice in GitHub Actions
-          echo "### ⚠️ Release Verification Failed - Automated Rollback Executed" >> $GITHUB_STEP_SUMMARY
-          echo "- **Failed Commit**: \`$CURRENT_SHA\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Rollback Target**: \`$PREVIOUS_SHA\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: Application successfully rolled back to last known green release." >> $GITHUB_STEP_SUMMARY
-          
+          echo "::error::Verification failed for $CURRENT_SHA. The source branch was not modified and Azure was not changed."
+          {
+            echo "### Verification failed"
+            echo "- **Failed commit**: \`$CURRENT_SHA\`"
+            echo "- **Previous commit**: \`$PREVIOUS_SHA\`"
+            echo "- **Status**: The workflow failed. \`main\` was not changed. Azure was not rolled back because this workflow does not deploy."
+          } >> "$GITHUB_STEP_SUMMARY"
           exit 1
