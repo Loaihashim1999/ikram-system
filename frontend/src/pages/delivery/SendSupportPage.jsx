@@ -3,20 +3,20 @@ import beneficiaryApi from "../../api/beneficiaries";
 import distributionApi from "../../api/distributions";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
-import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
+import HistoricalDistributionReferenceCard from "../../components/common/HistoricalDistributionReferenceCard";
 
 /* Inline QR / Barcode display component */
 const QrDisplay = ({ text }) => {
   const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(text)}`;
   return (
     <div className="flex flex-col items-center p-4 border rounded-2xl bg-white shadow-sm">
-      <div className="text-xs text-gray-500 font-bold mb-2">رمز الاستلام والـ QR المعتمد</div>
+      <div className="text-xs text-[var(--color-text-muted)] font-bold mb-2">رمز الاستلام والـ QR المعتمد</div>
       <img
         src={qrImgUrl}
         alt={`QR Code ${text}`}
-        className="w-36 h-36 border-2 border-amber-200 p-1.5 bg-white rounded-xl shadow-xs mb-3"
+        className="w-36 h-36 border-2 border-[var(--color-border)] p-1.5 bg-white rounded-xl shadow-xs mb-3"
       />
-      <div className="font-mono font-bold text-base tracking-widest text-amber-900 bg-amber-50 px-4 py-1.5 rounded-lg border border-amber-200">
+      <div className="font-mono font-bold text-base tracking-widest text-amber-900 bg-[var(--color-bg-soft)] px-4 py-1.5 rounded-lg border border-[var(--color-border)]">
         {text}
       </div>
     </div>
@@ -104,9 +104,9 @@ export default function SendSupportPage() {
   };
 
   const cls = {
-    card: "bg-white rounded-2xl shadow-md p-6 mb-5 border border-gray-100",
-    label: "block text-sm font-semibold text-gray-700 mb-1",
-    input: "w-full rounded-xl border border-gray-300 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400 text-right text-sm",
+    card: "bg-white rounded-2xl shadow-md p-6 mb-5 border border-[var(--color-border)]",
+    label: "block text-sm font-semibold text-[var(--color-text-secondary)] mb-1",
+    input: "w-full rounded-xl border border-[var(--color-border)] px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-gold)] text-right text-sm",
     btn: "px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm",
   };
 
@@ -116,10 +116,10 @@ export default function SendSupportPage() {
       {/* Title */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
             <span>📦</span> صفحة تقديم وإرسال الدعم
           </h1>
-          <p className="text-xs text-gray-500 mt-1">تحديد المستفيدين وتخصيص السلال الغذائية وإصدار رموز الاستلام</p>
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">تحديد المستفيدين وتخصيص السلال الغذائية وإصدار رموز الاستلام</p>
         </div>
       </div>
 
@@ -131,10 +131,10 @@ export default function SendSupportPage() {
               <div
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                   i === step
-                    ? "bg-amber-600 text-white shadow-md scale-105"
+                    ? "bg-[var(--color-brand-green)] text-white shadow-md scale-105"
                     : i < step
                     ? "bg-green-100 text-green-700 border border-green-200"
-                    : "bg-gray-100 text-gray-500"
+                    : "bg-[var(--color-bg-soft)] text-[var(--color-text-muted)]"
                 }`}
               >
                 <span className="w-5 h-5 rounded-full bg-white/30 flex items-center justify-center text-xs">
@@ -142,7 +142,7 @@ export default function SendSupportPage() {
                 </span>
                 {s}
               </div>
-              {i < STEPS.length - 1 && <div className="w-6 h-0.5 bg-gray-200 mx-1" />}
+              {i < STEPS.length - 1 && <div className="w-6 h-0.5 bg-[var(--color-bg-soft)] mx-1" />}
             </div>
           ))}
         </div>
@@ -176,16 +176,16 @@ export default function SendSupportPage() {
             </select>
           </div>
 
-          <div className="overflow-x-auto max-h-96 overflow-y-auto border border-gray-200 rounded-xl">
+          <div className="overflow-x-auto max-h-96 overflow-y-auto border border-[var(--color-border)] rounded-xl">
             <table className="w-full text-xs text-right">
-              <thead className="bg-amber-50/70 text-amber-900 sticky top-0 border-b">
+              <thead className="bg-[var(--color-bg-soft)]/70 text-amber-900 sticky top-0 border-b">
                 <tr>
                   <th className="p-3">
                     <input
                       type="checkbox"
                       checked={selected.size === filteredBeneficiaries.length && filteredBeneficiaries.length > 0}
                       onChange={toggleAll}
-                      className="rounded text-amber-600 focus:ring-amber-500 w-4 h-4"
+                      className="rounded text-amber-600 focus:ring-[var(--color-brand-gold)] w-4 h-4"
                     />
                   </th>
                   <th className="p-3 font-bold">الاسم الكامل</th>
@@ -201,7 +201,7 @@ export default function SendSupportPage() {
                     key={b.id}
                     onClick={() => toggleSelect(b.id)}
                     className={`border-b cursor-pointer transition-colors ${
-                      selected.has(b.id) ? "bg-amber-50 font-semibold" : "hover:bg-gray-50"
+                      selected.has(b.id) ? "bg-[var(--color-bg-soft)] font-semibold" : "hover:bg-[var(--color-bg-soft)]"
                     }`}
                   >
                     <td className="p-3">
@@ -209,13 +209,13 @@ export default function SendSupportPage() {
                         type="checkbox"
                         checked={selected.has(b.id)}
                         readOnly
-                        className="rounded text-amber-600 focus:ring-amber-500 w-4 h-4"
+                        className="rounded text-amber-600 focus:ring-[var(--color-brand-gold)] w-4 h-4"
                       />
                     </td>
-                    <td className="p-3 text-gray-800">{b.full_name || b.name}</td>
-                    <td className="p-3 text-gray-600">{b.national_id}</td>
-                    <td className="p-3 text-gray-600">{b.family_status || "—"}</td>
-                    <td className="p-3 text-gray-600">{b.city ? `${b.city} - ${b.district || ''}` : "—"}</td>
+                    <td className="p-3 text-[var(--color-text-primary)]">{b.full_name || b.name}</td>
+                    <td className="p-3 text-[var(--color-text-muted)]">{b.national_id}</td>
+                    <td className="p-3 text-[var(--color-text-muted)]">{b.family_status || "—"}</td>
+                    <td className="p-3 text-[var(--color-text-muted)]">{b.city ? `${b.city} - ${b.district || ''}` : "—"}</td>
                     <td className="p-3">
                       <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${b.beneficiary_type === 'citizen' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                         {b.beneficiary_type === "citizen" ? "مواطن" : "مقيم"}
@@ -225,13 +225,13 @@ export default function SendSupportPage() {
                 ))}
                 {filteredBeneficiaries.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-gray-400">لا توجد نتائج مطابقة للشروط</td>
+                    <td colSpan={6} className="p-8 text-center text-[var(--color-text-muted)]">لا توجد نتائج مطابقة للشروط</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-          <div className="mt-3 flex justify-between items-center text-xs text-gray-500">
+          <div className="mt-3 flex justify-between items-center text-xs text-[var(--color-text-muted)]">
             <span>تم تحديد <strong>{selected.size}</strong> مستفيد من أصل {filteredBeneficiaries.length}</span>
           </div>
         </div>
@@ -251,14 +251,14 @@ export default function SendSupportPage() {
                 onClick={() => setBasketId(b.id)}
                 className={`p-5 rounded-2xl border-2 text-right transition-all cursor-pointer ${
                   basketId === b.id
-                    ? "border-amber-500 bg-amber-50/70 shadow-md"
-                    : "border-gray-200 hover:border-amber-300 bg-white"
+                    ? "border-amber-500 bg-[var(--color-bg-soft)]/70 shadow-md"
+                    : "border-[var(--color-border)] hover:border-[var(--color-brand-gold)] bg-white"
                 }`}
               >
-                <div className="font-bold text-gray-800 text-base mb-1">{b.name}</div>
-                <div className="text-xs text-gray-500 mb-3">{b.description || "سلة دعم مخصصة للمستفيدين"}</div>
+                <div className="font-bold text-[var(--color-text-primary)] text-base mb-1">{b.name}</div>
+                <div className="text-xs text-[var(--color-text-muted)] mb-3">{b.description || "سلة دعم مخصصة للمستفيدين"}</div>
                 <div className="flex justify-between items-center text-xs border-t pt-2 mt-2">
-                  <span className="text-gray-600">الكمية المتوفرة:</span>
+                  <span className="text-[var(--color-text-muted)]">الكمية المتوفرة:</span>
                   <span className={`font-bold text-sm ${ (b.quantity ?? b.stock_quantity ?? 0) < selected.size ? "text-red-600" : "text-green-600"}`}>
                     {b.quantity ?? b.stock_quantity ?? 0} وحدة
                   </span>
@@ -266,7 +266,7 @@ export default function SendSupportPage() {
               </button>
             ))}
             {baskets.length === 0 && (
-              <p className="text-gray-400 col-span-3 text-center py-6">لا توجد مواد سلال مسجلة في المستودع</p>
+              <p className="text-[var(--color-text-muted)] col-span-3 text-center py-6">لا توجد مواد سلال مسجلة في المستودع</p>
             )}
           </div>
           {selectedBasket && (selectedBasket.quantity ?? selectedBasket.stock_quantity ?? 0) < selected.size && (
@@ -315,26 +315,26 @@ export default function SendSupportPage() {
             <span>📋</span> الخطوة 4: مراجعة وتأكيد إرسال الدعم
           </h2>
           <div className="grid md:grid-cols-3 gap-4 mb-6 text-center">
-            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4">
-              <div className="text-3xl font-bold text-amber-800">{selected.size}</div>
-              <div className="text-xs text-gray-600 mt-1">عدد المستفيدين المحددين</div>
+            <div className="bg-[var(--color-bg-soft)]/70 border border-[var(--color-border)] rounded-2xl p-4">
+              <div className="text-3xl font-bold text-[var(--color-text-secondary)]">{selected.size}</div>
+              <div className="text-xs text-[var(--color-text-muted)] mt-1">عدد المستفيدين المحددين</div>
             </div>
             <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
               <div className="text-base font-bold text-green-800">{selectedBasket?.name || "—"}</div>
-              <div className="text-xs text-gray-600 mt-1">نوع السلة المختارة</div>
+              <div className="text-xs text-[var(--color-text-muted)] mt-1">نوع السلة المختارة</div>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
               <div className="text-base font-bold text-blue-800">
                 {scheduledAt ? new Date(scheduledAt).toLocaleDateString("ar-SA") : "—"}
               </div>
-              <div className="text-xs text-gray-600 mt-1">موعد التوزيع</div>
+              <div className="text-xs text-[var(--color-text-muted)] mt-1">موعد التوزيع</div>
             </div>
           </div>
 
-          <h4 className="font-bold text-gray-700 text-xs mb-2">قائمة المستفيدين المشمولين في هذه الدفعة:</h4>
-          <div className="max-h-52 overflow-y-auto border border-gray-200 rounded-xl mb-3">
+          <h4 className="font-bold text-[var(--color-text-secondary)] text-xs mb-2">قائمة المستفيدين المشمولين في هذه الدفعة:</h4>
+          <div className="max-h-52 overflow-y-auto border border-[var(--color-border)] rounded-xl mb-3">
             <table className="w-full text-xs text-right">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-[var(--color-bg-soft)] border-b">
                 <tr>
                   <th className="p-2.5">#</th>
                   <th className="p-2.5">الاسم</th>
@@ -345,7 +345,7 @@ export default function SendSupportPage() {
               <tbody>
                 {selectedBeneficiaries.map((b, i) => (
                   <tr key={b.id} className="border-b">
-                    <td className="p-2.5 text-gray-400">{i + 1}</td>
+                    <td className="p-2.5 text-[var(--color-text-muted)]">{i + 1}</td>
                     <td className="p-2.5 font-medium">{b.full_name || b.name}</td>
                     <td className="p-2.5">{b.national_id}</td>
                     <td className="p-2.5">{b.phone}</td>
@@ -354,7 +354,7 @@ export default function SendSupportPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200">
+          <p className="text-xs text-[var(--color-text-secondary)] bg-[var(--color-bg-soft)] p-3 rounded-xl border border-[var(--color-border)]">
             ℹ️ بمجرد التأكيد: سيتم إنشاء أمر إرسال للدعم وتوليد رمز باركود لكل مستفيد وخصم الكمية تلقائياً من المستودع.
           </p>
         </div>
@@ -366,7 +366,7 @@ export default function SendSupportPage() {
           <div className="text-center mb-6">
             <div className="text-5xl mb-2">✅</div>
             <h2 className="text-xl font-bold text-green-800">{result.message}</h2>
-            <p className="text-xs text-gray-500 mt-1">تم تخصيص الدعم وتحديث رصيد المستودع بنجاح.</p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">تم تخصيص الدعم وتحديث رصيد المستودع بنجاح.</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(result.distributions || []).map((d) => {
@@ -389,7 +389,7 @@ export default function SendSupportPage() {
 
               return (
                 <div key={d.id} className="flex flex-col justify-between">
-                  <QrWhatsAppCard
+                  <HistoricalDistributionReferenceCard
                     text={code}
                     recipientName={b?.full_name || b?.name}
                     phone={b?.phone}
@@ -409,7 +409,7 @@ export default function SendSupportPage() {
                 setBasketId("");
                 setScheduledAt("");
               }}
-              className={cls.btn + " bg-amber-600 text-white hover:bg-amber-700"}
+              className={cls.btn + " bg-[var(--color-brand-green)] text-white hover:bg-[var(--color-brand-green-hover)]"}
             >
               إرسال دفعة دعم جديدة
             </button>
@@ -424,7 +424,7 @@ export default function SendSupportPage() {
             type="button"
             onClick={() => setStep((s) => Math.max(0, s - 1))}
             disabled={step === 0}
-            className={cls.btn + " bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40"}
+            className={cls.btn + " bg-[var(--color-bg-soft)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)] disabled:opacity-40"}
           >
             ← السابق
           </button>
@@ -437,7 +437,7 @@ export default function SendSupportPage() {
                 (step === 1 && !basketId) ||
                 (step === 2 && !scheduledAt)
               }
-              className={cls.btn + " bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-40"}
+              className={cls.btn + " bg-[var(--color-brand-green)] text-white hover:bg-[var(--color-brand-green-hover)] disabled:opacity-40"}
             >
               التالي →
             </button>
@@ -446,7 +446,7 @@ export default function SendSupportPage() {
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className={cls.btn + " bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"}
+              className={cls.btn + " bg-[var(--color-brand-green)] text-white hover:bg-[var(--color-brand-green-hover)] disabled:opacity-50"}
             >
               {submitting ? "⏳ جاري الاعتماد والتوزيع..." : "✅ تأكيد واعتماد الدعم"}
             </button>

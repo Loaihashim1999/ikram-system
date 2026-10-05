@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\DailyBeneficiary;
+use App\Models\DailyBeneficiaryDocument;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -23,7 +24,9 @@ class FullFunctionalQaTest extends TestCase
 
     public function test_daily_beneficiary_crud_filters_pagination_upload_and_soft_delete(): void
     {
-        Storage::fake('public');
+        $documentDisk = 'public';
+        Storage::fake($documentDisk);
+        $storage = Storage::disk($documentDisk);
         Sanctum::actingAs($this->admin());
         $category = Category::create(['name' => 'TEST_DAILY_CATEGORY']);
 
@@ -50,29 +53,79 @@ class FullFunctionalQaTest extends TestCase
             'full_name' => 'TEST_DAILY_UPDATED', 'national_id' => $record->national_id,
             'phone' => '0551234567', 'district' => 'TEST_UPDATED_DISTRICT',
             'category_id' => $category->id, 'status' => 'active', 'notes' => 'TEST_ARABIC_اختبار',
+            'nationality' => 'سعودي', 'reviewed_confirmation' => true,
         ])->assertOk()->assertJsonPath('data.notes', 'TEST_ARABIC_اختبار');
         $this->getJson('/api/daily-beneficiaries/'.$record->id)->assertOk()
             ->assertJsonPath('data.district', 'TEST_UPDATED_DISTRICT');
 
         $upload = $this->post('/api/daily-beneficiaries/'.$record->id.'/documents', [
             'document' => UploadedFile::fake()->image('TEST_ID.png', 100, 100),
-            'document_type' => 'identity', 'title' => 'TEST_IDENTITY',
+            'document_type' => 'identity',
         ])->assertCreated();
-        Storage::disk('public')->assertExists($upload->json('data.file_path'));
-        $firstPath = $upload->json('data.file_path');
+        $upload->assertJsonMissingPath('data.file_path');
+        $firstDocument = DailyBeneficiaryDocument::findOrFail($upload->json('data.id'));
+        $firstPath = $firstDocument->getRawOriginal('file_path');
+        $this->assertSame('TEST_ID.png', $firstDocument->file_name);
+        $firstResponseJson = json_encode($upload->json('data'), JSON_THROW_ON_ERROR);
+        $this->assertStringNotContainsString('/storage/', $firstResponseJson);
+        $this->assertStringNotContainsString('private.blob.example', $firstResponseJson);
+        $this->assertStringNotContainsString($firstPath, $firstResponseJson);
+        $storage->assertExists($firstPath);
+
         $duplicateName = $this->post('/api/daily-beneficiaries/'.$record->id.'/documents', [
             'document' => UploadedFile::fake()->image('TEST_ID.png', 100, 100),
-            'document_type' => 'identity', 'title' => 'TEST_IDENTITY_DUPLICATE_NAME',
+            'document_type' => 'identity',
         ])->assertCreated();
-        $this->assertNotSame($firstPath, $duplicateName->json('data.file_path'));
-        Storage::disk('public')->assertExists($duplicateName->json('data.file_path'));
-        $this->assertNotEmpty(Storage::disk('public')->get($firstPath));
+        $duplicateName->assertJsonMissingPath('data.file_path');
+        $secondDocument = DailyBeneficiaryDocument::findOrFail($duplicateName->json('data.id'));
+        $secondPath = $secondDocument->getRawOriginal('file_path');
+        $this->assertSame('TEST_ID.png', $secondDocument->file_name);
+        $this->assertNotSame($firstDocument->id, $secondDocument->id);
+        $this->assertNotSame($firstPath, $secondPath);
+        $this->assertSame(
+            2,
+            DailyBeneficiaryDocument::where('daily_beneficiary_id', $record->id)
+                ->where('document_type', 'identity')
+                ->count(),
+        );
+        $secondResponseJson = json_encode($duplicateName->json('data'), JSON_THROW_ON_ERROR);
+        $this->assertStringNotContainsString('/storage/', $secondResponseJson);
+        $this->assertStringNotContainsString('private.blob.example', $secondResponseJson);
+        $this->assertStringNotContainsString($secondPath, $secondResponseJson);
+        $storage->assertExists($secondPath);
+
+        $retrievedContents = [];
+        $storage->buildTemporaryUrlsUsing(
+            function (string $path) use ($storage, &$retrievedContents): string {
+                $retrievedContents[$path] = $storage->get($path);
+
+                return 'https://private.blob.example/'.$path.'?sig=test-only';
+            },
+        );
+        $firstDownloadEndpoint = route('daily-beneficiaries.documents.download', [
+            'beneficiary' => $record->id,
+            'document' => $firstDocument->id,
+        ]);
+        $this->getJson($firstDownloadEndpoint)
+            ->assertOk()
+            ->assertJsonPath('url', 'https://private.blob.example/'.$firstPath.'?sig=test-only');
+        $this->assertNotEmpty($retrievedContents[$firstPath]);
+        $secondDownloadEndpoint = route('daily-beneficiaries.documents.download', [
+            'beneficiary' => $record->id,
+            'document' => $secondDocument->id,
+        ]);
+        $this->getJson($secondDownloadEndpoint)
+            ->assertOk()
+            ->assertJsonPath('url', 'https://private.blob.example/'.$secondPath.'?sig=test-only');
+        $this->assertNotEmpty($retrievedContents[$secondPath]);
 
         $pdf = $this->post('/api/daily-beneficiaries/'.$record->id.'/documents', [
             'document' => UploadedFile::fake()->createWithContent('TEST_DOCUMENT.pdf', '%PDF-1.4 TEST'),
             'document_type' => 'supporting',
         ])->assertCreated();
-        Storage::disk('public')->assertExists($pdf->json('data.file_path'));
+        $pdf->assertJsonMissingPath('data.file_path');
+        $pdfDocument = DailyBeneficiaryDocument::findOrFail($pdf->json('data.id'));
+        $storage->assertExists($pdfDocument->getRawOriginal('file_path'));
         $this->post('/api/daily-beneficiaries/'.$record->id.'/documents', [
             'document' => UploadedFile::fake()->create('TEST_BAD.exe', 10, 'application/octet-stream'),
             'document_type' => 'identity',
@@ -86,8 +139,9 @@ class FullFunctionalQaTest extends TestCase
             'full_name' => 'TEST_DAILY_UPDATED_AGAIN', 'national_id' => $record->national_id,
             'phone' => '0551234567', 'district' => 'TEST_UPDATED_DISTRICT',
             'category_id' => $category->id, 'status' => 'active', 'notes' => 'TEST_DOCUMENT_PRESERVED',
+            'nationality' => 'سعودي',
         ])->assertOk();
-        Storage::disk('public')->assertExists($firstPath);
+        $storage->assertExists($firstPath);
 
         $restricted = User::create(['username' => 'TEST_UPLOAD_READONLY', 'full_name' => 'TEST UPLOAD READONLY', 'password' => 'Password123!', 'role' => 'readonly', 'is_active' => true]);
         Sanctum::actingAs($restricted);
@@ -99,7 +153,7 @@ class FullFunctionalQaTest extends TestCase
 
         $this->deleteJson('/api/daily-beneficiaries/'.$record->id)->assertOk();
         $this->assertSoftDeleted('daily_beneficiaries', ['id' => $record->id]);
-        $this->assertDatabaseHas('daily_beneficiary_documents', ['daily_beneficiary_id' => $record->id, 'file_name' => 'TEST_IDENTITY']);
+        $this->assertDatabaseHas('daily_beneficiary_documents', ['daily_beneficiary_id' => $record->id, 'file_name' => 'TEST_ID.png']);
     }
 
     public function test_organization_profile_fields_survive_create_edit_search_and_reopen(): void

@@ -41,10 +41,12 @@ class DailyBeneficiariesSystemTest extends TestCase
         Sanctum::actingAs($this->admin);
 
         $response = $this->postJson('/api/daily-beneficiaries', [
+            'reviewed_confirmation' => true,
             'full_name' => 'عبدالله خالد السعد',
             'national_id' => '1099887766',
             'phone' => '0551122334',
             'district' => 'حي الصفا',
+            'nationality' => 'سعودي',
             'date_of_birth' => '1985-05-10',
             'category_id' => $this->category->id,
             'status' => 'active',
@@ -73,10 +75,12 @@ class DailyBeneficiariesSystemTest extends TestCase
         ]);
 
         $response = $this->postJson('/api/daily-beneficiaries', [
+            'reviewed_confirmation' => true,
             'full_name' => 'الثاني مكرر',
             'national_id' => '1099887766',
             'phone' => '0562233445',
             'district' => 'حي الروضة',
+            'nationality' => 'سعودي',
         ]);
 
         $response->assertStatus(422);
@@ -216,5 +220,63 @@ class DailyBeneficiariesSystemTest extends TestCase
             'inventory' => ['main', 'daily', 'expiry_alerts'],
             'delivery',
         ]);
+    }
+
+    public function test_daily_index_filters_classification_and_nationality_without_treating_missing_as_saudi(): void
+    {
+        Sanctum::actingAs($this->admin);
+
+        $saudi = $this->dailyRow('DAILY SAUDI', '1099000001', 'سعودي', 'citizen');
+        $paddedSaudi = $this->dailyRow('DAILY PADDED SAUDI', '1099000002', '  سعودي  ', 'citizen');
+        $yemeni = $this->dailyRow('DAILY YEMENI', '2099000003', 'يمني', 'resident');
+        $missing = $this->dailyRow('DAILY MISSING', '1099000004', null, null);
+        $blank = $this->dailyRow('DAILY BLANK', '2099000005', '   ', 'resident');
+
+        $citizens = $this->indexIds(['beneficiary_type' => 'citizen']);
+        $this->assertContains($saudi->id, $citizens);
+        $this->assertContains($paddedSaudi->id, $citizens);
+        $this->assertNotContains($yemeni->id, $citizens);
+        $this->assertNotContains($missing->id, $citizens);
+        $this->assertNotContains($blank->id, $citizens);
+
+        $residents = $this->indexIds(['beneficiary_type' => 'resident']);
+        $this->assertContains($yemeni->id, $residents);
+        $this->assertContains($blank->id, $residents);
+        $this->assertNotContains($saudi->id, $residents);
+        $this->assertNotContains($missing->id, $residents);
+
+        $saudiNationality = $this->indexIds(['nationality' => 'سعودي']);
+        $this->assertContains($saudi->id, $saudiNationality);
+        $this->assertContains($paddedSaudi->id, $saudiNationality);
+        $this->assertNotContains($yemeni->id, $saudiNationality);
+        $this->assertNotContains($missing->id, $saudiNationality);
+        $this->assertNotContains($blank->id, $saudiNationality);
+
+        $missingNationality = $this->indexIds(['nationality_missing' => '1']);
+        $this->assertContains($missing->id, $missingNationality);
+        $this->assertContains($blank->id, $missingNationality);
+        $this->assertNotContains($saudi->id, $missingNationality);
+        $this->assertNotContains($paddedSaudi->id, $missingNationality);
+        $this->assertNotContains($yemeni->id, $missingNationality);
+    }
+
+    private function dailyRow(string $name, string $nationalId, ?string $nationality, ?string $type): DailyBeneficiary
+    {
+        return DailyBeneficiary::create([
+            'full_name' => $name,
+            'national_id' => $nationalId,
+            'phone' => '055'.substr($nationalId, -7),
+            'district' => 'حي الاختبار',
+            'status' => 'active',
+            'nationality' => $nationality,
+            'beneficiary_type' => $type,
+        ]);
+    }
+
+    private function indexIds(array $query): array
+    {
+        $response = $this->getJson('/api/daily-beneficiaries?'.http_build_query($query).'&per_page=100')->assertOk();
+
+        return collect($response->json('data.data'))->pluck('id')->all();
     }
 }

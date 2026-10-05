@@ -17,7 +17,12 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', env('DB_HOST') ? 'pgsql' : 'sqlite'),
+    'default' => env(
+        'DB_CONNECTION',
+        env('APP_ENV', 'production') === 'production'
+            ? 'pgsql'
+            : (env('DB_HOST') ? 'pgsql' : 'sqlite')
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -97,6 +102,7 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'sslrootcert' => env('DB_SSLROOTCERT'),
         ],
 
         'sqlsrv' => [

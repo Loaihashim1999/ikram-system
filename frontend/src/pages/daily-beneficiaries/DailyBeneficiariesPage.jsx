@@ -4,6 +4,7 @@ import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
 import Toast from "../../components/ui/Toast";
+import SummaryCard from "../../components/ui/SummaryCard";
 import DailyBeneficiariesList from "./DailyBeneficiariesList";
 import DailyBeneficiaryReceivingPage from "./DailyBeneficiaryReceivingPage";
 import DailyInventoryPage from "./DailyInventoryPage";
@@ -147,22 +148,25 @@ export default function DailyBeneficiariesPage() {
         />
 
         {/* Unified Tab Navigation Bar */}
-        <div className="bg-white border border-[#E5E2D9] rounded-2xl p-2 shadow-xs">
-          <div className="flex flex-wrap items-center gap-1.5 border-b border-[#F0ECE1] pb-2">
+        <div className="ikram-panel p-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto" role="tablist" aria-label="أقسام المستفيدين اليوميين">
             {tabsConfig.map((t) => {
               const Icon = t.icon;
               const isActive = activeTab === t.key;
               return (
                 <button
                   key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => setTab(t.key)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex min-h-10 items-center gap-2 whitespace-nowrap rounded-[10px] px-4 py-2.5 text-xs font-bold transition-colors ${
                     isActive
-                      ? "bg-[#3F6B3A] text-white shadow-sm"
-                      : "text-slate-600 hover:bg-[#FAF8F5] hover:text-[#111827]"
+                      ? "bg-[var(--color-brand-green)] text-white shadow-sm"
+                      : "text-slate-600 hover:bg-[var(--color-bg-soft)] hover:text-[var(--color-text-primary)]"
                   }`}
                 >
-                  <Icon size={16} className={isActive ? "text-white" : "text-[#C9A24A]"} />
+                  <Icon size={16} className={isActive ? "text-white" : "text-[var(--color-brand-gold)]"} />
                   <span>{t.label}</span>
                 </button>
               );
@@ -175,156 +179,113 @@ export default function DailyBeneficiariesPage() {
           <div className="space-y-6">
             {/* KPI Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white border border-[#E5E2D9] rounded-2xl p-4 shadow-xs flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-[#C9A24A]">
-                  <Users size={24} />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">إجمالي المسجلين اليوميين</p>
-                  <h3 className="text-xl font-bold text-gray-900 mt-0.5">{stats.totalBeneficiaries} مستفيد</h3>
-                  <span className="text-[10px] text-green-700 bg-green-50 px-1.5 py-0.5 rounded font-bold">ملفات معتمدة</span>
-                </div>
-              </div>
-
-              <div className="bg-white border border-[#E5E2D9] rounded-2xl p-4 shadow-xs flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-green-50 border border-green-200 flex items-center justify-center text-[#3F6B3A]">
-                  <PackageCheck size={24} />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">عمليات استلام اليوم</p>
-                  <h3 className="text-xl font-bold text-gray-900 mt-0.5">{stats.todayTransactions} عملية</h3>
-                  <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-bold">نشاط اليوم</span>
-                </div>
-              </div>
-
-              <div className="bg-white border border-[#E5E2D9] rounded-2xl p-4 shadow-xs flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
-                  <Package size={24} />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">سلال / مواد موزعة اليوم</p>
-                  <h3 className="text-xl font-bold text-gray-900 mt-0.5">{stats.todayBaskets} سلة/طرد</h3>
-                  <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-bold">صرف عيني</span>
-                </div>
-              </div>
-
-              <div className="bg-white border border-[#E5E2D9] rounded-2xl p-4 shadow-xs flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600">
-                  <Boxes size={24} />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">أصناف المستودع اليومي</p>
-                  <h3 className="text-xl font-bold text-gray-900 mt-0.5">{stats.inventoryItems} صنف</h3>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                    stats.lowStockCount > 0 ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"
-                  }`}>
-                    {stats.lowStockCount > 0 ? `${stats.lowStockCount} بحاجة لتوريد` : "المخزون متوفر"}
-                  </span>
-                </div>
-              </div>
+              <SummaryCard label="إجمالي المسجلين اليوميين" value={`${stats.totalBeneficiaries} مستفيد`} hint="ملفات المستفيدين اليومية المعتمدة" icon={Users} tone="gold" />
+              <SummaryCard label="عمليات استلام اليوم" value={`${stats.todayTransactions} عملية`} hint="النشاط التشغيلي المسجل اليوم" icon={PackageCheck} tone="green" />
+              <SummaryCard label="السلال والمواد الموزعة" value={`${stats.todayBaskets} سلة/طرد`} hint="إجمالي الصرف العيني اليوم" icon={Package} tone="blue" />
+              <SummaryCard label="أصناف المستودع اليومي" value={`${stats.inventoryItems} صنف`} hint={stats.lowStockCount > 0 ? `${stats.lowStockCount} بحاجة إلى توريد` : "المخزون متوفر"} icon={Boxes} tone={stats.lowStockCount > 0 ? "red" : "green"} />
             </div>
 
             {/* Quick Actions and Highlights */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Quick Shortcuts */}
-              <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-xs space-y-4">
-                <h3 className="text-sm font-bold text-[#111827] flex items-center gap-2">
-                  <ShieldCheck size={18} className="text-[#3F6B3A]" />
+              <div className="bg-white border border-[var(--color-border)] rounded-2xl p-5 shadow-xs space-y-4">
+                <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                  <ShieldCheck size={18} className="text-[var(--color-brand-green)]" />
                   <span>الوصول السريع للعمليات التشغيلية</span>
                 </h3>
                 <div className="space-y-2">
                   <button
                     onClick={() => setTab("today")}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-[#E5E2D9] hover:bg-[#FAF8F5] transition-colors text-right cursor-pointer"
+                    className="w-full flex items-center justify-between p-3 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-bg-soft)] transition-colors text-right cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-amber-50 text-[#C9A24A]">
+                      <div className="p-2 rounded-lg bg-[var(--color-bg-soft)] text-[var(--color-brand-gold)]">
                         <Users size={18} />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-gray-900">مستفيدو اليوم والمسجلون</div>
-                        <div className="text-[11px] text-gray-500">البحث في السجلات وتعديل البيانات</div>
+                        <div className="text-xs font-bold text-[var(--color-text-primary)]">مستفيدو اليوم والمسجلون</div>
+                        <div className="text-[11px] text-[var(--color-text-muted)]">البحث في السجلات وتعديل البيانات</div>
                       </div>
                     </div>
-                    <ArrowRight size={16} className="text-gray-400 rotate-180" />
+                    <ArrowRight size={16} className="text-[var(--color-text-muted)] rotate-180" />
                   </button>
 
                   <button
                     onClick={() => setTab("deliveries")}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-[#E5E2D9] hover:bg-[#FAF8F5] transition-colors text-right cursor-pointer"
+                    className="w-full flex items-center justify-between p-3 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-bg-soft)] transition-colors text-right cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-green-50 text-[#3F6B3A]">
+                      <div className="p-2 rounded-lg bg-green-50 text-[var(--color-brand-green)]">
                         <PackageCheck size={18} />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-gray-900">تسليم وصرف المساعدات</div>
-                        <div className="text-[11px] text-gray-500">صرف فوري وإصدار سند استلام رسمي</div>
+                        <div className="text-xs font-bold text-[var(--color-text-primary)]">تسليم وصرف المساعدات</div>
+                        <div className="text-[11px] text-[var(--color-text-muted)]">صرف فوري وإصدار سند استلام رسمي</div>
                       </div>
                     </div>
-                    <ArrowRight size={16} className="text-gray-400 rotate-180" />
+                    <ArrowRight size={16} className="text-[var(--color-text-muted)] rotate-180" />
                   </button>
 
                   <button
                     onClick={() => setTab("history")}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-[#E5E2D9] hover:bg-[#FAF8F5] transition-colors text-right cursor-pointer"
+                    className="w-full flex items-center justify-between p-3 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-bg-soft)] transition-colors text-right cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
                         <History size={18} />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-gray-900">سجل الاستلامات التاريخي</div>
-                        <div className="text-[11px] text-gray-500">مراجعة السندات وطباعة سندات الاستلام</div>
+                        <div className="text-xs font-bold text-[var(--color-text-primary)]">سجل الاستلامات التاريخي</div>
+                        <div className="text-[11px] text-[var(--color-text-muted)]">مراجعة السندات وطباعة سندات الاستلام</div>
                       </div>
                     </div>
-                    <ArrowRight size={16} className="text-gray-400 rotate-180" />
+                    <ArrowRight size={16} className="text-[var(--color-text-muted)] rotate-180" />
                   </button>
 
                   <button
                     onClick={() => setTab("inventory")}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-[#E5E2D9] hover:bg-[#FAF8F5] transition-colors text-right cursor-pointer"
+                    className="w-full flex items-center justify-between p-3 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-bg-soft)] transition-colors text-right cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-orange-50 text-orange-600">
                         <Boxes size={18} />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-gray-900">مستودع المساعدات اليومية</div>
-                        <div className="text-[11px] text-gray-500">متابعة الأرصدة وتسجيل حركات التوريد والصرف</div>
+                        <div className="text-xs font-bold text-[var(--color-text-primary)]">مستودع المساعدات اليومية</div>
+                        <div className="text-[11px] text-[var(--color-text-muted)]">متابعة الأرصدة وتسجيل حركات التوريد والصرف</div>
                       </div>
                     </div>
-                    <ArrowRight size={16} className="text-gray-400 rotate-180" />
+                    <ArrowRight size={16} className="text-[var(--color-text-muted)] rotate-180" />
                   </button>
                 </div>
               </div>
 
               {/* Recent Transactions Stream */}
-              <div className="lg:col-span-2 bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="lg:col-span-2 bg-white border border-[var(--color-border)] rounded-2xl p-5 shadow-xs space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-[#111827] flex items-center gap-2">
-                    <Clock size={18} className="text-[#C9A24A]" />
+                  <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                    <Clock size={18} className="text-[var(--color-brand-gold)]" />
                     <span>آخر سندات الاستلام المصروفة مؤخراً</span>
                   </h3>
                   <button
                     onClick={() => setTab("history")}
-                    className="text-xs text-[#3F6B3A] font-bold hover:underline"
+                    className="text-xs text-[var(--color-brand-green)] font-bold hover:underline"
                   >
                     عرض السجل الكامل
                   </button>
                 </div>
 
                 {loadingStats ? (
-                  <div className="p-8 text-center text-gray-400 text-xs">جاري تحميل أحدث العمليات...</div>
+                  <div className="p-8 text-center text-[var(--color-text-muted)] text-xs">جاري تحميل أحدث العمليات...</div>
                 ) : recentTransactions.length === 0 ? (
-                  <div className="p-8 text-center text-gray-400 text-xs border border-dashed border-[#E5E2D9] rounded-xl">
+                  <div className="p-8 text-center text-[var(--color-text-muted)] text-xs border border-dashed border-[var(--color-border)] rounded-xl">
                     لا توجد عمليات استلام مسجلة اليوم حتى الآن.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-right text-xs">
                       <thead>
-                        <tr className="border-b border-[#E5E2D9] text-gray-500 font-bold bg-[#FAF8F5]">
+                        <tr className="border-b border-[var(--color-border)] text-[var(--color-text-muted)] font-bold bg-[var(--color-bg-soft)]">
                           <th className="p-2.5">رقم السند</th>
                           <th className="p-2.5">المستفيد</th>
                           <th className="p-2.5">المادة المصروفة</th>
@@ -332,14 +293,14 @@ export default function DailyBeneficiariesPage() {
                           <th className="p-2.5">الوقت والتاريخ</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#E5E2D9]">
+                      <tbody className="divide-y divide-[var(--color-border)]">
                         {recentTransactions.map((tx) => (
-                          <tr key={tx.id} className="hover:bg-[#FAF8F5] transition-colors">
-                            <td className="p-2.5 font-bold font-mono text-[#C9A24A]">{tx.document_number}</td>
-                            <td className="p-2.5 font-bold text-gray-900">{tx.beneficiary?.full_name || "—"}</td>
+                          <tr key={tx.id} className="hover:bg-[var(--color-bg-soft)] transition-colors">
+                            <td className="p-2.5 font-bold font-mono text-[var(--color-brand-gold)]">{tx.document_number}</td>
+                            <td className="p-2.5 font-bold text-[var(--color-text-primary)]">{tx.beneficiary?.full_name || "—"}</td>
                             <td className="p-2.5">{tx.inventory_item?.name || tx.basket_type_name || "سلة غذائية"}</td>
                             <td className="p-2.5 font-bold">{tx.quantity}</td>
-                            <td className="p-2.5 text-gray-500 font-mono">
+                            <td className="p-2.5 text-[var(--color-text-muted)] font-mono">
                               {tx.receiving_date ? tx.receiving_date.slice(0, 16).replace("T", " ") : "—"}
                             </td>
                           </tr>

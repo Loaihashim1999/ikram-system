@@ -1,11 +1,13 @@
-import { downloadDocument } from '../../utils/documentUrl';
+import { downloadDocument, getApiBaseUrl } from '../../utils/documentUrl';
 import { useState, useEffect } from "react";
+import PagePermissionGuard from "../../components/common/PagePermissionGuard";
+import { canViewRepresentatives } from "../../utils/modulePermissions";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
-import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
+import HistoricalDistributionReferenceCard from "../../components/common/HistoricalDistributionReferenceCard";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
 import Scrim from "../../components/overlays/Scrim";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
@@ -19,9 +21,14 @@ import { exportArrayToExcel } from "../../utils/excelExport";
 import SmartExcelImport from "../../components/common/SmartExcelImport";
 
 export default function NeighborhoodRepsPage() {
+  return <PagePermissionGuard canAccess={canViewRepresentatives}><NeighborhoodRepsContent /></PagePermissionGuard>;
+}
+
+function NeighborhoodRepsContent() {
   const [reps, setReps] = useState([]);
   const [baskets, setBaskets] = useState([]);
   const [drivers, setDrivers] = useState([]);
+  const [driverError, setDriverError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState("");
@@ -84,10 +91,11 @@ export default function NeighborhoodRepsPage() {
 
   const loadData = () => {
     setLoading(true);
+    setDriverError(false);
     Promise.all([
       api.get("/neighborhood-reps").catch(() => ({ data: { data: [] } })),
       api.get("/inventory").catch(() => ({ data: { data: [] } })),
-      api.get("/users").catch(() => ({ data: { data: [] } })),
+      api.get("/neighborhood-reps/driver-options").catch(() => { setDriverError(true); return { data: { data: [] } }; }),
     ]).then(([repsRes, invRes, usersRes]) => {
       const rData = repsRes.data?.data ?? [];
       setReps(Array.isArray(rData) ? rData : []);
@@ -342,7 +350,7 @@ export default function NeighborhoodRepsPage() {
       link.click();
       link.remove();
     } catch {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com');
+      const baseUrl = getApiBaseUrl();
       await downloadDocument(`${baseUrl}/api/neighborhood-reps/${repId}/export-excel`);
     }
   };
@@ -456,7 +464,7 @@ export default function NeighborhoodRepsPage() {
 
         {showImportModal && <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowImportModal(false)}>
           <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-auto p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between mb-5"><div><h2 className="text-xl font-bold">الاستيراد الذكي للجهات المستفيدة</h2><p className="text-sm text-gray-500">طابق أعمدة الملف ثم استورد جميع السجلات.</p></div><button onClick={() => setShowImportModal(false)}><X /></button></div>
+            <div className="flex justify-between mb-5"><div><h2 className="text-xl font-bold">الاستيراد الذكي للجهات المستفيدة</h2><p className="text-sm text-[var(--color-text-muted)]">طابق أعمدة الملف ثم استورد جميع السجلات.</p></div><button onClick={() => setShowImportModal(false)}><X /></button></div>
             <SmartExcelImport entity="organizations" onComplete={loadData} />
           </div>
         </div>}
@@ -468,7 +476,7 @@ export default function NeighborhoodRepsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="بحث باسم الجهة، رقم الترخيص، اسم المسؤول، الجوال، أو الحي..."
-              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-xs text-right bg-surface-subtle shadow-sm focus:ring-2 focus:ring-primary-500"
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-xs text-right bg-surface-subtle shadow-sm focus:ring-2 focus:ring-primary-500"
             />
           </div>
 
@@ -476,7 +484,7 @@ export default function NeighborhoodRepsPage() {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-xs bg-white text-gray-700 font-bold"
+              className="ikram-control text-xs font-bold"
             >
               <option value="all">كل أنواع الجهات</option>
               {organizationTypes.map(t => (
@@ -489,7 +497,7 @@ export default function NeighborhoodRepsPage() {
             <select
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
-              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-xs bg-white text-gray-700 font-bold"
+              className="ikram-control text-xs font-bold"
             >
               <option value="all">كل المدن</option>
               {cities.map(c => (
@@ -500,9 +508,9 @@ export default function NeighborhoodRepsPage() {
         </div>
 
         {/* Reps Table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="overflow-x-auto border border-gray-200 rounded-xl">
-            <table className="w-full text-xs text-right">
+        <div className="bg-white rounded-2xl shadow-sm border border-[var(--color-border)] p-6">
+          <div className="overflow-x-auto border border-[var(--color-border)] rounded-xl">
+            <table className="ikram-table">
               <thead className="bg-primary-50/70 text-primary-900 border-b">
                 <tr>
                   <th className="p-3">#</th>
@@ -528,25 +536,25 @@ export default function NeighborhoodRepsPage() {
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={12} className="p-8 text-center text-gray-400">جاري التحميل...</td></tr>
+                  <tr><td colSpan={12} className="p-8 text-center text-[var(--color-text-muted)]">جاري التحميل...</td></tr>
                 )}
                 {!loading && filteredReps.map((r, idx) => (
                   <tr key={r.id || idx} className="border-b hover:bg-primary-50/20 transition-colors">
-                    <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
-                    <td className="p-3 font-bold text-gray-800">
+                    <td className="p-3 text-[var(--color-text-muted)] font-mono">{idx + 1}</td>
+                    <td className="p-3 font-bold text-[var(--color-text-primary)]">
                       <div className="flex items-center gap-1.5">
                         <Building2 className="w-4 h-4 text-primary-600 flex-shrink-0" />
                         <span>{r.organization_name || r.full_name}</span>
                       </div>
                     </td>
                     <td className="p-3">
-                      <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full text-[11px] font-bold border border-amber-200">
+                      <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full text-[11px] font-bold border border-[var(--color-border)]">
                         {r.organization_type || "جهة خيرية"}
                       </span>
                     </td>
-                    <td className="p-3 font-mono text-gray-700">{r.license_number || r.national_id || "—"}</td>
-                    <td className="p-3 font-bold text-gray-700">{r.contact_person || r.full_name || "—"}</td>
-                    <td className="p-3 font-mono text-gray-600" dir="ltr">{r.phone}</td>
+                    <td className="p-3 font-mono text-[var(--color-text-secondary)]">{r.license_number || r.national_id || "—"}</td>
+                    <td className="p-3 font-bold text-[var(--color-text-secondary)]">{r.contact_person || r.full_name || "—"}</td>
+                    <td className="p-3 font-mono text-[var(--color-text-muted)]" dir="ltr">{r.phone}</td>
                     <td className="p-3 text-primary-900 font-bold">
                       {r.city || "مكة المكرمة"} - {r.district_name || "عام"}
                     </td>
@@ -609,7 +617,7 @@ export default function NeighborhoodRepsPage() {
                       {/* Edit */}
                       <button
                         onClick={() => handleOpenEditModal(r)}
-                        className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        className="bg-[var(--color-bg-soft)] hover:bg-amber-100 text-amber-700 border border-[var(--color-border)] p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
                         title="تعديل بيانات الجهة المستفيدة"
                       >
                         <Edit3 className="w-4 h-4" />
@@ -618,7 +626,7 @@ export default function NeighborhoodRepsPage() {
                       {/* Change Status */}
                       <button
                         onClick={() => handleToggleRepStatus(r)}
-                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-1.5 rounded-lg text-xs font-bold transition-all border border-gray-300 cursor-pointer"
+                        className="bg-[var(--color-bg-soft)] hover:bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] p-1.5 rounded-lg text-xs font-bold transition-all border border-[var(--color-border)] cursor-pointer"
                         title="تعديل الحالة (نشط/موقوف)"
                       >
                         <RefreshCw className="w-4 h-4" />
@@ -639,10 +647,10 @@ export default function NeighborhoodRepsPage() {
 
                       {/* Print Receipt PDF */}
                       <a
-                        href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/rep-receipt/${r.id}/pdf`}
+                        href={`${getApiBaseUrl()}/api/documents/rep-receipt/${r.id}/pdf`}
                         target="_blank"
                         rel="noreferrer"
-                        className="bg-amber-700 hover:bg-amber-800 text-white p-1.5 rounded-lg text-xs font-bold transition-all shadow-xs inline-flex items-center justify-center cursor-pointer"
+                        className="bg-[var(--color-brand-green-hover)] hover:bg-amber-800 text-white p-1.5 rounded-lg text-xs font-bold transition-all shadow-xs inline-flex items-center justify-center cursor-pointer"
                         title="طباعة سند وسجل استلام الجهة (PDF)"
                       >
                         <FileText className="w-4 h-4" />
@@ -660,7 +668,7 @@ export default function NeighborhoodRepsPage() {
                   </tr>
                 ))}
                 {!loading && filteredReps.length === 0 && (
-                  <tr><td colSpan={12} className="p-8 text-center text-gray-400">لا توجد جهات مستفيدة مسجلة تطابق معايير البحث</td></tr>
+                  <tr><td colSpan={12} className="p-8 text-center text-[var(--color-text-muted)]">لا توجد جهات مستفيدة مسجلة تطابق معايير البحث</td></tr>
                 )}
               </tbody>
             </table>
@@ -670,7 +678,7 @@ export default function NeighborhoodRepsPage() {
         {/* ─── 1. Modal: View Linked Beneficiaries (عرض الأسر التابعة) ─── */}
         {viewBeneficiariesRep && (
           <Scrim isOpen={Boolean(viewBeneficiariesRep)} onClose={() => setViewBeneficiariesRep(null)}>
-            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150" dir="rtl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-[var(--color-border)] animate-in fade-in zoom-in duration-150" dir="rtl" onClick={(e) => e.stopPropagation()}>
               {/* Header */}
               <div className="p-5 bg-gradient-to-r from-primary-700 to-primary-800 text-white rounded-t-3xl flex justify-between items-center">
                 <div>
@@ -702,14 +710,14 @@ export default function NeighborhoodRepsPage() {
               {/* Body Table */}
               <div className="p-6">
                 {loadingBeneficiaries ? (
-                  <div className="p-8 text-center text-gray-400 font-bold">جاري تحميل الأسر التابعة...</div>
+                  <div className="p-8 text-center text-[var(--color-text-muted)] font-bold">جاري تحميل الأسر التابعة...</div>
                 ) : linkedBeneficiaries.length === 0 ? (
-                  <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-200">
-                    <p className="text-gray-500 font-bold text-sm">لا توجد أسر تابعة مسجلة لهذه الجهة حالياً</p>
+                  <div className="p-8 text-center bg-[var(--color-bg-soft)] rounded-2xl border border-[var(--color-border)]">
+                    <p className="text-[var(--color-text-muted)] font-bold text-sm">لا توجد أسر تابعة مسجلة لهذه الجهة حالياً</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto border border-gray-200 rounded-2xl shadow-xs">
-                    <table className="w-full text-xs text-right">
+                  <div className="overflow-x-auto border border-[var(--color-border)] rounded-2xl shadow-xs">
+                    <table className="ikram-table">
                       <thead className="bg-primary-50 text-primary-900 border-b border-primary-200">
                         <tr>
                           <th className="p-3 font-extrabold">#</th>
@@ -725,11 +733,11 @@ export default function NeighborhoodRepsPage() {
                       <tbody>
                         {linkedBeneficiaries.map((b, idx) => (
                           <tr key={b.id || idx} className="border-b hover:bg-primary-50/20">
-                            <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
-                            <td className="p-3 font-bold text-gray-800">{b.full_name || b.name}</td>
-                            <td className="p-3 font-mono text-gray-600" dir="ltr">{b.phone}</td>
-                            <td className="p-3 font-mono text-gray-700">{b.national_id || "—"}</td>
-                            <td className="p-3 text-gray-600">{cleanDate(b.date_of_birth || b.birth_date)}</td>
+                            <td className="p-3 text-[var(--color-text-muted)] font-mono">{idx + 1}</td>
+                            <td className="p-3 font-bold text-[var(--color-text-primary)]">{b.full_name || b.name}</td>
+                            <td className="p-3 font-mono text-[var(--color-text-muted)]" dir="ltr">{b.phone}</td>
+                            <td className="p-3 font-mono text-[var(--color-text-secondary)]">{b.national_id || "—"}</td>
+                            <td className="p-3 text-[var(--color-text-muted)]">{cleanDate(b.date_of_birth || b.birth_date)}</td>
                             <td className="p-3 font-bold text-primary-900">{b.city || "مكة"} - {b.district || viewBeneficiariesRep.district_name}</td>
                             <td className="p-3">
                               <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
@@ -755,7 +763,7 @@ export default function NeighborhoodRepsPage() {
         {/* ─── 2. Modal: View Rep Details (بطاقة بيانات الجهة المستفيدة) ─── */}
         {viewDetailsRep && (
           <Scrim isOpen={Boolean(viewDetailsRep)} onClose={() => setViewDetailsRep(null)}>
-            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150" dir="rtl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-[var(--color-border)] animate-in fade-in zoom-in duration-150" dir="rtl" onClick={(e) => e.stopPropagation()}>
               {/* Header Banner */}
               <div className="p-5 bg-gradient-to-r from-primary-700 to-primary-800 text-white rounded-t-3xl flex justify-between items-center">
                 <div>
@@ -769,7 +777,7 @@ export default function NeighborhoodRepsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <a
-                    href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/rep-receipt/${viewDetailsRep.id}/pdf`}
+                    href={`${getApiBaseUrl()}/api/documents/rep-receipt/${viewDetailsRep.id}/pdf`}
                     target="_blank"
                     rel="noreferrer"
                     className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl font-bold text-xs transition-all border border-white/30 flex items-center gap-1.5 cursor-pointer"
@@ -787,13 +795,13 @@ export default function NeighborhoodRepsPage() {
               </div>
 
               {/* 4 Tabs Bar */}
-              <div className="flex border-b border-gray-200 bg-primary-50/40 text-xs font-bold">
+              <div className="flex border-b border-[var(--color-border)] bg-primary-50/40 text-xs font-bold">
                 <button
                   onClick={() => setActiveTab("info")}
                   className={`flex-1 py-3 text-center transition-all cursor-pointer ${
                     activeTab === "info"
                       ? "border-b-2 border-primary-700 text-primary-900 bg-white font-extrabold"
-                      : "text-gray-500 hover:text-gray-700"
+                      : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
                   }`}
                 >
                   🏛️ بيانات الجهة والمفوض
@@ -803,7 +811,7 @@ export default function NeighborhoodRepsPage() {
                   className={`flex-1 py-3 text-center transition-all cursor-pointer ${
                     activeTab === "families"
                       ? "border-b-2 border-primary-700 text-primary-900 bg-white font-extrabold"
-                      : "text-gray-500 hover:text-gray-700"
+                      : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
                   }`}
                 >
                   👨‍👩‍👧‍👦 الأسر التابعة ({linkedBeneficiaries.length})
@@ -813,7 +821,7 @@ export default function NeighborhoodRepsPage() {
                   className={`flex-1 py-3 text-center transition-all cursor-pointer ${
                     activeTab === "history"
                       ? "border-b-2 border-primary-700 text-primary-900 bg-white font-extrabold"
-                      : "text-gray-500 hover:text-gray-700"
+                      : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
                   }`}
                 >
                   📦 سجل الاستلامات والتوزيع
@@ -823,7 +831,7 @@ export default function NeighborhoodRepsPage() {
                   className={`flex-1 py-3 text-center transition-all cursor-pointer ${
                     activeTab === "docs"
                       ? "border-b-2 border-primary-700 text-primary-900 bg-white font-extrabold"
-                      : "text-gray-500 hover:text-gray-700"
+                      : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
                   }`}
                 >
                   📁 وثائق وتراخيص الجهة
@@ -835,41 +843,41 @@ export default function NeighborhoodRepsPage() {
                 {/* Tab 1: Organization & Representative Info */}
                 {activeTab === "info" && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                    <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">اسم الجهة المستفيدة</span>
-                      <span className="font-extrabold text-gray-800 text-sm">{viewDetailsRep.organization_name || viewDetailsRep.full_name}</span>
+                    <div className="bg-[var(--color-bg-soft)]/90 rounded-2xl p-3.5 border border-[var(--color-border)]">
+                      <span className="text-[var(--color-text-muted)] block text-[11px] mb-0.5">اسم الجهة المستفيدة</span>
+                      <span className="font-extrabold text-[var(--color-text-primary)] text-sm">{viewDetailsRep.organization_name || viewDetailsRep.full_name}</span>
                     </div>
-                    <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">نوع الجهة</span>
+                    <div className="bg-[var(--color-bg-soft)]/90 rounded-2xl p-3.5 border border-[var(--color-border)]">
+                      <span className="text-[var(--color-text-muted)] block text-[11px] mb-0.5">نوع الجهة</span>
                       <span className="font-extrabold text-amber-900 text-sm">{viewDetailsRep.organization_type || "جهة خيرية"}</span>
                     </div>
-                    <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">رقم الترخيص / التسجيل</span>
-                      <span className="font-extrabold text-gray-800 font-mono text-sm">{viewDetailsRep.license_number || viewDetailsRep.national_id || "—"}</span>
+                    <div className="bg-[var(--color-bg-soft)]/90 rounded-2xl p-3.5 border border-[var(--color-border)]">
+                      <span className="text-[var(--color-text-muted)] block text-[11px] mb-0.5">رقم الترخيص / التسجيل</span>
+                      <span className="font-extrabold text-[var(--color-text-primary)] font-mono text-sm">{viewDetailsRep.license_number || viewDetailsRep.national_id || "—"}</span>
                     </div>
-                    <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">الشخص المفوض / المسؤول</span>
-                      <span className="font-extrabold text-gray-800 text-sm">{viewDetailsRep.contact_person || viewDetailsRep.full_name || "—"}</span>
+                    <div className="bg-[var(--color-bg-soft)]/90 rounded-2xl p-3.5 border border-[var(--color-border)]">
+                      <span className="text-[var(--color-text-muted)] block text-[11px] mb-0.5">الشخص المفوض / المسؤول</span>
+                      <span className="font-extrabold text-[var(--color-text-primary)] text-sm">{viewDetailsRep.contact_person || viewDetailsRep.full_name || "—"}</span>
                     </div>
-                    <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">رقم جوال المسؤول</span>
-                      <span className="font-extrabold text-gray-800 font-mono text-sm" dir="ltr">{viewDetailsRep.phone}</span>
+                    <div className="bg-[var(--color-bg-soft)]/90 rounded-2xl p-3.5 border border-[var(--color-border)]">
+                      <span className="text-[var(--color-text-muted)] block text-[11px] mb-0.5">رقم جوال المسؤول</span>
+                      <span className="font-extrabold text-[var(--color-text-primary)] font-mono text-sm" dir="ltr">{viewDetailsRep.phone}</span>
                     </div>
-                    <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">البريد الإلكتروني للجهة</span>
-                      <span className="font-extrabold text-gray-800 text-sm">{viewDetailsRep.email || "—"}</span>
+                    <div className="bg-[var(--color-bg-soft)]/90 rounded-2xl p-3.5 border border-[var(--color-border)]">
+                      <span className="text-[var(--color-text-muted)] block text-[11px] mb-0.5">البريد الإلكتروني للجهة</span>
+                      <span className="font-extrabold text-[var(--color-text-primary)] text-sm">{viewDetailsRep.email || "—"}</span>
                     </div>
-                    <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">المدينة</span>
+                    <div className="bg-[var(--color-bg-soft)]/90 rounded-2xl p-3.5 border border-[var(--color-border)]">
+                      <span className="text-[var(--color-text-muted)] block text-[11px] mb-0.5">المدينة</span>
                       <span className="font-extrabold text-primary-900 text-sm">{viewDetailsRep.city || "مكة المكرمة"}</span>
                     </div>
-                    <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">الحي السكني</span>
+                    <div className="bg-[var(--color-bg-soft)]/90 rounded-2xl p-3.5 border border-[var(--color-border)]">
+                      <span className="text-[var(--color-text-muted)] block text-[11px] mb-0.5">الحي السكني</span>
                       <span className="font-extrabold text-primary-900 text-sm">{viewDetailsRep.district_name || "عام"}</span>
                     </div>
-                    <div className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-100 md:col-span-2">
-                      <span className="text-gray-400 block text-[11px] mb-0.5">العنوان الوطني للجهة</span>
-                      <span className="font-extrabold text-gray-800 text-sm">{viewDetailsRep.national_address || "—"}</span>
+                    <div className="bg-[var(--color-bg-soft)]/90 rounded-2xl p-3.5 border border-[var(--color-border)] md:col-span-2">
+                      <span className="text-[var(--color-text-muted)] block text-[11px] mb-0.5">العنوان الوطني للجهة</span>
+                      <span className="font-extrabold text-[var(--color-text-primary)] text-sm">{viewDetailsRep.national_address || "—"}</span>
                     </div>
                   </div>
                 )}
@@ -878,7 +886,7 @@ export default function NeighborhoodRepsPage() {
                 {activeTab === "families" && (
                   <div className="space-y-3">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-gray-700">الأسر المستفيدة التابعة للجهة:</span>
+                      <span className="text-xs font-bold text-[var(--color-text-secondary)]">الأسر المستفيدة التابعة للجهة:</span>
                       <button
                         onClick={() => handleExportExcel(viewDetailsRep.id)}
                         className="bg-primary-100 hover:bg-primary-200 text-primary-900 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
@@ -888,7 +896,7 @@ export default function NeighborhoodRepsPage() {
                       </button>
                     </div>
                     <div className="overflow-x-auto border rounded-xl">
-                      <table className="w-full text-xs text-right">
+                      <table className="ikram-table">
                         <thead className="bg-primary-50 text-primary-900 font-bold">
                           <tr>
                             <th className="p-2">#</th>
@@ -902,7 +910,7 @@ export default function NeighborhoodRepsPage() {
                         <tbody>
                           {linkedBeneficiaries.map((b, idx) => (
                             <tr key={b.id || idx} className="border-b">
-                              <td className="p-2 text-gray-400">{idx + 1}</td>
+                              <td className="p-2 text-[var(--color-text-muted)]">{idx + 1}</td>
                               <td className="p-2 font-bold">{b.full_name || b.name}</td>
                               <td className="p-2 font-mono" dir="ltr">{b.phone}</td>
                               <td className="p-2 font-mono">{b.national_id}</td>
@@ -938,11 +946,11 @@ export default function NeighborhoodRepsPage() {
                           <Award className="w-4 h-4 text-primary-600" />
                           <span>ترخيص / شهادة تسجيل الجهة</span>
                         </h4>
-                        <p className="text-[11px] text-gray-500 mt-0.5">شهادة التسجيل من المركز الوطني / الوزارة</p>
+                        <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">شهادة التسجيل من المركز الوطني / الوزارة</p>
                       </div>
                       {viewDetailsRep.id_document_image_url ? (
                         <a
-                          href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewDetailsRep.id_document_image_url}`}
+                          href={viewDetailsRep.id_document_image_url}
                           target="_blank"
                           rel="noreferrer"
                           className="bg-primary-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-primary-800 transition-all flex items-center gap-1 cursor-pointer"
@@ -951,7 +959,7 @@ export default function NeighborhoodRepsPage() {
                           <span>عرض</span>
                         </a>
                       ) : (
-                        <span className="text-gray-400 font-bold text-[11px]">غير مرفق</span>
+                        <span className="text-[var(--color-text-muted)] font-bold text-[11px]">غير مرفق</span>
                       )}
                     </div>
 
@@ -962,11 +970,11 @@ export default function NeighborhoodRepsPage() {
                           <FileText className="w-4 h-4 text-primary-600" />
                           <span>خطاب التفويض الرسمي</span>
                         </h4>
-                        <p className="text-[11px] text-gray-500 mt-0.5">خطاب تفويض ممثل الجهة ومختوم رسمياً</p>
+                        <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">خطاب تفويض ممثل الجهة ومختوم رسمياً</p>
                       </div>
                       {viewDetailsRep.support_letter_url ? (
                         <a
-                          href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewDetailsRep.support_letter_url}`}
+                          href={viewDetailsRep.support_letter_url}
                           target="_blank"
                           rel="noreferrer"
                           className="bg-primary-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-primary-800 transition-all flex items-center gap-1 cursor-pointer"
@@ -975,7 +983,7 @@ export default function NeighborhoodRepsPage() {
                           <span>عرض</span>
                         </a>
                       ) : (
-                        <span className="text-gray-400 font-bold text-[11px]">غير مرفق</span>
+                        <span className="text-[var(--color-text-muted)] font-bold text-[11px]">غير مرفق</span>
                       )}
                     </div>
 
@@ -986,11 +994,11 @@ export default function NeighborhoodRepsPage() {
                           <MapPin className="w-4 h-4 text-primary-600" />
                           <span>وثيقة العنوان الوطني للجهة</span>
                         </h4>
-                        <p className="text-[11px] text-gray-500 mt-0.5">مستند العنوان الوطني المعتمد</p>
+                        <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">مستند العنوان الوطني المعتمد</p>
                       </div>
                       {viewDetailsRep.national_address_doc_url ? (
                         <a
-                          href={`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/storage/${viewDetailsRep.national_address_doc_url}`}
+                          href={viewDetailsRep.national_address_doc_url}
                           target="_blank"
                           rel="noreferrer"
                           className="bg-primary-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-primary-800 transition-all flex items-center gap-1 cursor-pointer"
@@ -999,7 +1007,7 @@ export default function NeighborhoodRepsPage() {
                           <span>عرض</span>
                         </a>
                       ) : (
-                        <span className="text-gray-400 font-bold text-[11px]">غير مرفق</span>
+                        <span className="text-[var(--color-text-muted)] font-bold text-[11px]">غير مرفق</span>
                       )}
                     </div>
 
@@ -1010,11 +1018,11 @@ export default function NeighborhoodRepsPage() {
                           <FileArchive className="w-4 h-4 text-purple-600" />
                           <span>صور هويات التابعين (ZIP)</span>
                         </h4>
-                        <p className="text-[11px] text-gray-500 mt-0.5">ملف مضغوط بهويات المستفيدين</p>
+                        <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">ملف مضغوط بهويات المستفيدين</p>
                       </div>
                       {viewDetailsRep.dependents_ids_zip_url ? (
                         <a
-                          href={`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/storage/${viewDetailsRep.dependents_ids_zip_url}`}
+                          href={viewDetailsRep.dependents_ids_zip_url}
                           target="_blank"
                           rel="noreferrer"
                           className="bg-purple-700 text-white px-3 py-1.5 rounded-xl font-bold hover:bg-purple-800 transition-all flex items-center gap-1 cursor-pointer"
@@ -1023,7 +1031,7 @@ export default function NeighborhoodRepsPage() {
                           <span>تنزيل</span>
                         </a>
                       ) : (
-                        <span className="text-gray-400 font-bold text-[11px]">غير مرفق</span>
+                        <span className="text-[var(--color-text-muted)] font-bold text-[11px]">غير مرفق</span>
                       )}
                     </div>
                   </div>
@@ -1044,7 +1052,7 @@ export default function NeighborhoodRepsPage() {
                 </h3>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="p-1 hover:bg-gray-100 rounded-full text-gray-500 cursor-pointer"
+                  className="p-1 hover:bg-[var(--color-bg-soft)] rounded-full text-[var(--color-text-muted)] cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1053,22 +1061,22 @@ export default function NeighborhoodRepsPage() {
               <form onSubmit={handleSaveRep} className="space-y-4 text-xs">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">اسم الجهة المستفيدة *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">اسم الجهة المستفيدة *</label>
                     <input
                       required
                       value={form.organization_name}
                       onChange={(e) => setForm({ ...form, organization_name: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-bold"
                       placeholder="مثال: جمعية البر والتقوى، جامع الإحسان..."
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">نوع الجهة *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">نوع الجهة *</label>
                     <select
                       value={form.organization_type}
                       onChange={(e) => setForm({ ...form, organization_type: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right bg-white font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right bg-white font-bold"
                     >
                       {organizationTypes.map(t => (
                         <option key={t} value={t}>{t}</option>
@@ -1077,54 +1085,54 @@ export default function NeighborhoodRepsPage() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">رقم الترخيص / التسجيل</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">رقم الترخيص / التسجيل</label>
                     <input
                       value={form.license_number}
                       onChange={(e) => setForm({ ...form, license_number: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-mono"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-mono"
                       placeholder="مثال: 1024 / 7000123456"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">الشخص المفوض / المسؤول *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">الشخص المفوض / المسؤول *</label>
                     <input
                       required
                       value={form.contact_person}
                       onChange={(e) => setForm({ ...form, contact_person: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-bold"
                       placeholder="اسم المفوض الرسمي للتواصل والاستلام"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">رقم جوال المسؤول *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">رقم جوال المسؤول *</label>
                     <input
                       required
                       value={form.phone}
                       onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-mono"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-mono"
                       placeholder="05xxxxxxxx"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">البريد الإلكتروني للجهة</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">البريد الإلكتروني للجهة</label>
                     <input
                       type="email"
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right"
                       placeholder="info@org.sa"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">المدينة *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">المدينة *</label>
                     <select
                       value={form.city}
                       onChange={(e) => setForm({ ...form, city: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right bg-white font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right bg-white font-bold"
                     >
                       <option value="مكة المكرمة">مكة المكرمة</option>
                       <option value="جدة">جدة</option>
@@ -1135,33 +1143,33 @@ export default function NeighborhoodRepsPage() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">اسم الحي السكني *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">اسم الحي السكني *</label>
                     <input
                       required
                       value={form.district_name}
                       onChange={(e) => setForm({ ...form, district_name: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-bold"
                       placeholder="مثال: حي الشرائع مخطط 9"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">عدد المستفيدين التابعين للجهة</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">عدد المستفيدين التابعين للجهة</label>
                     <input
                       type="number"
                       min="0"
                       value={form.beneficiaries_count}
                       onChange={(e) => setForm({ ...form, beneficiaries_count: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-bold"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">الحالة</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">الحالة</label>
                     <select
                       value={form.status}
                       onChange={(e) => setForm({ ...form, status: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right bg-white font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right bg-white font-bold"
                     >
                       <option value="active">نشط</option>
                       <option value="suspended">موقوف</option>
@@ -1170,11 +1178,11 @@ export default function NeighborhoodRepsPage() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-gray-700 mb-1">العنوان الوطني</label>
+                  <label className="block font-bold text-[var(--color-text-secondary)] mb-1">العنوان الوطني</label>
                   <input
                     value={form.national_address}
                     onChange={(e) => setForm({ ...form, national_address: e.target.value })}
-                    className="w-full rounded-xl border border-gray-300 p-2.5 text-right"
+                    className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right"
                     placeholder="العنوان الوطني للجهة والمقر"
                   />
                 </div>
@@ -1186,7 +1194,7 @@ export default function NeighborhoodRepsPage() {
                       <Users className="w-4 h-4 text-primary-700" />
                       <span>إدراج وقائمة الأسر التابعة للجهة ({formBeneficiaries.length} أسرة)</span>
                     </h4>
-                    <span className="text-[10px] text-gray-500 font-bold">يمكنك رفع ملف Excel أو إدراج الأسر هنا وتعديل بياناتهم مباشرة في الجدول</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)] font-bold">يمكنك رفع ملف Excel أو إدراج الأسر هنا وتعديل بياناتهم مباشرة في الجدول</span>
                   </div>
 
                   {/* شريط رفع واستخراج ملف Excel/CSV للأسر التابعة */}
@@ -1202,7 +1210,7 @@ export default function NeighborhoodRepsPage() {
                           className="hidden"
                         />
                       </label>
-                      <span className="text-[10px] text-gray-500 font-bold">يقرأ الملف ويضيف الأسر في جدول المعاينة فوراً</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)] font-bold">يقرأ الملف ويضيف الأسر في جدول المعاينة فوراً</span>
                     </div>
 
                     <button
@@ -1218,7 +1226,7 @@ export default function NeighborhoodRepsPage() {
                   {/* جدول الأسر المضافة المباشر (قابل للتعديل الفوري) */}
                   {formBeneficiaries.length > 0 && (
                     <div className="overflow-x-auto border border-primary-200 rounded-xl bg-white shadow-xs max-h-56 overflow-y-auto">
-                      <table className="w-full text-xs text-right">
+                      <table className="ikram-table">
                         <thead className="bg-primary-100/70 text-primary-900 font-bold border-b border-primary-200 sticky top-0 bg-primary-100">
                           <tr>
                             <th className="p-2">#</th>
@@ -1234,26 +1242,26 @@ export default function NeighborhoodRepsPage() {
                         <tbody>
                           {formBeneficiaries.map((b, idx) => (
                             <tr key={idx} className="border-b hover:bg-primary-50/40">
-                              <td className="p-2 text-gray-400 font-mono">{idx + 1}</td>
+                              <td className="p-2 text-[var(--color-text-muted)] font-mono">{idx + 1}</td>
                               <td className="p-1">
                                 <input
                                   value={b.name || b.full_name || ""}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'name', e.target.value)}
-                                  className="w-full rounded border border-gray-200 p-1 font-bold text-gray-800 focus:ring-1 focus:ring-primary-500"
+                                  className="w-full rounded border border-[var(--color-border)] p-1 font-bold text-[var(--color-text-primary)] focus:ring-1 focus:ring-primary-500"
                                 />
                               </td>
                               <td className="p-1">
                                 <input
                                   value={b.phone || ""}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'phone', e.target.value)}
-                                  className="w-full rounded border border-gray-200 p-1 font-mono text-gray-600 focus:ring-1 focus:ring-primary-500"
+                                  className="w-full rounded border border-[var(--color-border)] p-1 font-mono text-[var(--color-text-muted)] focus:ring-1 focus:ring-primary-500"
                                 />
                               </td>
                               <td className="p-1">
                                 <input
                                   value={b.national_id || ""}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'national_id', e.target.value)}
-                                  className="w-full rounded border border-gray-200 p-1 font-mono focus:ring-1 focus:ring-primary-500"
+                                  className="w-full rounded border border-[var(--color-border)] p-1 font-mono focus:ring-1 focus:ring-primary-500"
                                 />
                               </td>
                               <td className="p-1">
@@ -1261,14 +1269,14 @@ export default function NeighborhoodRepsPage() {
                                   type="date"
                                   value={b.date_of_birth ? String(b.date_of_birth).slice(0, 10) : (b.birth_date ? String(b.birth_date).slice(0, 10) : "")}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'date_of_birth', e.target.value)}
-                                  className="w-full rounded border border-gray-200 p-1 text-[11px] focus:ring-1 focus:ring-primary-500"
+                                  className="w-full rounded border border-[var(--color-border)] p-1 text-[11px] focus:ring-1 focus:ring-primary-500"
                                 />
                               </td>
                               <td className="p-1">
                                 <select
                                   value={b.beneficiary_type || b.type || "citizen"}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'beneficiary_type', e.target.value)}
-                                  className="w-full rounded border border-gray-200 p-1 bg-white focus:ring-1 focus:ring-primary-500"
+                                  className="w-full rounded border border-[var(--color-border)] p-1 bg-white focus:ring-1 focus:ring-primary-500"
                                 >
                                   <option value="citizen">مواطن</option>
                                   <option value="resident">مقيم</option>
@@ -1280,7 +1288,7 @@ export default function NeighborhoodRepsPage() {
                                   min="1"
                                   value={b.family_members_count || 1}
                                   onChange={(e) => handleUpdateFormBenRow(idx, 'family_members_count', parseInt(e.target.value) || 1)}
-                                  className="w-16 text-center rounded border border-gray-200 p-1 font-bold focus:ring-1 focus:ring-primary-500"
+                                  className="w-16 text-center rounded border border-[var(--color-border)] p-1 font-bold focus:ring-1 focus:ring-primary-500"
                                 />
                               </td>
                               <td className="p-1 text-center">
@@ -1324,35 +1332,35 @@ export default function NeighborhoodRepsPage() {
                   </h4>
                   <div className="grid md:grid-cols-2 gap-4">
                     {/* 1. License Doc */}
-                    <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200">
-                      <label className="block font-bold text-gray-700 mb-1">📜 صورة ترخيص / تسجيل الجهة</label>
+                    <div className="bg-[var(--color-bg-soft)] p-3 rounded-2xl border border-[var(--color-border)]">
+                      <label className="block font-bold text-[var(--color-text-secondary)] mb-1">📜 صورة ترخيص / تسجيل الجهة</label>
                       <input
                         type="file"
                         accept="image/*,.pdf"
                         onChange={(e) => setFiles({ ...files, id_document_image: e.target.files[0] })}
-                        className="w-full text-xs text-gray-500"
+                        className="w-full text-xs text-[var(--color-text-muted)]"
                       />
                     </div>
 
                     {/* 2. Support Letter */}
-                    <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200">
-                      <label className="block font-bold text-gray-700 mb-1">📑 خطاب التفويض الرسمي للشخص المسؤول</label>
+                    <div className="bg-[var(--color-bg-soft)] p-3 rounded-2xl border border-[var(--color-border)]">
+                      <label className="block font-bold text-[var(--color-text-secondary)] mb-1">📑 خطاب التفويض الرسمي للشخص المسؤول</label>
                       <input
                         type="file"
                         accept="image/*,.pdf"
                         onChange={(e) => setFiles({ ...files, support_letter: e.target.files[0] })}
-                        className="w-full text-xs text-gray-500"
+                        className="w-full text-xs text-[var(--color-text-muted)]"
                       />
                     </div>
 
                     {/* 3. National Address Doc */}
-                    <div className="bg-gray-50 p-3 rounded-2xl border border-gray-200">
-                      <label className="block font-bold text-gray-700 mb-1">📍 مستند العنوان الوطني للجهة</label>
+                    <div className="bg-[var(--color-bg-soft)] p-3 rounded-2xl border border-[var(--color-border)]">
+                      <label className="block font-bold text-[var(--color-text-secondary)] mb-1">📍 مستند العنوان الوطني للجهة</label>
                       <input
                         type="file"
                         accept="image/*,.pdf"
                         onChange={(e) => setFiles({ ...files, national_address_doc: e.target.files[0] })}
-                        className="w-full text-xs text-gray-500"
+                        className="w-full text-xs text-[var(--color-text-muted)]"
                       />
                     </div>
 
@@ -1373,7 +1381,7 @@ export default function NeighborhoodRepsPage() {
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 font-bold cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-[var(--color-bg-soft)] text-[var(--color-text-muted)] font-bold cursor-pointer"
                   >
                     إلغاء
                   </button>
@@ -1394,19 +1402,19 @@ export default function NeighborhoodRepsPage() {
           <Scrim isOpen={showDispatchModal && Boolean(selectedRep)} onClose={() => setShowDispatchModal(false)}>
             <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden p-6 border border-primary-100" dir="rtl" onClick={(e) => e.stopPropagation()}>
               <h3 className="font-bold text-base text-primary-900 mb-2">📦 توجيه الدعم للجهة: {selectedRep.organization_name || selectedRep.full_name}</h3>
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs text-[var(--color-text-muted)] mb-4">
                 الحي: {selectedRep.district_name || "عام"} | عدد الأسر المستحقة: <strong>{selectedRep.linked_beneficiaries_count || selectedRep.beneficiaries_count} أسرة</strong>
               </p>
 
               {!dispatchResult ? (
                 <form onSubmit={handleDispatch} className="space-y-4 text-xs">
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">نوع السلة / مادة المستودع *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">نوع السلة / مادة المستودع *</label>
                     <select
                       required
                       value={dispatchForm.basket_id}
                       onChange={(e) => setDispatchForm({ ...dispatchForm, basket_id: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 bg-white text-right font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 bg-white text-right font-bold"
                     >
                       <option value="">-- اختر السلة من المستودع --</option>
                       {baskets.map((b) => (
@@ -1418,27 +1426,28 @@ export default function NeighborhoodRepsPage() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">تاريخ الموعد والتوزيع *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">تاريخ الموعد والتوزيع *</label>
                     <input
                       type="date"
                       required
                       value={dispatchForm.scheduled_date}
                       onChange={(e) => setDispatchForm({ ...dispatchForm, scheduled_date: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-mono"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-mono"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">تحديد سائق التوصيل المسند للجهة</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">تحديد سائق التوصيل المسند للجهة</label>
+                    {driverError && <p role="alert">تعذر تحميل قائمة السائقين.</p>}
                     <select
                       value={dispatchForm.driver_id}
                       onChange={(e) => setDispatchForm({ ...dispatchForm, driver_id: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 bg-white text-right font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 bg-white text-right font-bold"
                     >
                       <option value="">-- اختر السائق المكلف بالتوجه للجهة --</option>
                       {drivers.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.full_name || d.username} ({d.phone})
+                          {d.full_name}
                         </option>
                       ))}
                     </select>
@@ -1452,7 +1461,7 @@ export default function NeighborhoodRepsPage() {
                     <button
                       type="button"
                       onClick={() => setShowDispatchModal(false)}
-                      className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 font-bold cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-[var(--color-bg-soft)] text-[var(--color-text-muted)] font-bold cursor-pointer"
                     >
                       إلغاء
                     </button>
@@ -1471,7 +1480,7 @@ export default function NeighborhoodRepsPage() {
                   
                   {(() => {
                     const repObj = selectedRep;
-                    const repMsg = `مرحباً سعادة المسؤول في ${repObj?.organization_name || repObj?.full_name || "الجهة المستفيدة"}،
+                    const referenceMessage = `مرحباً سعادة المسؤول في ${repObj?.organization_name || repObj?.full_name || "الجهة المستفيدة"}،
 تسر جمعية إكرام إفادتكم بتخصيص وتوجيه دفعة دعم جديدة لمستفيديكم:
 🏛️ *الجهة المستفيدة:* ${repObj?.organization_name || repObj?.full_name || ""}
 📍 *النطاق والحي:* ${repObj?.district_name || ""}
@@ -1481,11 +1490,11 @@ export default function NeighborhoodRepsPage() {
 يرجى استخدام رمز الـ QR لإثبات توثيق استلام ودعم المستفيدين. شكراً لكم.`;
 
                     return (
-                      <QrWhatsAppCard
+                      <HistoricalDistributionReferenceCard
                         text={dispatchResult.qr_code}
                         recipientName={repObj?.organization_name || repObj?.full_name}
                         phone={repObj?.phone}
-                        detailsMessage={repMsg}
+                        detailsMessage={referenceMessage}
                         title={`الجهة: ${repObj?.organization_name || repObj?.full_name || "الجهة المستفيدة"}`}
                       />
                     );

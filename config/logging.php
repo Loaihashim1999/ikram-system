@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'default' => env('LOG_CHANNEL', 'stack'),
+    'default' => env('LOG_CHANNEL', env('APP_ENV', 'production') === 'production' ? 'stderr' : 'stack'),
 
     /*
     |--------------------------------------------------------------------------
@@ -54,7 +54,10 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'channels' => explode(',', (string) env(
+                'LOG_STACK',
+                env('APP_ENV', 'production') === 'production' ? 'stderr' : 'single'
+            )),
             'ignore_exceptions' => false,
         ],
 

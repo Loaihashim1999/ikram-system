@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\ResetAccountPassword;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -11,6 +12,11 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, HasUuids, Notifiable;
+
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new ResetAccountPassword($token));
+    }
 
     protected $keyType = 'string';
 
@@ -38,6 +44,11 @@ class User extends Authenticatable
         'is_active' => 'boolean',
         'can_receive_notifications' => 'boolean',
         'permissions' => 'array',
+        'must_change_password' => 'boolean',
+        'temporary_password_expires_at' => 'datetime',
+        'failed_login_attempts' => 'integer',
+        'locked_until' => 'datetime',
+        'is_locked' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -67,6 +78,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(AuditLog::class);
     }
+
     /**
      * Determine if the user has a given permission.
      * Admin role has full access.
@@ -79,23 +91,21 @@ class User extends Authenticatable
         }
         // Permissions stored as JSON array in `permissions` attribute
         $permissions = $this->permissions ?? [];
+
         return in_array($permission, $permissions);
     }
 
     /**
-     * Check if user is eligible to receive operations alerts.
-     * Admin always receives notifications; other roles require can_receive_notifications = true.
+     * Check whether this account opted in to operations alerts.
      */
     public function canReceiveNotifications(): bool
     {
-        if ($this->role === 'admin') {
-            return true;
-        }
-        if (isset($this->attributes['can_receive_notifications'])) {
+        if (array_key_exists('can_receive_notifications', $this->attributes)) {
             return (bool) $this->attributes['can_receive_notifications'];
         }
+
         $perms = $this->permissions ?? [];
-        return !empty($perms['can_receive_notifications']);
+
+        return ! empty($perms['can_receive_notifications']);
     }
 }
-

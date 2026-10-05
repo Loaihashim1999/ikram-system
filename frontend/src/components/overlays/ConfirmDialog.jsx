@@ -31,23 +31,23 @@ export default function ConfirmDialog({
 
   const typeConfig = {
     danger: {
-      btnBg: "bg-[#C24B3F] hover:bg-red-700",
+      btnBg: "bg-[var(--color-danger)] hover:bg-[var(--color-danger)]",
       iconBg: "bg-red-50 text-red-600 border-red-200",
       Icon: Trash2,
     },
     warning: {
-      btnBg: "bg-[#D97706] hover:bg-[#B45309]",
-      iconBg: "bg-amber-50 text-amber-700 border-amber-200",
+      btnBg: "bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)]",
+      iconBg: "bg-[var(--color-bg-soft)] text-amber-700 border-[var(--color-border)]",
       Icon: AlertTriangle,
     },
     success: {
-      btnBg: "bg-[#3F6B3A] hover:bg-[#31542D]",
+      btnBg: "bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)]",
       iconBg: "bg-green-50 text-green-700 border-green-200",
       Icon: CheckCircle2,
     },
     info: {
-      btnBg: "bg-[#C9A24A] hover:bg-[#8A6B24]",
-      iconBg: "bg-amber-50 text-[#C9A24A] border-amber-200",
+      btnBg: "bg-[var(--color-brand-gold)] hover:bg-[#8A6B24]",
+      iconBg: "bg-[var(--color-bg-soft)] text-[var(--color-brand-gold)] border-[var(--color-border)]",
       Icon: AlertTriangle,
     },
   };
@@ -60,10 +60,12 @@ export default function ConfirmDialog({
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none" dir="rtl">
         {/* Surface */}
         <div
-          className="pointer-events-auto relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-[#E5E2D9] overflow-hidden flex flex-col p-6 text-right"
+          className="ikram-dialog pointer-events-auto relative w-full max-w-md overflow-hidden flex flex-col p-6 text-right"
           onClick={(e) => e.stopPropagation()}
           role="alertdialog"
           aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+          aria-describedby="confirm-dialog-message"
         >
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className={`p-3 rounded-2xl border flex-shrink-0 ${currentType.iconBg}`}>
@@ -72,22 +74,22 @@ export default function ConfirmDialog({
             <button
               onClick={close}
               disabled={busy}
-              className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
+              className="p-1.5 rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-soft)] transition-colors cursor-pointer disabled:opacity-50"
               aria-label="إغلاق"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <h3 className="font-extrabold text-lg text-[#111827] mb-1">{title}</h3>
-          <p className="text-xs text-[#6B7280] leading-relaxed mb-6">{message}</p>
+          <h3 id="confirm-dialog-title" className="font-extrabold text-base text-[var(--color-text-primary)] mb-1">{title}</h3>
+          <p id="confirm-dialog-message" className="text-xs text-[var(--color-text-muted)] leading-relaxed mb-6">{message}</p>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E5E2D9]">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--color-border)]">
             <button
               type="button"
               onClick={close}
               disabled={busy}
-              className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
+              className="px-4 py-2.5 rounded-xl bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] font-bold text-xs hover:bg-[var(--color-bg-soft)] transition-colors cursor-pointer disabled:opacity-50"
             >
               {finalCancelLabel}
             </button>

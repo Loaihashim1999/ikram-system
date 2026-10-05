@@ -11,8 +11,8 @@ import api from "../../api/axios";
 /* ─── Inline QR fallback — text box with code, styled clearly ─────── */
 const QrDisplay = ({ text }) => (
   <div className="flex flex-col items-center p-2 border rounded-lg bg-white">
-    <div className="text-xs text-gray-500 mb-1">رمز الاستلام</div>
-    <div className="font-mono font-bold text-lg tracking-widest text-amber-800 bg-amber-50 px-3 py-1 rounded">
+    <div className="text-xs text-[var(--color-text-muted)] mb-1">رمز الاستلام</div>
+    <div className="font-mono font-bold text-lg tracking-widest text-[var(--color-text-secondary)] bg-[var(--color-bg-soft)] px-3 py-1 rounded">
       {text}
     </div>
   </div>
@@ -113,16 +113,12 @@ export default function DistributionPage() {
     );
   };
 
-  const resendWhatsapp = async (id) => {
-    await distributionApi.sendWhatsapp(id);
-    alert("تم إعادة إرسال رسالة واتساب.");
-  };
 
   /* ─── Step Classes ─── */
   const cls = {
     card:  "bg-white rounded-2xl shadow-md p-6 mb-5",
-    label: "block text-sm font-semibold text-gray-700 mb-1",
-    input: "w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 text-right",
+    label: "block text-sm font-semibold text-[var(--color-text-secondary)] mb-1",
+    input: "w-full rounded-lg border border-[var(--color-border)] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-gold)] text-right",
     btn:   "px-5 py-2 rounded-lg font-semibold transition-all",
   };
 
@@ -130,7 +126,7 @@ export default function DistributionPage() {
     <div className="p-6 max-w-6xl mx-auto" dir="rtl">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">📦 صفحة إرسال الدعم</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">📦 صفحة إرسال الدعم</h1>
       </div>
 
       {/* Step Indicator */}
@@ -141,10 +137,10 @@ export default function DistributionPage() {
               <div
                 className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-semibold whitespace-nowrap ${
                   i === step
-                    ? "bg-amber-600 text-white"
+                    ? "bg-[var(--color-brand-green)] text-white"
                     : i < step
                     ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-500"
+                    : "bg-[var(--color-bg-soft)] text-[var(--color-text-muted)]"
                 }`}
               >
                 <span className="w-5 h-5 rounded-full bg-white/30 flex items-center justify-center text-xs font-bold">
@@ -153,7 +149,7 @@ export default function DistributionPage() {
                 {s}
               </div>
               {i < STEPS.length - 1 && (
-                <div className="w-6 h-0.5 bg-gray-200 mx-1" />
+                <div className="w-6 h-0.5 bg-[var(--color-bg-soft)] mx-1" />
               )}
             </div>
           ))}
@@ -163,7 +159,7 @@ export default function DistributionPage() {
       {/* ══ STEP 0 – اختيار المستفيدين ══ */}
       {step === 0 && (
         <div className={cls.card}>
-          <h2 className="text-lg font-bold text-amber-800 mb-4">🔍 اختر المستفيدين</h2>
+          <h2 className="text-lg font-bold text-[var(--color-text-secondary)] mb-4">🔍 اختر المستفيدين</h2>
           <input
             value={searchQ} onChange={(e) => setSearchQ(e.target.value)}
             placeholder="بحث بالاسم أو رقم الهوية..."
@@ -171,7 +167,7 @@ export default function DistributionPage() {
           />
           <div className="overflow-x-auto max-h-96 overflow-y-auto border rounded-xl">
             <table className="w-full text-sm">
-              <thead className="bg-amber-50 sticky top-0">
+              <thead className="bg-[var(--color-bg-soft)] sticky top-0">
                 <tr>
                   <th className="p-2 text-right">
                     <input type="checkbox"
@@ -190,7 +186,7 @@ export default function DistributionPage() {
                   <tr
                     key={b.id}
                     onClick={() => toggleSelect(b.id)}
-                    className={`border-t cursor-pointer hover:bg-amber-50 ${selected.has(b.id) ? "bg-amber-50" : ""}`}
+                    className={`border-t cursor-pointer hover:bg-[var(--color-bg-soft)] ${selected.has(b.id) ? "bg-[var(--color-bg-soft)]" : ""}`}
                   >
                     <td className="p-2">
                       <input type="checkbox" checked={selected.has(b.id)} readOnly />
@@ -202,19 +198,19 @@ export default function DistributionPage() {
                   </tr>
                 ))}
                 {filteredBeneficiaries.length === 0 && (
-                  <tr><td colSpan={5} className="p-4 text-center text-gray-400">لا توجد نتائج</td></tr>
+                  <tr><td colSpan={5} className="p-4 text-center text-[var(--color-text-muted)]">لا توجد نتائج</td></tr>
                 )}
               </tbody>
             </table>
           </div>
-          <p className="text-sm text-gray-500 mt-2">تم اختيار {selected.size} مستفيد</p>
+          <p className="text-sm text-[var(--color-text-muted)] mt-2">تم اختيار {selected.size} مستفيد</p>
         </div>
       )}
 
       {/* ══ STEP 1 – اختيار السلة/الدعم ══ */}
       {step === 1 && (
         <div className={cls.card}>
-          <h2 className="text-lg font-bold text-amber-800 mb-4">📦 اختر نوع الدعم</h2>
+          <h2 className="text-lg font-bold text-[var(--color-text-secondary)] mb-4">📦 اختر نوع الدعم</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {baskets.map((b) => (
               <button
@@ -223,12 +219,12 @@ export default function DistributionPage() {
                 onClick={() => setBasketId(b.id)}
                 className={`p-4 rounded-xl border-2 text-right transition-all ${
                   basketId === b.id
-                    ? "border-amber-500 bg-amber-50"
-                    : "border-gray-200 hover:border-amber-300"
+                    ? "border-amber-500 bg-[var(--color-bg-soft)]"
+                    : "border-[var(--color-border)] hover:border-[var(--color-brand-gold)]"
                 }`}
               >
-                <div className="font-bold text-gray-800">{b.name}</div>
-                <div className="text-sm text-gray-500 mt-1">
+                <div className="font-bold text-[var(--color-text-primary)]">{b.name}</div>
+                <div className="text-sm text-[var(--color-text-muted)] mt-1">
                   المتوفر: <span className={`font-bold ${ (b.current_quantity ?? b.quantity ?? b.stock_quantity ?? 0) <= 5 ? "text-red-600" : "text-green-600"}`}>
                     {b.current_quantity ?? b.quantity ?? b.stock_quantity ?? 0}
                   </span>
@@ -236,7 +232,7 @@ export default function DistributionPage() {
               </button>
             ))}
             {baskets.length === 0 && (
-              <p className="text-gray-400 col-span-3">لا توجد مواد في المستودع.</p>
+              <p className="text-[var(--color-text-muted)] col-span-3">لا توجد مواد في المستودع.</p>
             )}
           </div>
           {selectedBasket && selected.size > (selectedBasket.current_quantity ?? selectedBasket.quantity ?? selectedBasket.stock_quantity ?? 0) && (
@@ -250,7 +246,7 @@ export default function DistributionPage() {
       {/* ══ STEP 2 – تحديد الموعد ══ */}
       {step === 2 && (
         <div className={cls.card}>
-          <h2 className="text-lg font-bold text-amber-800 mb-4">📅 تحديد موعد الاستلام</h2>
+          <h2 className="text-lg font-bold text-[var(--color-text-secondary)] mb-4">📅 تحديد موعد الاستلام</h2>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className={cls.label}>تاريخ الاستلام *</label>
@@ -275,26 +271,26 @@ export default function DistributionPage() {
       {/* ══ STEP 3 – مراجعة وإرسال ══ */}
       {step === 3 && (
         <div className={cls.card}>
-          <h2 className="text-lg font-bold text-amber-800 mb-4">📋 مراجعة قبل الإرسال</h2>
+          <h2 className="text-lg font-bold text-[var(--color-text-secondary)] mb-4">📋 مراجعة قبل الإرسال</h2>
           <div className="grid md:grid-cols-3 gap-4 mb-4 text-center">
-            <div className="bg-amber-50 rounded-xl p-4">
+            <div className="bg-[var(--color-bg-soft)] rounded-xl p-4">
               <div className="text-3xl font-bold text-amber-700">{selected.size}</div>
-              <div className="text-sm text-gray-500 mt-1">مستفيد مختار</div>
+              <div className="text-sm text-[var(--color-text-muted)] mt-1">مستفيد مختار</div>
             </div>
             <div className="bg-green-50 rounded-xl p-4">
               <div className="text-lg font-bold text-green-700">{selectedBasket?.name || "—"}</div>
-              <div className="text-sm text-gray-500 mt-1">نوع الدعم</div>
+              <div className="text-sm text-[var(--color-text-muted)] mt-1">نوع الدعم</div>
             </div>
             <div className="bg-blue-50 rounded-xl p-4">
               <div className="text-lg font-bold text-blue-700">
                 {scheduledAt ? new Date(scheduledAt).toLocaleDateString("ar-SA") : "—"}
               </div>
-              <div className="text-sm text-gray-500 mt-1">تاريخ الاستلام</div>
+              <div className="text-sm text-[var(--color-text-muted)] mt-1">تاريخ الاستلام</div>
             </div>
           </div>
           <div className="max-h-48 overflow-y-auto border rounded-lg">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-[var(--color-bg-soft)]">
                 <tr>
                   <th className="p-2 text-right">#</th>
                   <th className="p-2 text-right">الاسم</th>
@@ -305,7 +301,7 @@ export default function DistributionPage() {
               <tbody>
                 {selectedBeneficiaries.map((b, i) => (
                   <tr key={b.id} className="border-t">
-                    <td className="p-2 text-gray-400">{i + 1}</td>
+                    <td className="p-2 text-[var(--color-text-muted)]">{i + 1}</td>
                     <td className="p-2">{b.full_name || b.name}</td>
                     <td className="p-2">{b.national_id}</td>
                     <td className="p-2">{b.phone}</td>
@@ -314,7 +310,7 @@ export default function DistributionPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-xs text-[var(--color-text-muted)] mt-2">
             سيتم إرسال رسالة واتساب لكل مستفيد برمز الاستلام وتاريخه، وخصم {selected.size} وحدة من المستودع.
           </p>
         </div>
@@ -329,8 +325,8 @@ export default function DistributionPage() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(result.distributions || []).map((d) => (
-              <div key={d.id} className="border rounded-xl p-4 bg-gray-50 text-center">
-                <div className="font-semibold text-gray-700 mb-2">
+              <div key={d.id} className="border rounded-xl p-4 bg-[var(--color-bg-soft)] text-center">
+                <div className="font-semibold text-[var(--color-text-secondary)] mb-2">
                   {selectedBeneficiaries.find((b) => b.id === d.beneficiary_id)?.full_name || d.beneficiary_id}
                 </div>
                 <QrDisplay text={d.barcode_code} />
@@ -340,7 +336,7 @@ export default function DistributionPage() {
           <div className="text-center mt-6">
             <button
               onClick={() => { setStep(0); setSelected(new Set()); setResult(null); setBasketId(""); setScheduledAt(""); }}
-              className={cls.btn + " bg-amber-100 text-amber-800 hover:bg-amber-200"}
+              className={cls.btn + " bg-amber-100 text-[var(--color-text-secondary)] hover:bg-amber-200"}
             >
               إرسال دفعة جديدة
             </button>
@@ -355,7 +351,7 @@ export default function DistributionPage() {
             type="button"
             onClick={() => setStep((s) => Math.max(0, s - 1))}
             disabled={step === 0}
-            className={cls.btn + " bg-gray-100 text-gray-600 disabled:opacity-40 hover:bg-gray-200"}
+            className={cls.btn + " bg-[var(--color-bg-soft)] text-[var(--color-text-muted)] disabled:opacity-40 hover:bg-[var(--color-bg-soft)]"}
           >
             ← السابق
           </button>
@@ -368,7 +364,7 @@ export default function DistributionPage() {
                 (step === 1 && !basketId) ||
                 (step === 2 && !scheduledAt)
               }
-              className={cls.btn + " bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-40"}
+              className={cls.btn + " bg-[var(--color-brand-green)] text-white hover:bg-[var(--color-brand-green-hover)] disabled:opacity-40"}
             >
               التالي →
             </button>
@@ -377,7 +373,7 @@ export default function DistributionPage() {
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className={cls.btn + " bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"}
+              className={cls.btn + " bg-[var(--color-brand-green)] text-white hover:bg-[var(--color-brand-green-hover)] disabled:opacity-50"}
             >
               {submitting ? "⏳ جاري الإرسال..." : "✅ إرسال الدعم"}
             </button>
@@ -387,13 +383,13 @@ export default function DistributionPage() {
 
       {/* ══ Distribution History ══ */}
       <div className={cls.card + " mt-8"}>
-        <h2 className="text-lg font-bold text-amber-800 mb-4">📋 سجل التوزيعات</h2>
+        <h2 className="text-lg font-bold text-[var(--color-text-secondary)] mb-4">📋 سجل التوزيعات</h2>
         {distLoading ? (
-          <p className="text-gray-400 text-center py-4">جاري التحميل...</p>
+          <p className="text-[var(--color-text-muted)] text-center py-4">جاري التحميل...</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-amber-50 text-amber-800">
+              <thead className="bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)]">
                 <tr>
                   <th className="p-2 text-right">المستفيد</th>
                   <th className="p-2 text-right">نوع الدعم</th>
@@ -436,18 +432,12 @@ export default function DistributionPage() {
                           تأكيد الاستلام
                         </button>
                       )}
-                      <button
-                        onClick={() => resendWhatsapp(d.id)}
-                        className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded hover:bg-blue-100 font-semibold"
-                      >
-                        إعادة إرسال
-                      </button>
                     </td>
                   </tr>
                 ))}
                 {distributions.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-6 text-center text-gray-400">
+                    <td colSpan={6} className="p-6 text-center text-[var(--color-text-muted)]">
                       لا توجد توزيعات بعد
                     </td>
                   </tr>

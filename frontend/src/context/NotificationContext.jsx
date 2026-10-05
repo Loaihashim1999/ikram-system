@@ -8,8 +8,7 @@ export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [error, setError] = useState('');
-  const [thresholdDays, setThresholdDays] = useState(10);
-  useEffect(() => { if (user) api.get('/settings').then(r => setThresholdDays(Number(r.data?.data?.warehouse_alert_threshold_days) || 10)).catch(() => {}); }, [user?.id]);
+  const thresholdDays = 5;
   const enabled = user && (user.role === 'admin' || user.can_receive_notifications || user.permissions?.can_receive_notifications);
   const refresh = useCallback(async () => {
     if (!enabled) return;
@@ -38,12 +37,12 @@ export function NotificationProvider({ children }) {
     return () => clearInterval(timer);
   }, [refresh]);
   const markAsRead = async (id) => {
-    try { await api.post(`/notifications/${id}/mark-as-read`); await refresh(); }
-    catch { setError('تعذر حفظ حالة القراءة'); }
+    try { await api.post(`/notifications/${id}/mark-as-read`); await refresh(); return true; }
+    catch { setError('تعذر حفظ حالة القراءة'); return false; }
   };
   const markAllAsRead = async () => {
-    try { await api.post('/notifications/mark-all-read'); await refresh(); }
-    catch { setError('تعذر حفظ حالة القراءة'); }
+    try { await api.post('/notifications/mark-all-read'); await refresh(); return true; }
+    catch { setError('تعذر حفظ حالة القراءة'); return false; }
   };
   return <NotificationContext.Provider value={{ notifications, unreadCount, error, refresh, thresholdDays, markAsRead, markAllAsRead,
     checkWarehouseExpirations: refresh, canViewWarehouseAlerts: () => !!enabled, notificationEnabled: !!enabled }}>

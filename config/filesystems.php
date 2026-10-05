@@ -1,5 +1,12 @@
 <?php
 
+$production = env('APP_ENV', 'production') === 'production';
+$publicDiskDriver = env('PUBLIC_FILESYSTEM_DRIVER', $production ? 'azure-storage-blob' : 'local');
+$publicDiskVisibility = env('PUBLIC_FILESYSTEM_VISIBILITY', $production ? 'private' : 'public');
+$azureStorageAccountName = env('AZURE_STORAGE_ACCOUNT_NAME');
+$azureStorageContainer = env('AZURE_STORAGE_CONTAINER');
+$azureClientId = env('AZURE_CLIENT_ID');
+
 return [
 
     /*
@@ -13,7 +20,7 @@ return [
     |
     */
 
-    'default' => env('FILESYSTEM_DISK', 'local'),
+    'default' => env('FILESYSTEM_DISK', $production ? 'azure' : 'local'),
 
     /*
     |--------------------------------------------------------------------------
@@ -39,12 +46,36 @@ return [
         ],
 
         'public' => [
-            'driver' => 'local',
+            'driver' => $publicDiskDriver,
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
-            'visibility' => 'public',
+            'url' => env(
+                'PUBLIC_FILESYSTEM_URL',
+                $publicDiskDriver === 'local'
+                    ? rtrim(env('APP_URL', 'http://localhost'), '/').'/storage'
+                    : null
+            ),
+            'visibility' => $publicDiskVisibility,
+            'is_public_container' => false,
+
+            ...($publicDiskDriver === 'azure-storage-blob' ? [
+                'credential' => 'managed_identity',
+                'account_name' => $azureStorageAccountName,
+                'client_id' => $azureClientId,
+                'container' => $azureStorageContainer,
+            ] : []),
+
             'throw' => false,
             'report' => false,
+        ],
+
+        'azure' => [
+            'driver' => 'azure-storage-blob',
+            'credential' => 'managed_identity',
+            'account_name' => $azureStorageAccountName,
+            'client_id' => $azureClientId,
+            'container' => $azureStorageContainer,
+            'throw' => true,
+            'report' => true,
         ],
 
         's3' => [

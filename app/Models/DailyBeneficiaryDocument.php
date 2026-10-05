@@ -24,6 +24,20 @@ class DailyBeneficiaryDocument extends Model
         'uploaded_by',
     ];
 
+    protected $hidden = ['file_path'];
+
+    public function getFileUrlAttribute(): ?string
+    {
+        if (! $this->file_path) {
+            return null;
+        }
+
+        return route('daily-beneficiaries.documents.download', [
+            'beneficiary' => $this->daily_beneficiary_id,
+            'document' => $this->getKey(),
+        ]);
+    }
+
     public function dailyBeneficiary(): BelongsTo
     {
         return $this->belongsTo(DailyBeneficiary::class, 'daily_beneficiary_id');

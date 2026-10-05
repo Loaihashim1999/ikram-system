@@ -53,4 +53,23 @@ class AuthenticationFailureTest extends TestCase
         ]);
         $response->assertStatus(422);
     }
+
+    public function test_normal_user_locks_after_three_failed_attempts(): void
+    {
+        $user = User::factory()->create([
+            'username' => 'locked_user',
+            'password' => Hash::make('correct-password'),
+            'role' => 'staff',
+            'is_active' => true,
+        ]);
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $this->postJson('/api/login', ['username' => 'locked_user', 'password' => 'wrong'])->assertUnprocessable();
+        }
+
+        $this->assertTrue((bool) $user->fresh()->is_locked);
+        $this->postJson('/api/login', ['username' => 'locked_user', 'password' => 'correct-password'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('username');
+    }
 }

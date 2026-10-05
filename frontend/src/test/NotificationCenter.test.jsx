@@ -1,11 +1,13 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import NotificationCenter from '../components/layout/NotificationCenter';
 import { NotificationProvider } from '../context/NotificationContext';
 import api from '../api/axios';
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1', role: 'admin' } }) }));
 vi.mock('../api/axios', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+function RouteProbe() { const route = useLocation(); return <output data-testid="route">{route.pathname}</output>; }
+
 describe('Persistent Notification Center', () => {
   let read;
   beforeEach(() => {
@@ -42,4 +44,30 @@ describe('Persistent Notification Center', () => {
     fireEvent.click(screen.getByRole('button', { name: /مركز الإشعارات والتنبيهات/ }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('تعذر تحديث الإشعارات'));
   });
+  it('persists read before opening the target and stays open when read fails', async () => {
+    api.post.mockRejectedValue(new Error('offline'));
+    render(<MemoryRouter><NotificationProvider><NotificationCenter /></NotificationProvider></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /مركز الإشعارات والتنبيهات/ }));
+    await waitFor(() => expect(screen.getAllByText('تنبيه المخزون').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText('تنبيه المخزون')[0]);
+    fireEvent.click(await screen.findByRole('button', { name: 'فتح السجل' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/notifications/n1/mark-as-read'));
+    expect(screen.getByRole('button', { name: 'فتح السجل' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'تحديد كمقروء' })).toBeInTheDocument();
+  });
+
+  it('waits for read persistence before navigating to the exact target', async () => {
+    let resolveRead;
+    api.post.mockImplementation(() => new Promise((resolve) => { resolveRead = () => { read = true; resolve({ data: { success: true } }); }; }));
+    render(<MemoryRouter><NotificationProvider><NotificationCenter /><RouteProbe /></NotificationProvider></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /مركز الإشعارات والتنبيهات/ }));
+    await waitFor(() => expect(screen.getAllByText('تنبيه المخزون').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText('تنبيه المخزون')[0]);
+    fireEvent.click(await screen.findByRole('button', { name: 'فتح السجل' }));
+    expect(screen.getByTestId('route')).toHaveTextContent('/');
+    expect(screen.getByTestId('route')).not.toHaveTextContent('/daily-beneficiaries');
+    resolveRead();
+    await waitFor(() => expect(screen.getByTestId('route')).toHaveTextContent('/daily-beneficiaries/inventory'));
+  });
+
 });

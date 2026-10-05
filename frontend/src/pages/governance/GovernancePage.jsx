@@ -6,6 +6,7 @@ import Toast from "../../components/ui/Toast";
 import { getAnalytics } from "../../api/dailyBeneficiaries";
 import { getDocumentPdfUrl, downloadDocument } from "../../utils/documentUrl";
 import { ColumnChart, LineChart, FunnelChart, PieChart } from "./GovernanceCharts";
+import { useAuth } from "../../context/AuthContext";
 import {
   BarChart3,
   TrendingUp,
@@ -26,6 +27,7 @@ import {
 } from "lucide-react";
 
 export default function GovernancePage() {
+  const { user } = useAuth();
   // Date Filtering State
   const [periodType, setPeriodType] = useState("weekly"); // daily, weekly, monthly, yearly, custom
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
@@ -47,6 +49,12 @@ export default function GovernancePage() {
   // Search filter inside sub-tables
   const [tableSearch, setTableSearch] = useState("");
   const [inventoryDrilldown, setInventoryDrilldown] = useState(null);
+  const [reportDataset, setReportDataset] = useState("beneficiaries");
+  const [reportDomain, setReportDomain] = useState("all");
+  const [reportStatus, setReportStatus] = useState("");
+  const [reportSearch, setReportSearch] = useState("");
+  const [reportPage, setReportPage] = useState(1);
+  const [reportPerPage, setReportPerPage] = useState(10);
 
   // Toast & Validation Error
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
@@ -62,6 +70,12 @@ export default function GovernancePage() {
         end_date: periodType === "weekly" || periodType === "custom" ? endDate : undefined,
         month: periodType === "monthly" ? selectedMonth : undefined,
         year: periodType === "monthly" || periodType === "yearly" ? selectedYear : undefined,
+        report_dataset: reportDataset,
+        domain: reportDomain,
+        status: reportStatus || undefined,
+        search: reportSearch || undefined,
+        page: reportPage,
+        per_page: reportPerPage,
       };
 
       const res = await getAnalytics(params);
@@ -82,7 +96,7 @@ export default function GovernancePage() {
 
   useEffect(() => {
     fetchAnalytics();
-  }, [periodType, selectedDate, startDate, endDate, selectedMonth, selectedYear]);
+  }, [periodType, selectedDate, startDate, endDate, selectedMonth, selectedYear, reportDataset, reportDomain, reportStatus, reportSearch, reportPage, reportPerPage]);
 
   // Handle Export to Excel
   const handleExportExcel = async () => {
@@ -111,8 +125,16 @@ export default function GovernancePage() {
       params.set('year', selectedYear);
     }
     if (periodType === 'yearly') params.set('year', selectedYear);
+    params.set('report_dataset', reportDataset);
+    params.set('domain', reportDomain);
+    if (reportStatus) params.set('status', reportStatus);
+    if (reportSearch) params.set('search', reportSearch);
     return getDocumentPdfUrl(`/reports/comprehensive/pdf?${params.toString()}`);
-  }, [periodType, startDate, endDate, selectedDate, selectedMonth, selectedYear]);
+  }, [periodType, startDate, endDate, selectedDate, selectedMonth, selectedYear, reportDataset, reportDomain, reportStatus, reportSearch]);
+
+  const isAdmin = user?.role === "admin";
+  const canExcel = isAdmin || user?.permissions?.governance?.export_excel === true;
+  const canPdf = isAdmin || user?.permissions?.governance?.export_pdf === true;
 
   const pdfDailyUrl = useMemo(() => {
     return getDocumentPdfUrl(`/reports/daily/pdf?date=${selectedDate}`);
@@ -144,16 +166,16 @@ export default function GovernancePage() {
           breadcrumbs={[{ label: "الحوكمة والتقارير" }]}
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <Button
+              {canExcel && <Button
                 variant="outline"
                 size="sm"
                 icon={FileSpreadsheet}
                 onClick={handleExportExcel}
               >
                 تصدير إكسل (Excel)
-              </Button>
+              </Button>}
 
-              <a
+              {canPdf && <a
                 href={pdfDailyUrl}
                 target="_blank"
                 rel="noreferrer"
@@ -161,9 +183,9 @@ export default function GovernancePage() {
                 <Button variant="outline" size="sm" icon={Printer}>
                   التقرير اليومي (PDF)
                 </Button>
-              </a>
+              </a>}
 
-              <a
+              {canPdf && <a
                 href={pdfComprehensiveUrl}
                 target="_blank"
                 rel="noreferrer"
@@ -171,19 +193,19 @@ export default function GovernancePage() {
                 <Button variant="secondary" size="sm" icon={Download}>
                   التقرير الشامل (PDF)
                 </Button>
-              </a>
+              </a>}
             </div>
           }
         />
 
         {/* Date Range Selector Box */}
-        <div className="bg-white border border-[#E5E2D9] rounded-2xl p-4 shadow-xs space-y-3">
+        <div className="ikram-panel p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-1.5 bg-white p-1 rounded-lg border border-[#E5E2D9] text-xs">
+            <div className="flex flex-wrap items-center gap-1.5 bg-white p-1 rounded-lg border border-[var(--color-border)] text-xs">
               <button
                 onClick={() => setPeriodType("daily")}
                 className={`px-3 py-1.5 rounded-md font-bold transition-colors ${
-                  periodType === "daily" ? "bg-[#3F6B3A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
+                  periodType === "daily" ? "bg-[var(--color-brand-green)] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
                 يومي
@@ -191,7 +213,7 @@ export default function GovernancePage() {
               <button
                 onClick={() => setPeriodType("weekly")}
                 className={`px-3 py-1.5 rounded-md font-bold transition-colors ${
-                  periodType === "weekly" ? "bg-[#3F6B3A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
+                  periodType === "weekly" ? "bg-[var(--color-brand-green)] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
                 أسبوعي
@@ -199,7 +221,7 @@ export default function GovernancePage() {
               <button
                 onClick={() => setPeriodType("monthly")}
                 className={`px-3 py-1.5 rounded-md font-bold transition-colors ${
-                  periodType === "monthly" ? "bg-[#3F6B3A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
+                  periodType === "monthly" ? "bg-[var(--color-brand-green)] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
                 شهري
@@ -207,7 +229,7 @@ export default function GovernancePage() {
               <button
                 onClick={() => setPeriodType("yearly")}
                 className={`px-3 py-1.5 rounded-md font-bold transition-colors ${
-                  periodType === "yearly" ? "bg-[#3F6B3A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
+                  periodType === "yearly" ? "bg-[var(--color-brand-green)] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
                 سنوي
@@ -215,7 +237,7 @@ export default function GovernancePage() {
               <button
                 onClick={() => setPeriodType("custom")}
                 className={`px-3 py-1.5 rounded-md font-bold transition-colors ${
-                  periodType === "custom" ? "bg-[#3F6B3A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
+                  periodType === "custom" ? "bg-[var(--color-brand-green)] text-white shadow-xs" : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
                 نطاق مخصص
@@ -231,7 +253,7 @@ export default function GovernancePage() {
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="px-3 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                    className="px-3 py-1.5 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                   />
                 </div>
               )}
@@ -246,7 +268,7 @@ export default function GovernancePage() {
                       setStartDate(e.target.value);
                       setDateRangeError("");
                     }}
-                    className="px-2.5 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs font-mono focus:border-[#3F6B3A] focus:outline-none"
+                    className="px-2.5 py-1.5 bg-white border border-[var(--color-border)] rounded-lg text-xs font-mono focus:border-[var(--color-brand-green)] focus:outline-none"
                   />
                   <span className="text-slate-600 font-bold">إلى تاريخ:</span>
                   <input
@@ -256,7 +278,7 @@ export default function GovernancePage() {
                       setEndDate(e.target.value);
                       setDateRangeError("");
                     }}
-                    className="px-2.5 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs font-mono focus:border-[#3F6B3A] focus:outline-none"
+                    className="px-2.5 py-1.5 bg-white border border-[var(--color-border)] rounded-lg text-xs font-mono focus:border-[var(--color-brand-green)] focus:outline-none"
                   />
                   <Button
                     variant="primary"
@@ -274,7 +296,7 @@ export default function GovernancePage() {
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    className="px-3 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs"
+                    className="px-3 py-1.5 bg-white border border-[var(--color-border)] rounded-lg text-xs"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
                       <option key={m} value={m}>شهر {m}</option>
@@ -283,7 +305,7 @@ export default function GovernancePage() {
                   <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="px-3 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs"
+                    className="px-3 py-1.5 bg-white border border-[var(--color-border)] rounded-lg text-xs"
                   >
                     {[2025, 2026, 2027].map((y) => (
                       <option key={y} value={y}>{y}</option>
@@ -298,7 +320,7 @@ export default function GovernancePage() {
                   <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="px-3 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs font-bold"
+                    className="px-3 py-1.5 bg-white border border-[var(--color-border)] rounded-lg text-xs font-bold"
                   >
                     {[2025, 2026, 2027].map((y) => (
                       <option key={y} value={y}>{y}</option>
@@ -307,7 +329,7 @@ export default function GovernancePage() {
                 </div>
               )}
 
-              <span className="hidden sm:inline-block px-3 py-1.5 bg-[#F5EDDA] text-[#8C6C26] rounded-lg font-bold">
+              <span className="hidden sm:inline-block px-3 py-1.5 bg-[var(--color-bg-soft)] text-[#8C6C26] rounded-lg font-bold">
                 {analytics?.period?.label || "الفترة النشطة"}
               </span>
             </div>
@@ -321,21 +343,21 @@ export default function GovernancePage() {
           )}
 
           {analytics?.period && (
-            <div className="p-3 bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl flex flex-wrap items-center justify-between text-xs gap-2">
+            <div className="p-3 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl flex flex-wrap items-center justify-between text-xs gap-2">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#C9A24A]" />
-                <span className="text-gray-600 font-medium">فترة التقرير الحالية:</span>
-                <strong className="text-gray-900 font-mono">
+                <Calendar className="w-4 h-4 text-[var(--color-brand-gold)]" />
+                <span className="text-[var(--color-text-muted)] font-medium">فترة التقرير الحالية:</span>
+                <strong className="text-[var(--color-text-primary)] font-mono">
                   من {analytics.period.start_date} إلى {analytics.period.end_date}
                 </strong>
-                <span className="text-[11px] text-gray-500">({analytics.period.label})</span>
+                <span className="text-[11px] text-[var(--color-text-muted)]">({analytics.period.label})</span>
               </div>
               <div className="flex items-center gap-2">
                 <a
                   href={pdfComprehensiveUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-2.5 py-1 bg-white border border-[#E5E2D9] hover:bg-[#FAF8F5] rounded-lg text-xs font-bold text-[#3F6B3A] flex items-center gap-1 transition-colors"
+                  className="px-2.5 py-1 bg-white border border-[var(--color-border)] hover:bg-[var(--color-bg-soft)] rounded-lg text-xs font-bold text-[var(--color-brand-green)] flex items-center gap-1 transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>تصدير تقرير الفترة (PDF)</span>
@@ -346,12 +368,12 @@ export default function GovernancePage() {
         </div>
 
         {/* Dashboard Navigation Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-[#E5E2D9] text-xs font-bold">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-[var(--color-border)] text-xs font-bold">
           <button
             onClick={() => setActiveTab("overview")}
             className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
               activeTab === "overview"
-                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)] bg-white"
                 : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
@@ -363,7 +385,7 @@ export default function GovernancePage() {
             onClick={() => setActiveTab("beneficiaries")}
             className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
               activeTab === "beneficiaries"
-                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)] bg-white"
                 : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
@@ -375,7 +397,7 @@ export default function GovernancePage() {
             onClick={() => setActiveTab("daily")}
             className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
               activeTab === "daily"
-                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)] bg-white"
                 : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
@@ -387,7 +409,7 @@ export default function GovernancePage() {
             onClick={() => setActiveTab("inventory")}
             className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
               activeTab === "inventory"
-                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)] bg-white"
                 : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
@@ -399,7 +421,7 @@ export default function GovernancePage() {
             onClick={() => setActiveTab("neighborhoods")}
             className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
               activeTab === "neighborhoods"
-                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)] bg-white"
                 : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
@@ -411,7 +433,7 @@ export default function GovernancePage() {
             onClick={() => setActiveTab("organizations")}
             className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
               activeTab === "organizations"
-                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)] bg-white"
                 : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
@@ -423,7 +445,7 @@ export default function GovernancePage() {
             onClick={() => setActiveTab("delivery")}
             className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
               activeTab === "delivery"
-                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)] bg-white"
                 : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
@@ -435,7 +457,7 @@ export default function GovernancePage() {
             onClick={() => setActiveTab("staff")}
             className={`px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex items-center gap-2 ${
               activeTab === "staff"
-                ? "border-[#3F6B3A] text-[#3F6B3A] bg-white"
+                ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)] bg-white"
                 : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
@@ -446,7 +468,7 @@ export default function GovernancePage() {
 
         {loading ? (
           <div className="py-20 text-center text-slate-400">
-            <div className="w-10 h-10 border-4 border-[#3F6B3A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <div className="w-10 h-10 border-4 border-[var(--color-brand-green)] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             جاري تجميع وحساب المؤشرات الإحصائية المعتمدة...
           </div>
         ) : !analytics ? (
@@ -460,10 +482,10 @@ export default function GovernancePage() {
               <div className="space-y-6">
                 {/* Grand Summary KPIs */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-white border border-[#E5E2D9] rounded-xl p-5 shadow-sm">
+                  <div className="ikram-panel p-5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-500 font-semibold">إجمالي المستفيدين المسجلين</span>
-                      <span className="p-2 bg-[#3F6B3A]/10 text-[#3F6B3A] rounded-lg">
+                      <span className="p-2 bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] rounded-lg">
                         <Users className="w-5 h-5" />
                       </span>
                     </div>
@@ -476,7 +498,7 @@ export default function GovernancePage() {
                     </div>
                   </div>
 
-                  <div className="bg-white border border-[#E5E2D9] rounded-xl p-5 shadow-sm">
+                  <div className="ikram-panel p-5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-500 font-semibold">المستفيدون المستلمون في الفترة</span>
                       <span className="p-2 bg-blue-50 text-blue-600 rounded-lg">
@@ -492,10 +514,10 @@ export default function GovernancePage() {
                     </div>
                   </div>
 
-                  <div className="bg-white border border-[#E5E2D9] rounded-xl p-5 shadow-sm">
+                  <div className="ikram-panel p-5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-500 font-semibold">إجمالي السلال الموزعة</span>
-                      <span className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                      <span className="p-2 bg-[var(--color-bg-soft)] text-amber-600 rounded-lg">
                         <Package className="w-5 h-5" />
                       </span>
                     </div>
@@ -508,7 +530,7 @@ export default function GovernancePage() {
                     </div>
                   </div>
 
-                  <div className="bg-white border border-[#E5E2D9] rounded-xl p-5 shadow-sm">
+                  <div className="ikram-panel p-5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-500 font-semibold">عمليات الاستلام اليومي</span>
                       <span className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
@@ -530,7 +552,7 @@ export default function GovernancePage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-[#3F6B3A]" />
+                      <BarChart3 className="w-4 h-4 text-[var(--color-brand-green)]" />
                       مخططات الحوكمة والتحليلات البيانية المعتمدة (بيانات فعلية من النظام)
                     </h3>
                     <span className="text-xs text-slate-400">
@@ -564,15 +586,97 @@ export default function GovernancePage() {
                       title={analytics.charts?.pie_chart?.title}
                     />
                   </div>
+
+                  {analytics.nationality_analysis?.chart && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-bold text-slate-800">تحليل الجنسية</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {["registered", "active", "served"].map((key) => {
+                          const population = analytics.nationality_analysis.populations?.[key];
+                          if (!population) return null;
+                          return (
+                            <div key={key} className="ikram-panel p-5">
+                              <span className="text-xs text-slate-500 font-semibold">{population.label}</span>
+                              <div className="text-2xl font-bold text-slate-800 mt-2">{population.total ?? 0}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {analytics.nationality_analysis.chart.series?.map((series) => (
+                          <ColumnChart
+                            key={series.key}
+                            title={series.label}
+                            data={(analytics.nationality_analysis.chart.categories || []).map((category, index) => ({
+                              label: category.label,
+                              count: Number(series.data?.[index] ?? 0),
+                            }))}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                <section className="ikram-panel overflow-hidden" data-testid="governance-server-report">
+                  <div className="p-5 border-b border-[var(--color-border)] bg-[var(--color-bg-soft)] space-y-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-slate-900">سجل التقرير التفصيلي</h3>
+                        <p className="text-xs text-slate-500 mt-1">ترشيح وترقيم من الخادم. تُصدّر الملفات جميع الصفوف المطابقة بصرف النظر عن الصفحة الحالية.</p>
+                      </div>
+                      <span className="text-xs font-bold text-[var(--color-brand-green)] bg-[#EBF4EA] px-3 py-1 rounded-full">{analytics.detail?.total || 0} سجل مطابق</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                      <label className="text-xs text-slate-600">نوع السجل
+                        <select value={reportDataset} onChange={(e) => { setReportDataset(e.target.value); setReportPage(1); }} className="mt-1 w-full border rounded-lg px-3 py-2 bg-white">
+                          <option value="beneficiaries">المستفيدون الدائمون</option><option value="daily_beneficiaries">المستفيدون اليوميون</option>
+                          <option value="policy_evaluations">تقييمات السياسة</option><option value="policy_decisions">قرارات السياسة</option>
+                          <option value="support_distributions">عمليات الدعم</option><option value="legacy_distributions">التوزيع القديم</option>
+                          <option value="main_inventory_movements">حركات المخزون العام</option><option value="daily_inventory_movements">حركات مخزون اليوميين</option>
+                        </select>
+                      </label>
+                      <label className="text-xs text-slate-600">المجال
+                        <select value={reportDomain} onChange={(e) => { setReportDomain(e.target.value); setReportPage(1); }} className="mt-1 w-full border rounded-lg px-3 py-2 bg-white">
+                          <option value="all">الكل</option><option value="permanent">دائم فقط</option><option value="daily">يومي فقط</option>
+                        </select>
+                      </label>
+                      <label className="text-xs text-slate-600">الحالة
+                        <input value={reportStatus} onChange={(e) => { setReportStatus(e.target.value); setReportPage(1); }} placeholder="مثال: active" className="mt-1 w-full border rounded-lg px-3 py-2 bg-white" />
+                      </label>
+                      <label className="text-xs text-slate-600">بحث
+                        <input value={reportSearch} onChange={(e) => { setReportSearch(e.target.value); setReportPage(1); }} placeholder="الاسم أو الحي" className="mt-1 w-full border rounded-lg px-3 py-2 bg-white" />
+                      </label>
+                      <label className="text-xs text-slate-600">صفوف الصفحة
+                        <select value={reportPerPage} onChange={(e) => { setReportPerPage(Number(e.target.value)); setReportPage(1); }} className="mt-1 w-full border rounded-lg px-3 py-2 bg-white">
+                          <option value={10}>10</option><option value={25}>25</option><option value={50}>50</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="ikram-table whitespace-nowrap">
+                      <thead className="bg-[#355B30] text-white"><tr>{Object.keys(analytics.detail?.data?.[0] || {}).map((key) => <th key={key} className="px-3 py-3">{key}</th>)}</tr></thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(analytics.detail?.data || []).map((row) => <tr key={row.id} className="hover:bg-[var(--color-bg-soft)]">{Object.keys(analytics.detail?.data?.[0] || {}).map((key) => <td key={key} className="px-3 py-2.5 max-w-64 overflow-hidden text-ellipsis">{row[key] == null ? "—" : String(row[key])}</td>)}</tr>)}
+                        {!analytics.detail?.data?.length && <tr><td className="p-8 text-center text-slate-400">لا توجد سجلات مطابقة.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="p-4 border-t flex items-center justify-between gap-3 text-xs">
+                    <Button size="sm" variant="outline" disabled={(analytics.detail?.page || 1) <= 1} onClick={() => setReportPage((p) => Math.max(1, p - 1))}>السابق</Button>
+                    <span>صفحة {analytics.detail?.page || 1} من {analytics.detail?.last_page || 1}</span>
+                    <Button size="sm" variant="outline" disabled={(analytics.detail?.page || 1) >= (analytics.detail?.last_page || 1)} onClick={() => setReportPage((p) => p + 1)}>التالي</Button>
+                  </div>
+                </section>
 
                 {/* Two Column Grid: Categories Breakdown & Neighborhood Highlights */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Categories Breakdown */}
-                  <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm p-5 space-y-4">
+                  <div className="ikram-panel p-5 space-y-4">
                     <h3 className="font-bold text-slate-800 text-sm flex items-center justify-between pb-3 border-b">
                       <span className="flex items-center gap-2">
-                        <Layers className="w-4 h-4 text-[#3F6B3A]" />
+                        <Layers className="w-4 h-4 text-[var(--color-brand-green)]" />
                         توزيع المستفيدين العامين حسب الفئات
                       </span>
                       <span className="text-xs text-slate-400">إجمالي الفئات</span>
@@ -585,12 +689,12 @@ export default function GovernancePage() {
                             <span className="text-slate-700">{cat.name}</span>
                             <span className="text-slate-500">
                               {cat.total_beneficiaries} مستفيد (استلم منهم:{" "}
-                              <strong className="text-[#3F6B3A]">{cat.received_count}</strong>)
+                              <strong className="text-[var(--color-brand-green)]">{cat.received_count}</strong>)
                             </span>
                           </div>
                           <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-[#3F6B3A] rounded-full transition-all"
+                              className="h-full bg-[var(--color-brand-green)] rounded-full transition-all"
                               style={{
                                 width: `${
                                   cat.total_beneficiaries > 0
@@ -606,10 +710,10 @@ export default function GovernancePage() {
                   </div>
 
                   {/* Daily Beneficiaries Baskets Breakdown */}
-                  <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm p-5 space-y-4">
+                  <div className="ikram-panel p-5 space-y-4">
                     <h3 className="font-bold text-slate-800 text-sm flex items-center justify-between pb-3 border-b">
                       <span className="flex items-center gap-2">
-                        <Package className="w-4 h-4 text-[#C9A24A]" />
+                        <Package className="w-4 h-4 text-[var(--color-brand-gold)]" />
                         سلال المستفيدين اليوميين المصروفة في الفترة
                       </span>
                       <span className="text-xs text-slate-400">حسب نوع السلة</span>
@@ -640,16 +744,16 @@ export default function GovernancePage() {
                 </div>
 
                 {/* Expiry Tracking Alert Bar */}
-                {analytics.inventory?.expiry_alerts?.expired_count > 0 || analytics.inventory?.expiry_alerts?.in_7_days_count > 0 ? (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                {analytics.inventory?.expiry_alerts?.expired_count > 0 || analytics.inventory?.expiry_alerts?.in_5_days_count > 0 ? (
+                  <div className="p-4 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                     <div className="text-xs space-y-1">
-                      <strong className="text-amber-800 font-bold block">
+                      <strong className="text-[var(--color-text-secondary)] font-bold block">
                         تنبيهات سلامة وجودة المخزون الغذائي:
                       </strong>
                       <p className="text-slate-700">
                         يوجد <strong>{analytics.inventory.expiry_alerts.expired_count}</strong> أصناف منتهية الصلاحية بمستودع اليوميين، و{" "}
-                        <strong>{analytics.inventory.expiry_alerts.in_7_days_count}</strong> أصناف تنتهي صلاحيتها خلال الـ 7 أيام القادمة. يرجى مراجعة تبويب "مقارنة المخزون والصلاحيات".
+                        <strong>{analytics.inventory.expiry_alerts.in_5_days_count}</strong> أصناف تنتهي صلاحيتها خلال الـ 5 أيام القادمة. يرجى مراجعة تبويب "مقارنة المخزون والصلاحيات".
                       </p>
                     </div>
                   </div>
@@ -686,7 +790,7 @@ export default function GovernancePage() {
                     توزيع المستفيدين العامين ونسب الاستلام حسب الفئات
                   </h3>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-right text-xs border-collapse">
+                    <table className="ikram-table">
                       <thead>
                         <tr className="bg-slate-50 text-slate-700 font-bold border-b">
                           <th className="py-2.5 px-3">الفئة المستهدفة</th>
@@ -790,7 +894,7 @@ export default function GovernancePage() {
                   <div className="bg-white border rounded-xl shadow-sm p-5 space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b">
                       <div className="flex items-center gap-2">
-                        <Package className="w-5 h-5 text-[#3F6B3A]" />
+                        <Package className="w-5 h-5 text-[var(--color-brand-green)]" />
                         <h3 className="font-bold text-slate-800 text-base">المستودع المركزي العام</h3>
                       </div>
                       <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600">
@@ -811,7 +915,7 @@ export default function GovernancePage() {
                           +{analytics.inventory?.main?.stock_in || 0}
                         </strong>
                       </div>
-                      <div className="p-3 bg-amber-50 text-amber-800 rounded-lg text-center">
+                      <div className="p-3 bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] rounded-lg text-center">
                         <span className="text-amber-600 block">المنصرف والموزع (-)</span>
                         <strong className="text-lg font-bold mt-1 block">
                           -{analytics.inventory?.main?.stock_out || 0}
@@ -830,10 +934,10 @@ export default function GovernancePage() {
                   <div className="bg-white border rounded-xl shadow-sm p-5 space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b">
                       <div className="flex items-center gap-2">
-                        <Package className="w-5 h-5 text-[#C9A24A]" />
+                        <Package className="w-5 h-5 text-[var(--color-brand-gold)]" />
                         <h3 className="font-bold text-slate-800 text-base">مستودع المستفيدين اليوميين</h3>
                       </div>
-                      <span className="text-xs bg-[#F5EDDA] text-[#8C6C26] px-2 py-0.5 rounded font-bold">
+                      <span className="text-xs bg-[var(--color-bg-soft)] text-[#8C6C26] px-2 py-0.5 rounded font-bold">
                         {analytics.inventory?.daily?.total_items || 0} أصناف
                       </span>
                     </div>
@@ -851,7 +955,7 @@ export default function GovernancePage() {
                           +{analytics.inventory?.daily?.stock_in || 0}
                         </strong>
                       </div>
-                      <div className="p-3 bg-amber-50 text-amber-800 rounded-lg text-center">
+                      <div className="p-3 bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] rounded-lg text-center">
                         <span className="text-amber-600 block">المنصرف لليوميين (-)</span>
                         <strong className="text-lg font-bold mt-1 block">
                           -{analytics.inventory?.daily?.stock_out || 0}
@@ -881,10 +985,10 @@ export default function GovernancePage() {
                         {analytics.inventory?.expiry_alerts?.expired_count || 0}
                       </strong>
                     </button>
-                    <button type="button" onClick={() => setInventoryDrilldown("in_7_days")} className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
-                      <span className="text-amber-700 block font-semibold">تنتهي خلال 7 أيام</span>
-                      <strong className="text-xl font-bold text-amber-800 mt-1 block">
-                        {analytics.inventory?.expiry_alerts?.in_7_days_count || 0}
+                    <button type="button" onClick={() => setInventoryDrilldown("in_5_days")} className="p-3 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-lg text-center">
+                      <span className="text-amber-700 block font-semibold">تنتهي خلال 5 أيام</span>
+                      <strong className="text-xl font-bold text-[var(--color-text-secondary)] mt-1 block">
+                        {analytics.inventory?.expiry_alerts?.in_5_days_count || 0}
                       </strong>
                     </button>
                     <button type="button" onClick={() => setInventoryDrilldown("in_30_days")} className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
@@ -908,7 +1012,7 @@ export default function GovernancePage() {
                         <button type="button" onClick={() => setInventoryDrilldown(null)} className="text-xs text-slate-600 underline">إغلاق</button>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full text-xs text-right">
+                        <table className="ikram-table">
                           <thead><tr className="border-b"><th className="p-3">الصنف</th><th className="p-3">الكمية</th><th className="p-3">تاريخ الصلاحية</th></tr></thead>
                           <tbody>
                             {(analytics.inventory?.expiry_alerts?.[inventoryDrilldown] || []).map((item) => (
@@ -956,7 +1060,7 @@ export default function GovernancePage() {
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-right text-xs border-collapse">
+                  <table className="ikram-table">
                     <thead>
                       <tr className="bg-slate-50 text-slate-700 font-bold border-b">
                         <th className="py-3 px-4">#</th>
@@ -978,7 +1082,7 @@ export default function GovernancePage() {
                             <td className="py-3 px-4 font-bold text-slate-800">{nh.neighborhood}</td>
                             <td className="py-3 px-4 text-center">{nh.general_beneficiaries}</td>
                             <td className="py-3 px-4 text-center">{nh.daily_beneficiaries}</td>
-                            <td className="py-3 px-4 text-center font-bold text-[#3F6B3A]">{nh.total_beneficiaries}</td>
+                            <td className="py-3 px-4 text-center font-bold text-[var(--color-brand-green)]">{nh.total_beneficiaries}</td>
                             <td className="py-3 px-4 text-center">{nh.families_count}</td>
                             <td className="py-3 px-4 text-center">
                               <span className="px-2 py-0.5 bg-[#EBF4EA] text-[#2E5A27] font-bold rounded">
@@ -1007,7 +1111,7 @@ export default function GovernancePage() {
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-right text-xs border-collapse">
+                  <table className="ikram-table">
                     <thead>
                       <tr className="bg-slate-50 text-slate-700 font-bold border-b">
                         <th className="py-3 px-4">اسم الجهة / المندوب</th>
@@ -1027,7 +1131,7 @@ export default function GovernancePage() {
                           <td className="py-3 px-4 text-center font-semibold">{org.beneficiaries_count}</td>
                           <td className="py-3 px-4 text-center font-semibold">{org.families_count}</td>
                           <td className="py-3 px-4 text-center font-bold text-[#8C6C26]">
-                            <span className="px-2.5 py-0.5 bg-[#F5EDDA] rounded">
+                            <span className="px-2.5 py-0.5 bg-[var(--color-bg-soft)] rounded">
                               {org.baskets_received} سلة
                             </span>
                           </td>
@@ -1052,7 +1156,7 @@ export default function GovernancePage() {
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-right text-xs border-collapse">
+                  <table className="ikram-table">
                     <thead>
                       <tr className="bg-slate-50 text-slate-700 font-bold border-b">
                         <th className="py-3 px-4">اسم السائق</th>
@@ -1105,9 +1209,9 @@ export default function GovernancePage() {
                       {analytics.staff?.received_count || 0}
                     </strong>
                   </div>
-                  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                  <div className="p-4 bg-[var(--color-bg-soft)] rounded-xl border border-[var(--color-border)]">
                     <span className="text-xs text-amber-700 block">إجمالي السلال المخصصة</span>
-                    <strong className="text-2xl font-bold text-amber-800 mt-1 block">
+                    <strong className="text-2xl font-bold text-[var(--color-text-secondary)] mt-1 block">
                       {analytics.staff?.baskets_distributed || 0}
                     </strong>
                   </div>

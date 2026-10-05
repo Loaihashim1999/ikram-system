@@ -54,6 +54,39 @@ class NeighborhoodRep extends Model
         'updated_at' => 'datetime',
     ];
 
+    public function getIdDocumentImageUrlAttribute(): ?string
+    {
+        return $this->privateDocumentUrl('id_document_image_url');
+    }
+
+    public function getSupportLetterUrlAttribute(): ?string
+    {
+        return $this->privateDocumentUrl('support_letter_url');
+    }
+
+    public function getNationalAddressDocUrlAttribute(): ?string
+    {
+        return $this->privateDocumentUrl('national_address_doc_url');
+    }
+
+    public function getDependentsIdsZipUrlAttribute(): ?string
+    {
+        return $this->privateDocumentUrl('dependents_ids_zip_url');
+    }
+
+    private function privateDocumentUrl(string $field): ?string
+    {
+        $path = $this->getRawOriginal($field);
+        if (! is_string($path) || $path === '' || str_contains($path, '://') || str_starts_with($path, '/')) {
+            return null;
+        }
+
+        return route('neighborhood-reps.documents.download', [
+            'representative' => $this->getKey(),
+            'field' => $field,
+        ]);
+    }
+
     // العلاقات
     public function repDistributions(): HasMany
     {

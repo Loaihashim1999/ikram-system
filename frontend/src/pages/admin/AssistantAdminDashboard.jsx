@@ -36,9 +36,9 @@ export default function AssistantAdminDashboard() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[var(--color-border)] flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-500 font-semibold">إجمالي الحالات المراجعة</p>
+            <p className="text-xs text-[var(--color-text-muted)] font-semibold">إجمالي الحالات المراجعة</p>
             <h3 className="text-2xl font-black text-purple-900 mt-1">{beneficiaries.length}</h3>
           </div>
           <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-700 font-bold">
@@ -46,9 +46,9 @@ export default function AssistantAdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[var(--color-border)] flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-500 font-semibold">توزيعات السلات المكتملة</p>
+            <p className="text-xs text-[var(--color-text-muted)] font-semibold">توزيعات السلات المكتملة</p>
             <h3 className="text-2xl font-black text-green-700 mt-1">
               {distributions.filter(d => d.status === 'delivered').length}
             </h3>
@@ -58,23 +58,23 @@ export default function AssistantAdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[var(--color-border)] flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-500 font-semibold">طلبات قيد المتابعة</p>
+            <p className="text-xs text-[var(--color-text-muted)] font-semibold">طلبات قيد المتابعة</p>
             <h3 className="text-2xl font-black text-amber-700 mt-1">
               {distributions.filter(d => d.status !== 'delivered').length}
             </h3>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-700 font-bold">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-bg-soft)] flex items-center justify-center text-amber-700 font-bold">
             <Clock className="w-5 h-5" />
           </div>
         </div>
       </div>
 
       {/* Main Table */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <h2 className="text-base font-bold text-gray-800 mb-4">📋 مراجعة الحالات الجديدة للتصنيف والدعم</h2>
-        <div className="overflow-x-auto border border-gray-200 rounded-xl">
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[var(--color-border)]">
+        <h2 className="text-base font-bold text-[var(--color-text-primary)] mb-4">📋 مراجعة الحالات الجديدة للتصنيف والدعم</h2>
+        <div className="overflow-x-auto border border-[var(--color-border)] rounded-xl">
           <table className="w-full text-xs text-right">
             <thead className="bg-purple-50/70 text-purple-900 border-b">
               <tr>
@@ -89,15 +89,15 @@ export default function AssistantAdminDashboard() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-400">
+                  <td colSpan={6} className="p-8 text-center text-[var(--color-text-muted)]">
                     جاري تحميل الحالات...
                   </td>
                 </tr>
               )}
               {!loading && beneficiaries.map((b, idx) => (
-                <tr key={b.id || idx} className="border-b hover:bg-gray-50 transition-colors">
-                  <td className="p-3 text-gray-400">{idx + 1}</td>
-                  <td className="p-3 font-bold text-gray-800">{b.full_name || b.name}</td>
+                <tr key={b.id || idx} className="border-b hover:bg-[var(--color-bg-soft)] transition-colors">
+                  <td className="p-3 text-[var(--color-text-muted)]">{idx + 1}</td>
+                  <td className="p-3 font-bold text-[var(--color-text-primary)]">{b.full_name || b.name}</td>
                   <td className="p-3 font-mono">{b.national_id}</td>
                   <td className="p-3">
                     <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-[11px] font-bold">
@@ -109,7 +109,7 @@ export default function AssistantAdminDashboard() {
                       معتمد
                     </span>
                   </td>
-                  <td className="p-3 text-gray-500 font-mono">
+                  <td className="p-3 text-[var(--color-text-muted)] font-mono">
                     {b.created_at ? new Date(b.created_at).toLocaleDateString("ar-SA") : "—"}
                   </td>
                 </tr>

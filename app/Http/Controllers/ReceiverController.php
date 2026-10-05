@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Distribution;
-use App\Models\Notification;
 use App\Models\RepDistribution;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ReceiverController extends Controller
 {
@@ -27,7 +27,10 @@ class ReceiverController extends Controller
             ->first();
 
         if ($dist) {
-            if (in_array(request()->user()->role, ['driver', 'delivery_driver'])) abort_unless($dist->driver_id === request()->user()->id, 403);
+            if (in_array(request()->user()->role, ['driver', 'delivery_driver'])) {
+                abort_unless($dist->driver_id === request()->user()->id, 403);
+            }
+
             return response()->json([
                 'success' => true,
                 'type' => 'regular',
@@ -41,7 +44,10 @@ class ReceiverController extends Controller
             ->first();
 
         if ($repDist) {
-            if (in_array(request()->user()->role, ['driver', 'delivery_driver'])) abort_unless($repDist->driver_id === request()->user()->id, 403);
+            if (in_array(request()->user()->role, ['driver', 'delivery_driver'])) {
+                abort_unless($repDist->driver_id === request()->user()->id, 403);
+            }
+
             return response()->json([
                 'success' => true,
                 'type' => 'representative',
@@ -76,19 +82,17 @@ class ReceiverController extends Controller
                 $user = $request->user();
                 $recipientName = $dist->beneficiary->full_name ?? $dist->beneficiary->name ?? 'المستفيد';
 
-                foreach (User::where('role', 'admin')->get() as $supervisor) {
-                    Notification::create([
-                        'id' => Str::uuid(), 'recipient_type' => 'staff', 'recipient_id' => $supervisor->id,
-                        'related_record_type' => 'distributions', 'related_record_id' => $dist->id,
-                        'message_body' => "تم استلام الدعم للمستفيد {$recipientName} بواسطة ".($user?->full_name ?? 'الموظف'),
-                        'status' => 'sent', 'sent_at' => now(),
-                    ]);
-                }
+                NotificationService::notifyAll(
+                    'delivery_receipt_confirmed',
+                    "تم استلام الدعم للمستفيد {$recipientName} بواسطة ".($user?->full_name ?? 'الموظف'),
+                    $dist
+                );
                 AuditLog::create([
                     'id' => Str::uuid(), 'user_id' => $user?->id, 'action' => 'confirm_receipt',
                     'target_table' => 'distributions', 'target_id' => $dist->id,
                     'details' => ['barcode_code' => $code, 'beneficiary' => $recipientName, 'actor_name' => $user?->full_name],
                 ]);
+
                 return response()->json([
                     'success' => true,
                     'message' => "تم تأكيد استلام الدعم للمستفيد ({$recipientName}) بنجاح وإشعار المشرف.",
@@ -107,6 +111,7 @@ class ReceiverController extends Controller
                 }
                 $repDist->update(['status' => 'delivered', 'picked_up_at' => now()]);
                 $repName = $repDist->representative->full_name ?? 'مندوب الحي';
+
                 return response()->json([
                     'success' => true,
                     'message' => "تم تأكيد استلام السلال لمندوب الحي ({$repName}) بنجاح.",

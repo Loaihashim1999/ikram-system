@@ -33,6 +33,7 @@ export default function DailyBeneficiaryForm() {
 
   const [formData, setFormData] = useState({
     full_name: "",
+    nationality: "",
     national_id: "",
     phone: "",
     date_of_birth: "",
@@ -46,7 +47,9 @@ export default function DailyBeneficiaryForm() {
   const [districtsList, setDistrictsList] = useState([]);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
   const [errors, setErrors] = useState({});
+  useEffect(() => { setReviewed(false); }, [formData]);
 
   // National ID uniqueness check state
   const [idChecking, setIdChecking] = useState(false);
@@ -96,6 +99,7 @@ export default function DailyBeneficiaryForm() {
             const b = res.data.data;
             setFormData({
               full_name: b.full_name || "",
+              nationality: b.nationality || "",
               national_id: b.national_id || "",
               phone: b.phone || "",
               date_of_birth: b.date_of_birth ? b.date_of_birth.slice(0, 10) : "",
@@ -139,6 +143,17 @@ export default function DailyBeneficiaryForm() {
   const validateForm = () => {
     const newErrors = {};
 
+    const nationality = formData.nationality.trim();
+    if (!nationality) {
+      newErrors.nationality = "الجنسية مطلوبة.";
+    } else if (nationality.length > 100) {
+      newErrors.nationality = "الجنسية يجب ألا تتجاوز 100 حرفاً.";
+    }
+
+    if (!reviewed) {
+      newErrors.reviewed_confirmation = "يجب تأكيد مراجعة البيانات قبل الحفظ.";
+    }
+
     if (!formData.full_name.trim()) {
       newErrors.full_name = "الاسم الرباعي مطلوب.";
     }
@@ -175,15 +190,22 @@ export default function DailyBeneficiaryForm() {
     }
 
     setSaving(true);
+    const payload = {
+      ...formData,
+      nationality: formData.nationality.trim(),
+      reviewed_confirmation: true,
+    };
+    delete payload.beneficiary_type;
+    delete payload.type;
     try {
       if (isEdit) {
-        const res = await updateDailyBeneficiary(id, formData);
+        const res = await updateDailyBeneficiary(id, payload);
         if (res.data?.success) {
           setToast({ show: true, message: "تم تحديث بيانات المستفيد بنجاح", type: "success" });
           setTimeout(() => navigate(`/daily-beneficiaries/${id}`), 1000);
         }
       } else {
-        const res = await createDailyBeneficiary(formData);
+        const res = await createDailyBeneficiary(payload);
         if (res.data?.success) {
           const newId = res.data.data.id;
           setToast({ show: true, message: "تم تسجيل المستفيد اليومي بنجاح", type: "success" });
@@ -259,7 +281,7 @@ export default function DailyBeneficiaryForm() {
     return (
       <MainLayout title="تحميل المستفيد...">
         <div className="py-20 text-center text-slate-400">
-          <div className="w-10 h-10 border-4 border-[#3F6B3A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-10 h-10 border-4 border-[var(--color-brand-green)] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           جاري تحميل بيانات المستفيد اليومي...
         </div>
       </MainLayout>
@@ -268,7 +290,7 @@ export default function DailyBeneficiaryForm() {
 
   return (
     <MainLayout title={isEdit ? "تعديل بيانات المستفيد اليومي" : "إضافة مستفيد يومي جديد"}>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         {/* Back link & Header */}
         <PageHeader
           title={isEdit ? "تعديل بيانات المستفيد اليومي" : "إضافة مستفيد يومي جديد"}
@@ -290,9 +312,9 @@ export default function DailyBeneficiaryForm() {
         />
 
         {/* Main Form Card */}
-        <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm p-6">
-          <div className="flex items-center gap-3 pb-5 mb-6 border-b border-[#E5E2D9]">
-            <div className="p-2.5 bg-[#3F6B3A]/10 text-[#3F6B3A] rounded-xl">
+        <div className="ikram-panel p-4 sm:p-6">
+          <div className="flex items-center gap-3 pb-5 mb-6 border-b border-[var(--color-border)]">
+            <div className="p-2.5 bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] rounded-xl">
               {isEdit ? <UserCheck className="w-6 h-6" /> : <UserPlus className="w-6 h-6" />}
             </div>
             <div>
@@ -307,7 +329,7 @@ export default function DailyBeneficiaryForm() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Group 1: Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="ikram-form-grid">
               {/* Full Name */}
               <div className="md:col-span-2">
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
@@ -322,17 +344,44 @@ export default function DailyBeneficiaryForm() {
                   }}
                   placeholder="مثال: إبراهيم سليمان منصور المنصور"
                   className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-lg text-sm focus:outline-none focus:bg-white transition-colors ${
-                    errors.full_name ? "border-red-500 focus:border-red-500" : "border-[#E5E2D9] focus:border-[#3F6B3A]"
+                    errors.full_name ? "border-red-500 focus:border-red-500" : "border-[var(--color-border)] focus:border-[var(--color-brand-green)]"
                   }`}
                 />
                 {errors.full_name && <p className="text-red-500 text-xs mt-1">{errors.full_name}</p>}
               </div>
 
               {/* National ID */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  رقم الهوية الوطنية / الإقامة <span className="text-red-500">*</span>
-                </label>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    الجنسية <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    name="nationality"
+                    value={formData.nationality}
+                    onChange={(e) => {
+                      setFormData({ ...formData, nationality: e.target.value });
+                      if (errors.nationality) setErrors({ ...errors, nationality: null });
+                    }}
+                    maxLength={100}
+                    placeholder="سعودي، أو جنسية أخرى"
+                    className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-lg text-sm focus:outline-none focus:bg-white transition-colors ${
+                      errors.nationality ? "border-red-500 focus:border-red-500" : "border-[var(--color-border)] focus:border-[var(--color-brand-green)]"
+                    }`}
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    {formData.nationality.trim() === "سعودي"
+                      ? "مواطن"
+                      : formData.nationality.trim()
+                        ? "مقيم"
+                        : "الجنسية الفارغة ليست سعودياً."}
+                  </p>
+                  {errors.nationality && <p className="text-red-500 text-xs mt-1">{errors.nationality}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    رقم الهوية الوطنية / الإقامة <span className="text-red-500">*</span>
+                  </label>
                 <div className="relative">
                   <input
                     type="text"
@@ -347,12 +396,12 @@ export default function DailyBeneficiaryForm() {
                     className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-lg text-sm font-mono focus:outline-none focus:bg-white transition-colors ${
                       errors.national_id || idDuplicateWarning
                         ? "border-red-500 focus:border-red-500"
-                        : "border-[#E5E2D9] focus:border-[#3F6B3A]"
+                        : "border-[var(--color-border)] focus:border-[var(--color-brand-green)]"
                     }`}
                   />
                   {idChecking && (
                     <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                      <div className="w-4 h-4 border-2 border-[#3F6B3A] border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-[var(--color-brand-green)] border-t-transparent rounded-full animate-spin" />
                     </div>
                   )}
                 </div>
@@ -383,7 +432,7 @@ export default function DailyBeneficiaryForm() {
                   }}
                   placeholder="05xxxxxxxx"
                   className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-lg text-sm font-mono text-right focus:outline-none focus:bg-white transition-colors ${
-                    errors.phone ? "border-red-500 focus:border-red-500" : "border-[#E5E2D9] focus:border-[#3F6B3A]"
+                    errors.phone ? "border-red-500 focus:border-red-500" : "border-[var(--color-border)] focus:border-[var(--color-brand-green)]"
                   }`}
                 />
                 {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
@@ -404,7 +453,7 @@ export default function DailyBeneficiaryForm() {
                   }}
                   placeholder="اختر أو اكتب اسم الحي..."
                   className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-lg text-sm focus:outline-none focus:bg-white transition-colors ${
-                    errors.district ? "border-red-500 focus:border-red-500" : "border-[#E5E2D9] focus:border-[#3F6B3A]"
+                    errors.district ? "border-red-500 focus:border-red-500" : "border-[var(--color-border)] focus:border-[var(--color-brand-green)]"
                   }`}
                 />
                 <datalist id="districts-datalist">
@@ -422,7 +471,7 @@ export default function DailyBeneficiaryForm() {
                   type="date"
                   value={formData.date_of_birth}
                   onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A] focus:bg-white"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)] focus:bg-white"
                 />
               </div>
 
@@ -432,7 +481,7 @@ export default function DailyBeneficiaryForm() {
                 <select
                   value={formData.category_id}
                   onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A] focus:bg-white"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)] focus:bg-white"
                 >
                   <option value="">-- اختر فئة المستفيد --</option>
                   {categories.map((c) => (
@@ -449,7 +498,7 @@ export default function DailyBeneficiaryForm() {
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A] focus:bg-white"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)] focus:bg-white"
                 >
                   <option value="active">نشط (مؤهل لاستلام المساعدات اليومية)</option>
                   <option value="inactive">غير نشط (معلق / تم إيقاف الدعم)</option>
@@ -464,13 +513,19 @@ export default function DailyBeneficiaryForm() {
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="وصف إضافي للحالة، الوضع الصحي أو الاجتماعي، أسباب الحاجة اليومية..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A] focus:bg-white"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)] focus:bg-white"
                 />
               </div>
             </div>
 
+            <label className="flex items-center gap-3 text-sm font-bold text-[var(--color-text-primary)]">
+              <input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} />
+              راجعت بيانات المستفيد وأؤكد حفظها
+            </label>
+            {errors.reviewed_confirmation && <p className="text-red-500 text-xs">{errors.reviewed_confirmation}</p>}
+
             {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-5 border-t border-[#E5E2D9]">
+            <div className="ikram-actions justify-end border-t border-[var(--color-border)] pt-5">
               <Button
                 type="button"
                 variant="outline"
@@ -484,6 +539,7 @@ export default function DailyBeneficiaryForm() {
                 variant="secondary"
                 size="md"
                 loading={saving}
+                disabled={!reviewed || !formData.nationality.trim()}
                 icon={Save}
               >
                 {isEdit ? "حفظ التعديلات" : "تسجيل المستفيد"}
@@ -494,10 +550,10 @@ export default function DailyBeneficiaryForm() {
 
         {/* Documents Section (Available for Edit or upon creation) */}
         {isEdit && (
-          <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#E5E2D9]">
+          <div className="ikram-panel p-4 sm:p-6">
+            <div className="flex items-center justify-between pb-4 mb-5 border-b border-[var(--color-border)]">
               <div className="flex items-center gap-2.5">
-                <FileText className="w-5 h-5 text-[#C9A24A]" />
+                <FileText className="w-5 h-5 text-[var(--color-brand-gold)]" />
                 <h3 className="font-bold text-slate-800 text-base">وثائق ومرفقات المستفيد</h3>
               </div>
               <span className="text-xs text-slate-500">
@@ -513,7 +569,7 @@ export default function DailyBeneficiaryForm() {
                   <select
                     value={docType}
                     onChange={(e) => setDocType(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs"
+                    className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs"
                   >
                     <option value="national_id">صورة الهوية الوطنية</option>
                     <option value="residence_id">صورة الإقامة</option>
@@ -531,7 +587,7 @@ export default function DailyBeneficiaryForm() {
                     value={docTitle}
                     onChange={(e) => setDocTitle(e.target.value)}
                     placeholder="مثال: الهوية الوطنية للمستفيد"
-                    className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs"
+                    className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs"
                   />
                 </div>
 
@@ -541,7 +597,7 @@ export default function DailyBeneficiaryForm() {
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png,.docx"
                     onChange={(e) => setDocFile(e.target.files[0] || null)}
-                    className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#3F6B3A]/10 file:text-[#3F6B3A] hover:file:bg-[#3F6B3A]/20"
+                    className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[var(--color-brand-green)]/10 file:text-[var(--color-brand-green)] hover:file:bg-[var(--color-brand-green)]/20"
                   />
                 </div>
               </div>
@@ -550,7 +606,7 @@ export default function DailyBeneficiaryForm() {
                 <button
                   type="submit"
                   disabled={uploadingDoc || !docFile}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-[#C9A24A] hover:bg-[#B8923D] text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[var(--color-brand-gold)] hover:bg-[#B8923D] text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   {uploadingDoc ? "جاري الرفع..." : "رفع الوثيقة"}
@@ -569,7 +625,7 @@ export default function DailyBeneficiaryForm() {
                     className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
                   >
                     <div className="flex items-center gap-2.5 overflow-hidden">
-                      <div className="p-2 bg-amber-50 text-amber-700 rounded-lg shrink-0">
+                      <div className="p-2 bg-[var(--color-bg-soft)] text-amber-700 rounded-lg shrink-0">
                         <FileCheck className="w-4 h-4" />
                       </div>
                       <div className="overflow-hidden">

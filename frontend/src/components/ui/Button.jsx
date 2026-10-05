@@ -3,9 +3,9 @@ import { Loader2 } from 'lucide-react';
 /**
  * Reusable Standard Button Component for Ikram Design System:
  * Variants:
- * - primary: Action Amber (#D97706) for primary actions, save, submit, confirm
- * - secondary: Brand Green (#3F6B3A) for secondary identity actions
- * - gold: Royal Gold (#C9A24A)
+ * - primary: Action Amber (var(--color-brand-green)) for primary actions, save, submit, confirm
+ * - secondary: Brand Green (var(--color-brand-green)) for secondary identity actions
+ * - gold: Royal Gold (var(--color-brand-gold))
  * - outline: Border with transparent background
  * - ghost: Flat with hover background
  * - danger: Crimson Red (#DC2626) strictly for destructive operations
@@ -24,7 +24,7 @@ export default function Button({
   as: Component = 'button',
   ...props
 }) {
-  const baseClasses = 'inline-flex items-center justify-center font-bold transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none rounded-xl';
+  const baseClasses = 'ikram-btn transition-colors duration-150 focus:outline-none';
 
   const sizeClasses = {
     xs: 'px-2.5 py-1 text-xs gap-1.5',
@@ -34,13 +34,13 @@ export default function Button({
   };
 
   const variantClasses = {
-    primary: 'bg-[#D97706] hover:bg-[#B45309] active:bg-[#92400E] text-white shadow-xs focus:ring-[#D97706]',
-    secondary: 'bg-[#3F6B3A] hover:bg-[#31542D] active:bg-[#223B1E] text-white shadow-xs focus:ring-[#3F6B3A]',
-    gold: 'bg-[#C9A24A] hover:bg-[#B48528] active:bg-[#8C6C26] text-white shadow-xs focus:ring-[#C9A24A]',
-    outline: 'bg-white border border-[#E5E2D9] text-[#111827] hover:bg-[#FAF8F5] hover:border-[#C9A24A] active:bg-[#F4EFE3] focus:ring-[#C9A24A]',
-    ghost: 'bg-transparent text-[#1F2937] hover:bg-[#FAF8F5] active:bg-[#F4EFE3] focus:ring-[#C9A24A]',
-    danger: 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-xs focus:ring-red-500',
-    dangerOutline: 'bg-white border border-red-200 text-red-700 hover:bg-red-50 hover:border-red-400 focus:ring-red-500',
+    primary: 'ikram-btn-primary',
+    secondary: 'ikram-btn-secondary',
+    gold: 'ikram-btn-gold',
+    outline: 'ikram-btn-outline',
+    ghost: 'ikram-btn-ghost',
+    danger: 'ikram-btn-danger',
+    dangerOutline: 'ikram-btn-dangerOutline',
   };
 
   const isDisabled = disabled || loading;

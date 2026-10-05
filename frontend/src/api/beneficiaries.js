@@ -13,6 +13,7 @@ const beneficiaryApi = {
     }
     return api.put(`/beneficiaries/${id}`, data);
   },
+  restore: (id) => api.post(`/beneficiaries/${id}/restore`),
   remove: (id)          => api.delete(`/beneficiaries/${id}`),
 
   // التحقق من رقم الهوية

@@ -273,13 +273,13 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white border border-[#E5E2D9] rounded-xl p-1.5 shadow-sm flex items-center justify-between">
+        <div className="ikram-panel p-1.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab("beneficiaries")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-colors ${
                 activeTab === "beneficiaries"
-                  ? "bg-[#3F6B3A] text-white shadow-sm"
+                  ? "bg-[var(--color-brand-green)] text-white shadow-sm"
                   : "text-slate-600 hover:bg-slate-100"
               }`}
             >
@@ -291,7 +291,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
               onClick={() => setActiveTab("transactions")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-colors ${
                 activeTab === "transactions"
-                  ? "bg-[#3F6B3A] text-white shadow-sm"
+                  ? "bg-[var(--color-brand-green)] text-white shadow-sm"
                   : "text-slate-600 hover:bg-slate-100"
               }`}
             >
@@ -310,7 +310,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
         {activeTab === "beneficiaries" && (
           <div className="space-y-4">
             {/* Search & District Filter */}
-            <div className="bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center gap-3">
+            <div className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center gap-3">
               <div className="relative flex-1 w-full">
                 <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -319,7 +319,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                   onChange={(e) => setSearchBeneficiary(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && loadBeneficiaries(1)}
                   placeholder="ابحث باسم المستفيد، رقم الهوية، أو الجوال..."
-                  className="w-full pl-3 pr-10 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full pl-3 pr-10 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -327,7 +327,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                 <select
                   value={selectedDistrict}
                   onChange={(e) => setSelectedDistrict(e.target.value)}
-                  className="px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 >
                   <option value="all">جميع الأحياء</option>
                   {districts.map((d) => (
@@ -337,7 +337,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
 
                 <button
                   onClick={() => loadBeneficiaries(1)}
-                  className="px-4 py-2 bg-[#3F6B3A] text-white text-xs font-semibold rounded-lg hover:bg-[#345830] transition-colors"
+                  className="px-4 py-2 bg-[var(--color-brand-green)] text-white text-xs font-semibold rounded-lg hover:bg-[#345830] transition-colors"
                 >
                   بحث
                 </button>
@@ -345,11 +345,11 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
             </div>
 
             {/* Beneficiaries Table */}
-            <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-right border-collapse text-xs">
+            <div className="ikram-panel overflow-hidden">
+              <div className="ikram-table-wrap">
+                <table className="ikram-table text-xs">
                   <thead>
-                    <tr className="bg-[#FAF8F5] text-slate-700 font-bold border-b border-[#E5E2D9]">
+                    <tr className="bg-[var(--color-bg-soft)] text-slate-700 font-bold border-b border-[var(--color-border)]">
                       <th className="py-3 px-4">اسم المستفيد</th>
                       <th className="py-3 px-4">الهوية / الإقامة</th>
                       <th className="py-3 px-4">رقم الجوال</th>
@@ -376,7 +376,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                       beneficiaries.map((b) => (
                         <tr key={b.id} className="hover:bg-slate-50 transition-colors">
                           <td className="py-3 px-4 font-bold text-slate-800">
-                            <Link to={`/daily-beneficiaries/${b.id}`} className="hover:text-[#3F6B3A] hover:underline">
+                            <Link to={`/daily-beneficiaries/${b.id}`} className="hover:text-[var(--color-brand-green)] hover:underline">
                               {b.full_name}
                             </Link>
                           </td>
@@ -396,7 +396,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                           <td className="py-3 px-4 text-center">
                             <button
                               onClick={() => openReceivingModalFor(b)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#3F6B3A] hover:bg-[#345830] text-white rounded-lg font-bold shadow-xs transition-colors"
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--color-brand-green)] hover:bg-[#345830] text-white rounded-lg font-bold shadow-xs transition-colors"
                             >
                               <Package className="w-3.5 h-3.5" />
                               تسجيل استلام
@@ -411,7 +411,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
 
               {/* Pagination */}
               {paginationBeneficiaries.last_page > 1 && (
-                <div className="p-3 border-t border-[#E5E2D9] flex items-center justify-between text-xs">
+                <div className="p-3 border-t border-[var(--color-border)] flex items-center justify-between text-xs">
                   <span>
                     الصفحة {paginationBeneficiaries.current_page} من {paginationBeneficiaries.last_page} (إجمالي {paginationBeneficiaries.total})
                   </span>
@@ -441,7 +441,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
         {activeTab === "transactions" && (
           <div className="space-y-4">
             {/* Filter Bar */}
-            <div className="bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center gap-3">
+            <div className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center gap-3">
               <div className="relative flex-1 w-full">
                 <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -450,7 +450,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                   onChange={(e) => setSearchTx(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && loadTransactions(1)}
                   placeholder="ابحث برقم السند، اسم المستفيد، أو رقم الهوية..."
-                  className="w-full pl-3 pr-10 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full pl-3 pr-10 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -459,11 +459,11 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                   type="date"
                   value={txDateFrom}
                   onChange={(e) => setTxDateFrom(e.target.value)}
-                  className="px-2.5 py-1.5 bg-white border border-[#E5E2D9] rounded-lg text-xs"
+                  className="px-2.5 py-1.5 bg-white border border-[var(--color-border)] rounded-lg text-xs"
                 />
                 <button
                   onClick={() => loadTransactions(1)}
-                  className="px-4 py-2 bg-[#3F6B3A] text-white text-xs font-semibold rounded-lg hover:bg-[#345830] transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-[var(--color-brand-green)] text-white text-xs font-semibold rounded-lg hover:bg-[#345830] transition-colors cursor-pointer"
                 >
                   تصفية
                 </button>
@@ -479,11 +479,11 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
             </div>
 
             {/* Transactions Table */}
-            <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-right border-collapse text-xs">
+            <div className="ikram-panel overflow-hidden">
+              <div className="ikram-table-wrap">
+                <table className="ikram-table text-xs">
                   <thead>
-                    <tr className="bg-[#FAF8F5] text-slate-700 font-bold border-b border-[#E5E2D9]">
+                    <tr className="bg-[var(--color-bg-soft)] text-slate-700 font-bold border-b border-[var(--color-border)]">
                       <th className="py-3 px-4">رقم السند</th>
                       <th className="py-3 px-4">اسم المستفيد</th>
                       <th className="py-3 px-4">الهوية / الإقامة</th>
@@ -532,7 +532,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                               href={getDocumentPdfUrl(`/documents/daily-receiving/${tx.id}/pdf`)}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#F5EDDA] hover:bg-[#ECE0C4] text-[#8C6C26] rounded-lg text-xs font-bold transition-colors"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--color-bg-soft)] hover:bg-[#ECE0C4] text-[#8C6C26] rounded-lg text-xs font-bold transition-colors"
                             >
                               <Printer className="w-3.5 h-3.5" />
                               سند PDF
@@ -547,7 +547,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
 
               {/* Pagination */}
               {paginationTx.last_page > 1 && (
-                <div className="p-3 border-t border-[#E5E2D9] flex items-center justify-between text-xs">
+                <div className="p-3 border-t border-[var(--color-border)] flex items-center justify-between text-xs">
                   <span>
                     الصفحة {paginationTx.current_page} من {paginationTx.last_page} (إجمالي {paginationTx.total})
                   </span>
@@ -583,8 +583,8 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
           {selectedBeneficiary && (
             <div className="space-y-4">
               {createdVoucher ? (
-                <div className="p-5 bg-[#EBF4EA] border border-[#3F6B3A]/30 rounded-xl space-y-3 text-center">
-                  <CheckCircle2 className="w-12 h-12 text-[#3F6B3A] mx-auto" />
+                <div className="p-5 bg-[#EBF4EA] border border-[var(--color-brand-green)]/30 rounded-xl space-y-3 text-center">
+                  <CheckCircle2 className="w-12 h-12 text-[var(--color-brand-green)] mx-auto" />
                   <h3 className="font-bold text-slate-800 text-base">تم تسجيل الاستلام وصرف السلة بنجاح!</h3>
                   <p className="text-xs text-slate-600">
                     رقم سند الاستلام الرسمي:{" "}
@@ -597,7 +597,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                       href={getDocumentPdfUrl(`/documents/daily-receiving/${createdVoucher.id}/pdf`)}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-2 px-5 py-2.5 bg-[#C9A24A] hover:bg-[#B8923D] text-white rounded-lg text-xs font-bold transition-colors shadow"
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-brand-gold)] hover:bg-[#B8923D] text-white rounded-lg text-xs font-bold transition-colors shadow"
                     >
                       <Printer className="w-4 h-4" />
                       طباعة سند الاستلام (PDF)
@@ -636,7 +636,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                     <select
                       value={selectedItemId}
                       onChange={(e) => setSelectedItemId(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                      className="w-full px-3 py-2.5 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                     >
                       {inventoryItems.map((item) => (
                         <option key={item.id} value={item.id}>
@@ -664,7 +664,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                       max={selectedInventoryItemObj?.current_quantity || 1}
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
+                      className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
                     />
                   </div>
 
@@ -676,7 +676,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="تم التسليم بمقر الجمعية بحالة سليمة..."
-                      className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                      className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                     />
                   </div>
 
@@ -693,7 +693,7 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
                       type="button"
                       disabled={submitting || !selectedItemId || (selectedInventoryItemObj && selectedInventoryItemObj.current_quantity < quantity)}
                       onClick={handleExecuteReceiving}
-                      className="px-5 py-2.5 bg-[#3F6B3A] hover:bg-[#345830] text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+                      className="px-5 py-2.5 bg-[var(--color-brand-green)] hover:bg-[#345830] text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
                     >
                       {submitting ? "جاري التأكيد والخصم..." : "تأكيد الاستلام وخصم المخزون"}
                     </button>

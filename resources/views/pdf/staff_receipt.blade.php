@@ -44,7 +44,6 @@
                     <th>#</th>
                     <th>تاريخ الاستلام</th>
                     <th>نوع السلة / الدعم</th>
-                    <th>رمز الاستلام الرقمي (Barcode)</th>
                     <th>حالة التسليم</th>
                 </tr>
             </thead>
@@ -54,8 +53,7 @@
                         <td>{{ $idx + 1 }}</td>
                         <td style="font-family: monospace;">{{ $d->delivered_at ? \Carbon\Carbon::parse($d->delivered_at)->format('Y-m-d') : ($d->scheduled_at ? \Carbon\Carbon::parse($d->scheduled_at)->format('Y-m-d') : '—') }}</td>
                         <td><strong>{{ $d->basket->name ?? 'سلة دعم مخصصة' }}</strong></td>
-                        <td style="font-family: monospace; font-weight: bold; color: #8C6C26;">{{ $d->barcode_code ?? '—' }}</td>
-                        <td>{{ $d->status === 'delivered' ? 'تم التسليم ✅' : 'قيد المعالجة ⏳' }}</td>
+                        <td>{{ $d->status === 'delivered' ? 'تم التسليم' : 'قيد المعالجة' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -91,7 +89,7 @@
     @endif
 
     <div style="margin-top: 20px; font-size: 11px; color: #5C5C5C; border: 1px border #C9A24B; padding: 10px; background-color: #F7F5F0; border-radius: 6px;">
-        📄 هذا المستند وسند الاستلام معتمد رسمياً وصادر من جمعية إكرام الجود لخدمة ضيوف الرحمن لتوثيق استلام الموظفين للدعم والمستحقات المعتمدة.
+        هذا المستند وسند الاستلام صادر من {{ $associationName }} لتوثيق استلام الموظفين للدعم والمستحقات المعتمدة.
     </div>
 
     <table style="width: 100%; margin-top: 35px;">

@@ -36,13 +36,14 @@ function fitToColumn(data, headers) {
  * @param {string} options.sheetName - Name of worksheet
  * @param {Array<Object>} options.data - Array of row objects with Arabic keys
  */
-export function exportArrayToExcel({ filename = "ikram-export", sheetName = "البيانات", data = [] }) {
+export function exportArrayToExcel({ filename = "ikram-export", sheetName = "البيانات", data = [], metadata }) {
   if (!data || data.length === 0) {
     throw new Error("لا توجد بيانات متاحة للتصدير");
   }
 
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(data);
+  const ws = metadata ? XLSX.utils.aoa_to_sheet([[metadata.association], [metadata.title], ['تاريخ الإنشاء', new Date().toLocaleDateString('ar-SA')], ['الفترة', metadata.range || 'جميع التواريخ'], []]) : XLSX.utils.json_to_sheet(data);
+  if (metadata) XLSX.utils.sheet_add_json(ws, data, { origin: 'A6' });
 
   // Set worksheet view to Right-To-Left (RTL) for Arabic
   if (!ws["!views"]) ws["!views"] = [];
@@ -75,6 +76,7 @@ export async function exportApiDataToExcel({
   filename = "ikram-export",
   sheetName = "البيانات",
   transform,
+  metadata,
 }) {
   // Pass export flag or per_page: -1 to instruct backend to return all matching records
   const exportParams = {
@@ -116,6 +118,6 @@ export async function exportApiDataToExcel({
     }
   }
   const transformedData = transform ? records.map(transform) : records;
-  exportArrayToExcel({ filename, sheetName, data: transformedData });
+  exportArrayToExcel({ filename, sheetName, data: transformedData, metadata });
   return records.length;
 }

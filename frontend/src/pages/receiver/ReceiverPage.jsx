@@ -118,14 +118,14 @@ export default function ReceiverPage() {
         />
 
         {/* Scanner & Code Search Box */}
-        <div className="bg-white rounded-2xl shadow-xs border border-[#E5E2D9] p-6 text-center">
+        <div className="bg-white rounded-2xl shadow-xs border border-[var(--color-border)] p-6 text-center">
           <div className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
             <input
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="أدخل رمز الباركود / QR (مثال: REP-A1B2C3)..."
-              className="flex-1 h-11 rounded-xl border border-[#E5E2D9] px-4 text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-[#C9A24A] bg-[#FAF8F5]"
+              className="flex-1 h-11 rounded-xl border border-[var(--color-border)] px-4 text-sm text-right font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-gold)] bg-[var(--color-bg-soft)]"
             />
             
             <Button
@@ -151,14 +151,14 @@ export default function ReceiverPage() {
 
       {/* Result Display */}
       {result && !confirmed && (
-        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 space-y-6 animate-in fade-in zoom-in duration-200">
+        <div className="bg-white rounded-3xl shadow-xl border border-[var(--color-border)] p-8 space-y-6 animate-in fade-in zoom-in duration-200">
           {/* Header Card with Recipient and Code Status */}
           <div className="bg-primary-50/60 border border-primary-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <UserCheck className="w-8 h-8 text-primary-700" />
               <div>
-                <h3 className="font-bold text-base text-gray-800">{recipient?.full_name || recipient?.name || "المستفيد"}</h3>
-                <p className="text-xs text-gray-600">
+                <h3 className="font-bold text-base text-[var(--color-text-primary)]">{recipient?.full_name || recipient?.name || "المستفيد"}</h3>
+                <p className="text-xs text-[var(--color-text-muted)]">
                   {recipient?.national_id ? `رقم الهوية: ${recipient.national_id}` : `نوع الجهة: ${recipient?.organization_type || "جهة مستفيدة"}`} | الجوال: <span className="font-mono">{recipient?.phone || "—"}</span>
                 </p>
               </div>
@@ -194,12 +194,12 @@ export default function ReceiverPage() {
 
           {/* Rejection Alert If Code is Expired */}
           {codeStatus === "expired" && (
-            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 text-amber-900 space-y-2">
-              <div className="flex items-center gap-2 font-black text-sm text-amber-800">
+            <div className="bg-[var(--color-bg-soft)] border-2 border-amber-300 rounded-2xl p-5 text-amber-900 space-y-2">
+              <div className="flex items-center gap-2 font-black text-sm text-[var(--color-text-secondary)]">
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
                 <span>⚠️ تنبيه: رمز الاستلام منتهي الصلاحية</span>
               </div>
-              <p className="text-xs text-amber-800">
+              <p className="text-xs text-[var(--color-text-secondary)]">
                 لقد تجاوز هذا الرمز التاريخ المحدد للصرف. يرجى التواصل مع إدارة الجمعية لإعادة الجدولة.
               </p>
             </div>
@@ -207,12 +207,12 @@ export default function ReceiverPage() {
 
           {/* Details Grid */}
           <div className="grid md:grid-cols-2 gap-4 text-xs">
-            <div className="bg-gray-50 p-4 rounded-xl space-y-2 border border-gray-200">
+            <div className="bg-[var(--color-bg-soft)] p-4 rounded-xl space-y-2 border border-[var(--color-border)]">
               <div><strong>نوع الدعم / السلة:</strong> {result.data.basket?.name || "سلة دعم غذائية"}</div>
               <div><strong>نقطة التسليم:</strong> {result.data.pickup_location || "مقر الجمعية الرئيسي"}</div>
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-xl space-y-2 border border-gray-200">
+            <div className="bg-[var(--color-bg-soft)] p-4 rounded-xl space-y-2 border border-[var(--color-border)]">
               <div><strong>تاريخ الموعد:</strong> {result.data.scheduled_at ? new Date(result.data.scheduled_at).toLocaleDateString('ar-SA') : "اليوم"}</div>
               <div className="flex items-center gap-2">
                 <strong>حالة الرمز:</strong>
@@ -233,7 +233,7 @@ export default function ReceiverPage() {
                 <span>{confirming ? "⏳ جاري التوثيق والإشعار..." : "✅ تأكيد وتسليم الدعم للمستفيد (صرف لمرة واحدة)"}</span>
               </button>
             ) : (
-              <div className="text-center p-3 bg-gray-100 rounded-xl text-gray-500 font-bold text-xs border border-gray-300">
+              <div className="text-center p-3 bg-[var(--color-bg-soft)] rounded-xl text-[var(--color-text-muted)] font-bold text-xs border border-[var(--color-border)]">
                 ⛔ تم تعطيل زر التسليم لأن الرمز ({codeStatus === "used" ? "مستخدم مسبقاً" : codeStatus === "expired" ? "منتهي الصلاحية" : "ملغى"})
               </div>
             )}
@@ -244,7 +244,7 @@ export default function ReceiverPage() {
       {/* Confirmation Completed View */}
       {confirmed && (
         <div className="bg-green-50 border-2 border-green-300 rounded-3xl p-8 text-center space-y-6 shadow-xl animate-in zoom-in duration-200">
-          <div className="w-16 h-16 bg-green-600 text-white rounded-full flex items-center justify-center mx-auto text-3xl shadow-lg">
+          <div className="w-16 h-16 bg-[var(--color-brand-green)] text-white rounded-full flex items-center justify-center mx-auto text-3xl shadow-lg">
             ✓
           </div>
           <div>
@@ -264,7 +264,7 @@ export default function ReceiverPage() {
                 href={confirmed.pdf_url}
                 target="_blank"
                 rel="noreferrer"
-                className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-3 rounded-2xl text-xs shadow-md inline-flex items-center gap-2"
+                className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-bold px-6 py-3 rounded-2xl text-xs shadow-md inline-flex items-center gap-2"
               >
                 <FileText className="w-4 h-4" />
                 <span>📄 طباعة سند الاستلام (PDF)</span>
