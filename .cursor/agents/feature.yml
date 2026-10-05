@@ -1,0 +1,104 @@
+# Software Engineering AI Agents — feature pipeline
+# Human guide: AI_TEAM_WORKFLOW.md
+
+id: ikram-feature
+name: Ikram Feature Delivery
+description: >
+  End-to-end multi-agent workflow for feature work on Ikram System
+  (Laravel API + React SPA).
+
+triggers:
+  - feature
+  - fullstack
+  - "new module behavior"
+  - "api and ui"
+
+agents:
+  - id: pm
+    file: pm.md
+  - id: analyst
+    file: analyst.md
+  - id: architect
+    file: architect.md
+  - id: database
+    file: database.md
+  - id: backend
+    file: backend.md
+  - id: frontend
+    file: frontend.md
+  - id: security
+    file: security.md
+  - id: qa
+    file: qa.md
+  - id: review
+    file: review.md
+  - id: devops
+    file: devops.md
+  - id: team
+    file: team.md
+
+steps:
+  - id: brief
+    name: Product brief
+    agents: [pm, analyst]
+    outputs:
+      - goal
+      - acceptance_criteria
+      - business_rules
+      - out_of_scope
+    onComplete: design
+
+  - id: design
+    name: Technical design
+    agents: [architect]
+    optional_agents: [database]
+    outputs:
+      - approach
+      - api_contract
+      - file_list
+      - implementation_slices
+    onComplete: implement
+
+  - id: implement
+    name: Implementation
+    parallel:
+      - agent: database
+        when: schema_change
+      - agent: backend
+      - agent: frontend
+        when: ui_change
+    outputs:
+      - code_changes
+      - unit_tests
+    onComplete: harden
+
+  - id: harden
+    name: Security and QA
+    parallel:
+      - agent: security
+      - agent: qa
+      - agent: devops
+        when: ci_or_deploy_change
+    outputs:
+      - security_findings
+      - test_evidence
+    onComplete: review
+
+  - id: review
+    name: Review and PR
+    agents: [review]
+    outputs:
+      - verdict
+      - pr_body
+    checks:
+      - pull_request_template: ../../.github/pull_request_template.md
+      - ci_workflows:
+          - ../../.github/workflows/ci.yml
+          - ../../.github/workflows/feature.yml
+
+definition_of_done:
+  - acceptance_criteria_met
+  - permissions_enforced
+  - tests_with_evidence
+  - pr_template_complete
+  - no_secrets_committed
