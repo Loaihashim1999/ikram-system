@@ -44,13 +44,13 @@ class FsaIdorMatrixTest extends TestCase
         $support1 = SupportDistribution::create(['recipient_type' => 'beneficiary', 'beneficiary_id' => $benX->id, 'recipient_name' => 'ALICE BENEFICIARY', 'fulfillment_method' => 'delivery', 'status' => 'ready', 'created_by' => $admin->id, 'driver_id' => null]);
         $support2 = SupportDistribution::create(['recipient_type' => 'beneficiary', 'beneficiary_id' => $benY->id, 'recipient_name' => 'BOB BENEFICIARY', 'fulfillment_method' => 'delivery', 'status' => 'ready', 'created_by' => $admin->id, 'driver_id' => null]);
 
-        $alice = $this->user('idor_alice', 'assistant_admin', ['beneficiaries' => ['view' => true, 'create' => true, 'edit' => true, 'notifications' => true], 'daily_beneficiaries' => ['view' => true], 'notifications' => ['view' => true]]);
+        $alice = $this->user('idor_alice', 'assistant_admin', ['beneficiaries' => ['view' => true, 'create' => true, 'edit' => true], 'daily_beneficiaries' => ['view' => true], 'notifications' => ['view' => true]]);
         $bob = $this->user('idor_bob', 'staff', ['beneficiaries' => ['view' => true], 'support' => ['view' => true, 'fulfill' => true], 'receiver' => ['view' => true]]);
         $this->user('idor_noperms', 'reception', ['beneficiaries' => ['view' => true]]);
 
         // Owner-scoped notifications.
-        $noteA = Notification::create(['category' => 'system_event', 'event_type' => 'beneficiary_changed', 'title' => 'ALICE NOTE', 'recipient_type' => 'staff', 'recipient_id' => $alice->id, 'related_record_type' => Beneficiary::class, 'related_record_id' => $benX->id, 'message_body' => 'ALICE SECRET BODY']);
-        $noteB = Notification::create(['category' => 'system_event', 'event_type' => 'beneficiary_changed', 'title' => 'BOB NOTE', 'recipient_type' => 'staff', 'recipient_id' => $bob->id, 'related_record_type' => Beneficiary::class, 'related_record_id' => $benY->id, 'message_body' => 'BOB SECRET BODY']);
+        $noteA = Notification::create(['category' => 'system_event', 'title' => 'ALICE NOTE', 'recipient_type' => 'staff', 'recipient_id' => $alice->id, 'related_record_type' => 'user', 'related_record_id' => $alice->id, 'message_body' => 'ALICE SECRET BODY']);
+        $noteB = Notification::create(['category' => 'system_event', 'title' => 'BOB NOTE', 'recipient_type' => 'staff', 'recipient_id' => $bob->id, 'related_record_type' => 'user', 'related_record_id' => $bob->id, 'message_body' => 'BOB SECRET BODY']);
 
         // Driver assignments scoped by token hash (driver A vs driver B).
         $dA = Driver::create(['full_name' => 'DRIVER A', 'phone' => '0551111111', 'vehicle_info' => 'A', 'is_active' => true]);
