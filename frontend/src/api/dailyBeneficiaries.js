@@ -32,4 +32,4 @@ export const createDailyReceivingTransaction = (data) => api.post('/daily-receiv
 export const getDailyReceivingTransaction = (id) => api.get(`/daily-receiving/${id}`);
 
 // ─── التحليلات الشاملة والحوكمة ──────────────────────────────────────────────
-export const getAnalytics = (params) => api.get('/analytics', { params });
+export const getAnalytics = (params) => api.get('/governance/analytics', { params });

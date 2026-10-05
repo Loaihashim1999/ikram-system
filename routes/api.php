@@ -8,18 +8,26 @@ use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\PasswordRecoveryController;
 use App\Http\Controllers\Beneficiaries\BeneficiaryController;
 use App\Http\Controllers\Beneficiaries\CategoryController;
+use App\Http\Controllers\BeneficiaryPolicy\BeneficiaryPolicyController;
+use App\Http\Controllers\BeneficiaryPolicy\PolicyApplicationRunController;
+use App\Http\Controllers\BeneficiaryPolicy\PolicyReviewController;
 use App\Http\Controllers\DailyBeneficiaryController;
 use App\Http\Controllers\DailyInventoryController;
 use App\Http\Controllers\DailyReceivingController;
+use App\Http\Controllers\DeliveryCommunicationController;
 use App\Http\Controllers\DistributionController;
+use App\Http\Controllers\GovernanceReportController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\NeighborhoodRepController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PdfExportController;
-use App\Http\Controllers\ReceiverController;
+use App\Http\Controllers\PickupLocationController;
+use App\Http\Controllers\PrivateDocumentController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SmartImportController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\SupportDistributionController;
+use App\Http\Controllers\TaqnyatSmsWebhookController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\ModulePermission;
 use Illuminate\Support\Facades\Route;
@@ -35,12 +43,87 @@ Route::get('/', function () {
 Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:6,1')->name('login');
 Route::get('/setup-admin/status', [FirstAdminSetupController::class, 'status'])->middleware('throttle:30,1');
 Route::post('/setup-admin', [FirstAdminSetupController::class, 'store'])->middleware('throttle:5,1');
-Route::post('/forgot-password', [PasswordRecoveryController::class, 'forgot'])->middleware('throttle:3,1');
-Route::post('/reset-password', [PasswordRecoveryController::class, 'reset'])->middleware('throttle:5,1');
+Route::post('/forgot-password', [PasswordRecoveryController::class, 'forgot'])->middleware('throttle:password-recovery-request');
+Route::post('/forgot-password/verify', [PasswordRecoveryController::class, 'verifyOtp'])->middleware('throttle:password-recovery-verify');
+Route::post('/reset-password', [PasswordRecoveryController::class, 'reset'])->middleware('throttle:password-recovery-reset');
+
+Route::post('/webhooks/taqnyat/sms', [TaqnyatSmsWebhookController::class, 'sms'])
+    ->middleware('throttle:30,1')
+    ->name('webhooks.taqnyat.sms');
+
+Route::get('/driver-access', [DeliveryCommunicationController::class, 'driver'])->middleware('throttle:60,1');
+Route::get('/driver-access/tasks/{id}', [DeliveryCommunicationController::class, 'driver'])->middleware('throttle:60,1');
+Route::post('/driver-access/tasks/{id}/confirm', [DeliveryCommunicationController::class, 'driver'])->middleware('throttle:20,1');
 
 // ─── المسارات المحمية ──────────────────────────────────────────────────────
 Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () {
+    Route::post('/change-password', [PasswordRecoveryController::class, 'change']);
+    Route::match(['get', 'put'], '/settings/communications', [DeliveryCommunicationController::class, 'settings']);
+    Route::post('/settings/communications/preview', [DeliveryCommunicationController::class, 'preview']);
+    Route::get('/settings/communications/messages', [DeliveryCommunicationController::class, 'messages']);
+    Route::post('/settings/communications/messages/{id}/retry', [DeliveryCommunicationController::class, 'retry']);
+    Route::post('/support/distributions/{id}/receipt-code', [DeliveryCommunicationController::class, 'issue']);
+    Route::post('/support/distributions/{id}/verify', [DeliveryCommunicationController::class, 'verify']);
+    Route::post('/support/distributions/{id}/verify-preview', [DeliveryCommunicationController::class, 'previewReceipt'])->middleware('throttle:20,1');
+    Route::get('/support/distributions/{id}/proof', [PdfExportController::class, 'exportSupportProof']);
+    Route::match(['get', 'post'], '/support/drivers', [DeliveryCommunicationController::class, 'drivers']);
+    Route::patch('/support/drivers/{id}', [DeliveryCommunicationController::class, 'updateDriver']);
+    Route::match(['get', 'post'], '/support/assignments', [DeliveryCommunicationController::class, 'assignments']);
+    Route::post('/support/assignments/reassign', [DeliveryCommunicationController::class, 'reassign']);
+    Route::post('/support/assignments/{id}/revoke', [DeliveryCommunicationController::class, 'revoke']);
+    Route::post('/support/assignments/{id}/resend', [DeliveryCommunicationController::class, 'resend']);
+    Route::get('/support/assignments/{id}/link', [DeliveryCommunicationController::class, 'link']);
+    Route::get('/support/history', [SupportDistributionController::class, 'history']);
+    Route::get('/support/distributions', [SupportDistributionController::class, 'index']);
+    Route::post('/support/distributions', [SupportDistributionController::class, 'store']);
+    Route::get('/support/distributions/{id}', [SupportDistributionController::class, 'show']);
+    Route::patch('/support/distributions/{id}', [SupportDistributionController::class, 'update']);
+    Route::patch('/support/distributions/{id}/{action}', [SupportDistributionController::class, 'transition'])
+        ->whereIn('action', ['approve', 'reserve', 'ready', 'dispatch', 'complete', 'cancel']);
+    Route::get('/support/pickup-locations', [PickupLocationController::class, 'index']);
+    Route::post('/support/pickup-locations', [PickupLocationController::class, 'store']);
+    Route::patch('/support/pickup-locations/{id}', [PickupLocationController::class, 'update']);
+    Route::delete('/support/pickup-locations/{id}', [PickupLocationController::class, 'destroy']);
+
+    // ── محرك سياسة المستفيدين — إدارة إصدارات السياسة (POLICY-A فقط) ──────────
+    Route::get('/beneficiary-policy/permissions', [BeneficiaryPolicyController::class, 'permissions']);
+    Route::get('/beneficiary-policy/versions', [BeneficiaryPolicyController::class, 'index']);
+    Route::post('/beneficiary-policy/versions', [BeneficiaryPolicyController::class, 'store']);
+    Route::get('/beneficiary-policy/versions/{id}', [BeneficiaryPolicyController::class, 'show']);
+    Route::patch('/beneficiary-policy/versions/{id}', [BeneficiaryPolicyController::class, 'update']);
+    Route::get('/beneficiary-policy/versions/{id}/history', [BeneficiaryPolicyController::class, 'history']);
+    Route::post('/beneficiary-policy/versions/{id}/clone', [BeneficiaryPolicyController::class, 'clone']);
+    Route::post('/beneficiary-policy/versions/{id}/approve', [BeneficiaryPolicyController::class, 'approve']);
+    Route::post('/beneficiary-policy/versions/{id}/publish', [BeneficiaryPolicyController::class, 'publish']);
+    Route::post('/beneficiary-policy/versions/{id}/retire', [BeneficiaryPolicyController::class, 'retire']);
+
+    // ── POLICY-E2/E3: نطاق التطبيق — المحاكاة (قراءة فقط) والتنفيذ المُتحكَّم به ──
+    Route::post('/beneficiary-policy/versions/{version}/simulate', [PolicyApplicationRunController::class, 'simulateVersion']);
+    Route::get('/beneficiary-policy/versions/{version}/application-runs', [PolicyApplicationRunController::class, 'index']);
+    Route::post('/beneficiary-policy/versions/{version}/application-runs', [PolicyApplicationRunController::class, 'store']);
+    Route::get('/beneficiary-policy/application-runs/{run}', [PolicyApplicationRunController::class, 'show']);
+    Route::get('/beneficiary-policy/application-runs/{run}/items', [PolicyApplicationRunController::class, 'items']);
+    Route::post('/beneficiary-policy/application-runs/{run}/simulate', [PolicyApplicationRunController::class, 'simulate']);
+    Route::post('/beneficiary-policy/application-runs/{run}/approve-application', [PolicyApplicationRunController::class, 'approveApplication']);
+    Route::post('/beneficiary-policy/application-runs/{run}/execute', [PolicyApplicationRunController::class, 'execute']);
+    Route::post('/beneficiary-policy/application-runs/{run}/retry', [PolicyApplicationRunController::class, 'retry']);
+    Route::post('/beneficiary-policy/application-runs/{run}/cancel', [PolicyApplicationRunController::class, 'cancel']);
+    Route::get('/beneficiary-policy/beneficiaries/{beneficiary}/evaluations', [PolicyReviewController::class, 'index']);
+    Route::prefix('beneficiary-policy/evaluations/{evaluation}')->group(function () {
+        Route::get('/review', [PolicyReviewController::class, 'show']);
+        Route::post('/documents/{code}', [PolicyReviewController::class, 'document']);
+        Route::post('/medical-evidence', [PolicyReviewController::class, 'medical']);
+        Route::put('/social-assessment', [PolicyReviewController::class, 'draft']);
+        Route::post('/social-assessment/submit', [PolicyReviewController::class, 'submit']);
+        Route::post('/social-assessment/review', [PolicyReviewController::class, 'review']);
+        Route::post('/approve', [PolicyReviewController::class, 'approve']);
+        Route::post('/reject', [PolicyReviewController::class, 'reject']);
+    });
+    // POLICY-B: single-record financial eligibility evaluation (granular `evaluate` permission).
+    Route::post('/beneficiary-policy/evaluate', [BeneficiaryPolicyController::class, 'evaluate']);
+
     // تصدير PDF العام وتنزيل الشيتات
+    Route::get('/documents/beneficiary/{id}/pdf', [PdfExportController::class, 'exportBeneficiaryCard']);
     Route::get('/documents/individual-receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
     Route::get('/documents/receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
     Route::get('/documents/total-delivery/{id}/pdf', [PdfExportController::class, 'exportTotalDelivery']);
@@ -51,6 +134,12 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
     Route::get('/reports/comprehensive/excel', [PdfExportController::class, 'exportComprehensiveExcel']);
     Route::get('/reports/comprehensive/pdf', [PdfExportController::class, 'exportWeeklyComprehensiveReport']);
     Route::get('/neighborhood-reps/{id}/export-excel', [NeighborhoodRepController::class, 'exportLinkedBeneficiariesExcel']);
+    Route::get('/beneficiaries/{beneficiary}/documents/{field}', [PrivateDocumentController::class, 'beneficiary'])
+        ->name('beneficiaries.documents.download');
+    Route::get('/daily-beneficiaries/{beneficiary}/documents/{document}/download', [PrivateDocumentController::class, 'dailyBeneficiary'])
+        ->name('daily-beneficiaries.documents.download');
+    Route::get('/neighborhood-reps/{representative}/documents/{field}', [PrivateDocumentController::class, 'representative'])
+        ->name('neighborhood-reps.documents.download');
 
     // المصادقة
     Route::get('/me', [LoginController::class, 'me']);
@@ -63,6 +152,8 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
 
     // ── المستفيدون ──────────────────────────────────────────────────────────
+    Route::get('/beneficiaries/unified/export', [BeneficiaryController::class, 'unifiedExport']);
+    Route::get('/beneficiaries/unified', [BeneficiaryController::class, 'unifiedIndex']);
     Route::get('/beneficiaries/check-national-id/{nationalId}',
         [BeneficiaryController::class, 'checkNationalId']);
     Route::post('/beneficiaries/extract-ocr-data',
@@ -71,6 +162,8 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
         [BeneficiaryController::class, 'importExcel']);
 
     Route::post('/beneficiaries/{beneficiary}', [BeneficiaryController::class, 'update']);
+    Route::post('/beneficiaries/{beneficiary}/restore', [BeneficiaryController::class, 'restore']);
+    Route::get('/beneficiaries/{beneficiary}/support-history', [BeneficiaryController::class, 'supportHistory']);
     Route::apiResource('beneficiaries', BeneficiaryController::class);
 
     // تابعون (معالون) للمستفيد
@@ -84,10 +177,10 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
 
     // ── التوزيع / الدعم ──────────────────────────────────────────────────────
     Route::get('/distributions', [DistributionController::class, 'index']);
-    Route::get('/drivers/deliveries', [DistributionController::class, 'driverDeliveries']);
+    Route::get('/drivers/deliveries', fn () => response()->json(['message' => 'تم إيقاف المسار القديم؛ استخدم تسليم الدعم الموحد.'], 410));
     Route::post('/distributions', [DistributionController::class, 'store']);
-    Route::put('/distributions/{id}/received', [DistributionController::class, 'markReceived']);
-    Route::post('/distributions/{id}/whatsapp', [DistributionController::class, 'sendWhatsapp']);
+    Route::put('/distributions/{id}/received', fn () => response()->json(['message' => 'تم إيقاف المسار القديم؛ استخدم تسليم الدعم الموحد.'], 410));
+    Route::post('/distributions/{id}/whatsapp', fn () => response()->json(['message' => 'تم إيقاف المسار القديم؛ استخدم تسليم الدعم الموحد.'], 410));
     Route::get('/distributions/{id}', [DistributionController::class, 'show']);
 
     // ── الموظفون ─────────────────────────────────────────────────────────────
@@ -104,6 +197,7 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
     // ── مناديب الأحياء بالسائقين والمناديب ────────────────────────────────────
     Route::get('/representatives', [NeighborhoodRepController::class, 'index']);
     Route::get('/drivers', [UserController::class, 'drivers']);
+    Route::get('/neighborhood-reps/driver-options', [NeighborhoodRepController::class, 'driverOptions']);
     Route::apiResource('neighborhood-reps', NeighborhoodRepController::class);
     Route::post('/neighborhood-reps/{id}', [NeighborhoodRepController::class, 'update']);
     Route::post('/neighborhood-reps/{id}/dispatch', [NeighborhoodRepController::class, 'dispatchSupport']);
@@ -111,8 +205,8 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
     Route::put('/neighborhood-reps/{id}/status', [NeighborhoodRepController::class, 'toggleStatus']);
 
     // ── صفحة الاستلام (Receiver Page & Scanner) ────────────────────────────────
-    Route::get('/receiver/scan/{code}', [ReceiverController::class, 'scan']);
-    Route::post('/receiver/confirm/{code}', [ReceiverController::class, 'confirm']);
+    Route::get('/receiver/scan/{code}', fn () => response()->json(['message' => 'تم إيقاف التحقق القديم؛ استخدم رمز الاستلام المكون من أربعة أرقام.'], 410));
+    Route::post('/receiver/confirm/{code}', fn () => response()->json(['message' => 'تم إيقاف التحقق القديم؛ استخدم رمز الاستلام المكون من أربعة أرقام.'], 410));
 
     // ── التدقيق ──────────────────────────────────────────────────────────────
     Route::get('/audit', [AuditController::class, 'index']);
@@ -149,5 +243,5 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
 
     // ── الحوكمة والتحليلات الشاملة ─────────────────────────────────
     Route::get('/analytics', [AnalyticsController::class, 'index']);
-    Route::get('/governance/analytics', [AnalyticsController::class, 'index']);
+    Route::get('/governance/analytics', [GovernanceReportController::class, 'index']);
 });

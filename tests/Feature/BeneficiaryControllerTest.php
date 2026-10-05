@@ -59,7 +59,9 @@ class BeneficiaryControllerTest extends TestCase
         Sanctum::actingAs($this->user);
 
         $payload = [
+            'reviewed_confirmation' => true,
             'beneficiary_type' => 'citizen',
+            'nationality' => 'سعودي',
             'full_name' => 'عبدالله خالد',
             'national_id' => '1000000002',
             'phone' => '0500000002',
@@ -82,6 +84,8 @@ class BeneficiaryControllerTest extends TestCase
                 'message' => 'تمت إضافة وحفظ المستفيد والبيانات الأسرية بنجاح.',
             ]);
 
+        $response->assertJsonPath('data.confirmed_by', $this->user->id);
+        $this->assertNotNull($response->json('data.confirmed_at'));
         $this->assertDatabaseHas('beneficiaries', [
             'national_id' => '1000000002',
             'full_name' => 'عبدالله خالد',
@@ -94,7 +98,9 @@ class BeneficiaryControllerTest extends TestCase
 
         // Missing full_name, phone, street, family_status, family_members_count, housing_type
         $response = $this->postJson('/api/beneficiaries', [
+            'reviewed_confirmation' => true,
             'beneficiary_type' => 'citizen',
+            'nationality' => 'سعودي',
             'national_id' => '1000000099',
         ]);
 
@@ -156,15 +162,17 @@ class BeneficiaryControllerTest extends TestCase
             'name' => 'ياسر محمد',
         ]);
     }
+
     public function test_backend_recalculates_selected_sources_and_rejects_resident_first_degree(): void
     {
         Sanctum::actingAs($this->user);
         Category::firstOrCreate(['name' => 'درجة ثانية'], ['description' => 'الفئة الثانية']);
 
         $response = $this->postJson('/api/beneficiaries', [
+            'reviewed_confirmation' => true,
             'beneficiary_type' => 'resident', 'full_name' => 'TEST RESIDENT',
             'national_id' => '2999999991', 'phone' => '0509999991',
-            'date_of_birth' => '1990-01-01', 'nationality' => 'TEST',
+            'date_of_birth' => '1990-01-01', 'nationality' => 'يمني',
             'city' => 'مكة', 'district' => 'TEST', 'street' => 'TEST',
             'family_status' => 'poor', 'family_members_count' => 2,
             'housing_type' => 'rent', 'annual_rent_amount' => 12000,
@@ -194,7 +202,8 @@ class BeneficiaryControllerTest extends TestCase
         ]);
 
         $this->putJson('/api/beneficiaries/'.$beneficiary->id, [
-            'beneficiary_type' => 'citizen', 'full_name' => 'TEST CITIZEN',
+            'reviewed_confirmation' => true,
+            'beneficiary_type' => 'citizen', 'nationality' => 'سعودي', 'full_name' => 'TEST CITIZEN',
             'national_id' => '1999999991', 'phone' => '0509999992', 'date_of_birth' => '1990-01-01',
             'city' => 'مكة', 'district' => 'TEST', 'street' => 'TEST', 'family_status' => 'poor',
             'family_members_count' => 2, 'housing_type' => 'own',
@@ -204,5 +213,4 @@ class BeneficiaryControllerTest extends TestCase
 
         $this->assertDatabaseHas('beneficiaries', ['id' => $beneficiary->id, 'citizen_account_amount' => 0]);
     }
-
 }

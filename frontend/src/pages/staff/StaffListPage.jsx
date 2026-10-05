@@ -16,7 +16,7 @@ import { exportArrayToExcel } from "../../utils/excelExport";
 
 const statusLabels = {
   active: { label: "نشط", class: "bg-emerald-100 text-emerald-800 border-emerald-300" },
-  on_leave: { label: "إجازة", class: "bg-amber-100 text-amber-800 border-amber-300" },
+  on_leave: { label: "إجازة", class: "bg-amber-100 text-[var(--color-text-secondary)] border-amber-300" },
   terminated: { label: "منتهي الخدمة", class: "bg-red-100 text-red-800 border-red-300" },
 };
 
@@ -318,34 +318,6 @@ export default function StaffListPage() {
   const selectedBasketObj = baskets.find((b) => String(b.id) === String(basketId));
   const selectedStaffList = staff.filter((s) => selectedStaffIds.has(s.id));
 
-  const sendStaffWhatsAppMsg = (dist, sObj) => {
-    const rawPhone = (sObj?.phone || "").replace(/[^0-9]/g, "");
-    let phoneNum = rawPhone;
-    if (phoneNum.startsWith("0")) phoneNum = "966" + phoneNum.slice(1);
-    else if (!phoneNum.startsWith("966") && phoneNum.length === 9) phoneNum = "966" + phoneNum;
-    if (!phoneNum) phoneNum = "966574917155";
-
-    const name = sObj?.name || "الموظف الكريم";
-    const natId = sObj?.national_id || "—";
-    const date = scheduledAt || new Date().toISOString().split("T")[0];
-    const loc = pickupLocation || "مقر جمعية إكرام الرئيسي (قسم الموظفين)";
-    const code = dist.barcode_code || dist.qr_code || "IKRAM-STAFF-SUPPORT";
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${code}`;
-    const basketName = selectedBasketObj?.name || "سلة دعم موظف مخصصة";
-
-    const textMsg = `مرحباً الزميل/ة ${name}،
-تسر إدارة الجمعية إفادتكم بصدور وتأكيد استحقاقكم لسلة الدعم المخصصة للموظفين:
-👤 *اسم الموظف:* ${name}
-🪪 *رقم الهوية:* ${natId}
-📦 *سلة الدعم:* ${basketName}
-📅 *موعد الاستلام:* ${date}
-📍 *موقع الاستلام:* ${loc}
-🔑 *كود الاستلام والـ QR:* ${code}
-📌 *رابط صورة الـ QR المباشرة:*
-${qrUrl}`;
-
-    window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(textMsg)}`, "_blank");
-  };
 
   const jobTitles = Array.from(new Set(staff.map((s) => s.job_title).filter(Boolean)));
   const departments = Array.from(new Set(staff.map((s) => s.department).filter(Boolean)));
@@ -443,23 +415,23 @@ ${qrUrl}`;
         />
 
         {/* Global Search Bar */}
-        <div className="bg-white border border-[#E5E2D9] rounded-2xl p-4 shadow-xs">
+        <div className="ikram-panel p-4">
           <div className="relative max-w-md w-full">
-            <Search className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-[var(--color-text-muted)] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="بحث باسم الموظف، رقم الهوية، رقم الجوال، أو المسمى الوظيفي..."
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
-              className="w-full h-10 pr-9 pl-3 bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C9A24A] focus:bg-white transition-all font-medium"
+              className="w-full h-10 pr-9 pl-3 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl text-xs sm:text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-gold)] focus:bg-white transition-all font-medium"
             />
           </div>
         </div>
 
         {/* Main Staff Table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
+        <div className="bg-white rounded-2xl shadow-sm border border-[var(--color-border)] overflow-x-auto">
           <table className="w-full text-right text-xs">
-            <thead className="bg-amber-50/80 text-amber-950 font-bold border-b border-amber-200">
+            <thead className="bg-[var(--color-bg-soft)] text-[var(--color-text-primary)] font-bold border-b border-[var(--color-border)]">
               <tr>
                 <th className="p-3">#</th>
                 <th className="p-3 font-bold">اسم الموظف</th>
@@ -506,24 +478,24 @@ ${qrUrl}`;
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-gray-400">
+                  <td colSpan={10} className="p-8 text-center text-[var(--color-text-muted)]">
                     <div className="inline-block w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-1" />
                     <p>جاري تحميل قائمة الموظفين...</p>
                   </td>
                 </tr>
               )}
               {!loading && filteredStaff.map((s, idx) => {
-                const st = statusLabels[s.status] || { label: s.status, class: "bg-gray-100 text-gray-600" };
+                const st = statusLabels[s.status] || { label: s.status, class: "bg-[var(--color-bg-soft)] text-[var(--color-text-muted)]" };
                 const formattedBirthDate = s.birth_date ? String(s.birth_date).split('T')[0] : "—";
                 return (
-                  <tr key={s.id || idx} className="border-b hover:bg-gray-50 transition-colors">
-                    <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
-                    <td className="p-3 font-bold text-gray-800">{s.name}</td>
-                    <td className="p-3 font-mono font-semibold text-gray-700">{s.national_id}</td>
-                    <td className="p-3 font-mono text-gray-600">{s.phone}</td>
+                  <tr key={s.id || idx} className="border-b hover:bg-[var(--color-bg-soft)] transition-colors">
+                    <td className="p-3 text-[var(--color-text-muted)] font-mono">{idx + 1}</td>
+                    <td className="p-3 font-bold text-[var(--color-text-primary)]">{s.name}</td>
+                    <td className="p-3 font-mono font-semibold text-[var(--color-text-secondary)]">{s.national_id}</td>
+                    <td className="p-3 font-mono text-[var(--color-text-muted)]">{s.phone}</td>
                     <td className="p-3 font-bold text-amber-900">{s.job_title || "—"}</td>
                     <td className="p-3">{s.department || "—"}</td>
-                    <td className="p-3 font-semibold text-gray-700">{formattedBirthDate}</td>
+                    <td className="p-3 font-semibold text-[var(--color-text-secondary)]">{formattedBirthDate}</td>
                     <td className="p-3">
                       <span className={`px-2.5 py-1 rounded-xl text-xs font-bold border ${st.class}`}>
                         {st.label}
@@ -541,7 +513,7 @@ ${qrUrl}`;
                         </button>
                         <Link
                           to={`/staff/${s.id}/edit`}
-                          className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl border border-amber-200 cursor-pointer transition-all"
+                          className="p-1.5 bg-[var(--color-bg-soft)] hover:bg-amber-100 text-amber-700 rounded-xl border border-[var(--color-border)] cursor-pointer transition-all"
                           title="تعديل بيانات الموظف"
                         >
                           <Edit className="w-4 h-4" />
@@ -567,7 +539,7 @@ ${qrUrl}`;
               })}
               {!loading && filteredStaff.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-gray-400">
+                  <td colSpan={10} className="p-8 text-center text-[var(--color-text-muted)]">
                     لا توجد نتائج مطابقة لخيار البحث والفلترة المحدد
                   </td>
                 </tr>
@@ -589,7 +561,7 @@ ${qrUrl}`;
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-5 py-2.5 rounded-xl bg-gray-200 text-gray-700 font-bold cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] font-bold cursor-pointer"
               >
                 إلغاء
               </button>
@@ -597,7 +569,7 @@ ${qrUrl}`;
                 type="button"
                 onClick={handleSaveStaff}
                 disabled={submittingAdd}
-                className="px-7 py-2.5 rounded-xl bg-amber-600 text-white font-extrabold hover:bg-amber-700 shadow-md cursor-pointer text-xs flex items-center gap-2"
+                className="px-7 py-2.5 rounded-xl bg-[var(--color-brand-green)] text-white font-extrabold hover:bg-[var(--color-brand-green-hover)] shadow-md cursor-pointer text-xs flex items-center gap-2"
               >
                 {submittingAdd ? "جاري الحفظ..." : "💾 حفظ كافة بيانات الموظف والتابعين"}
               </button>
@@ -605,12 +577,12 @@ ${qrUrl}`;
           }
         >
           {/* Tabs */}
-          <div className="flex border-b border-gray-200 mb-4 overflow-x-auto gap-2 text-xs font-bold pb-2">
+          <div className="flex border-b border-[var(--color-border)] mb-4 overflow-x-auto gap-2 text-xs font-bold pb-2">
             <button
               type="button"
               onClick={() => setAddTab("personal")}
               className={`px-4 py-2 rounded-xl transition-all cursor-pointer ${
-                addTab === "personal" ? "bg-amber-600 text-white shadow-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                addTab === "personal" ? "bg-[var(--color-brand-green)] text-white shadow-xs" : "bg-[var(--color-bg-soft)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)]"
               }`}
             >
               <span>👤 1. البيانات الشخصية</span>
@@ -620,7 +592,7 @@ ${qrUrl}`;
               type="button"
               onClick={() => setAddTab("job")}
               className={`px-4 py-2 rounded-xl transition-all cursor-pointer ${
-                addTab === "job" ? "bg-amber-600 text-white shadow-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                addTab === "job" ? "bg-[var(--color-brand-green)] text-white shadow-xs" : "bg-[var(--color-bg-soft)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)]"
               }`}
             >
               <span>💼 2. البيانات الوظيفية والمالية</span>
@@ -630,7 +602,7 @@ ${qrUrl}`;
               type="button"
               onClick={() => setAddTab("family")}
               className={`px-4 py-2 rounded-xl transition-all cursor-pointer ${
-                addTab === "family" ? "bg-amber-600 text-white shadow-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                addTab === "family" ? "bg-[var(--color-brand-green)] text-white shadow-xs" : "bg-[var(--color-bg-soft)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)]"
               }`}
             >
               <span>🏠 3. الأسرة والتابعين ({dependents.length})</span>
@@ -640,7 +612,7 @@ ${qrUrl}`;
               type="button"
               onClick={() => setAddTab("docs")}
               className={`px-4 py-2 rounded-xl transition-all cursor-pointer ${
-                addTab === "docs" ? "bg-amber-600 text-white shadow-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                addTab === "docs" ? "bg-[var(--color-brand-green)] text-white shadow-xs" : "bg-[var(--color-bg-soft)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)]"
               }`}
             >
               <span>📁 4. الوثائق والمرفقات</span>
@@ -651,68 +623,68 @@ ${qrUrl}`;
             {/* TAB 1: PERSONAL */}
             {addTab === "personal" && (
               <div className="space-y-3">
-                <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-200 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-[var(--color-bg-soft)] p-4 rounded-2xl border border-[var(--color-border)] grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">اسم الموظف الكامل *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">اسم الموظف الكامل *</label>
                     <input
                       required
                       value={addForm.name}
                       onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                       placeholder="الاسم الرباعي للموظف"
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-bold"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">رقم الهوية الوطنية / الإقامة *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">رقم الهوية الوطنية / الإقامة *</label>
                     <input
                       required
                       value={addForm.national_id}
                       onChange={(e) => setAddForm({ ...addForm, national_id: e.target.value })}
                       placeholder="10XXXXXXXX"
-                      className="w-full rounded-xl border border-gray-300 p-2.5 font-mono text-right"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 font-mono text-right"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">رقم الجوال *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">رقم الجوال *</label>
                     <input
                       required
                       value={addForm.phone}
                       onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
                       placeholder="05XXXXXXXX"
-                      className="w-full rounded-xl border border-gray-300 p-2.5 font-mono text-right"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 font-mono text-right"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">البريد الإلكتروني</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">البريد الإلكتروني</label>
                     <input
                       type="email"
                       value={addForm.email}
                       onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
                       placeholder="staff@ikram.org.sa"
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-mono"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-mono"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">تاريخ الميلاد</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">تاريخ الميلاد</label>
                     <input
                       type="date"
                       value={addForm.birth_date}
                       onChange={(e) => setAddForm({ ...addForm, birth_date: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 font-bold"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">العنوان الوطني التفصيلي</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">العنوان الوطني التفصيلي</label>
                     <input
                       value={addForm.national_address}
                       onChange={(e) => setAddForm({ ...addForm, national_address: e.target.value })}
                       placeholder="مكة المكرمة - حي العزيزية"
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right"
                     />
                   </div>
                 </div>
@@ -721,7 +693,7 @@ ${qrUrl}`;
                   <button
                     type="button"
                     onClick={() => setAddTab("job")}
-                    className="bg-amber-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-amber-700 cursor-pointer"
+                    className="bg-[var(--color-brand-green)] text-white px-5 py-2 rounded-xl font-bold hover:bg-[var(--color-brand-green-hover)] cursor-pointer"
                   >
                     التالي: البيانات الوظيفية والمالية ←
                   </button>
@@ -732,56 +704,56 @@ ${qrUrl}`;
             {/* TAB 2: JOB & FINANCIAL */}
             {addTab === "job" && (
               <div className="space-y-3">
-                <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-200 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-[var(--color-bg-soft)] p-4 rounded-2xl border border-[var(--color-border)] grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">المسمى الوظيفي *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">المسمى الوظيفي *</label>
                     <input
                       required
                       value={addForm.job_title}
                       onChange={(e) => setAddForm({ ...addForm, job_title: e.target.value })}
                       placeholder="مثال: محصل مالي / أخصائي مستفيدين"
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-bold"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">القسم *</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">القسم *</label>
                     <input
                       required
                       value={addForm.department}
                       onChange={(e) => setAddForm({ ...addForm, department: e.target.value })}
                       placeholder="مثال: المالية / خدمات المستفيدين"
-                      className="w-full rounded-xl border border-gray-300 p-2.5 text-right font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-bold"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">تاريخ التعيين</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">تاريخ التعيين</label>
                     <input
                       type="date"
                       value={addForm.hire_date}
                       onChange={(e) => setAddForm({ ...addForm, hire_date: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 font-bold"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">الراتب الشهري (ر.س)</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">الراتب الشهري (ر.س)</label>
                     <input
                       type="number"
                       value={addForm.salary}
                       onChange={(e) => setAddForm({ ...addForm, salary: e.target.value })}
                       placeholder="6500"
-                      className="w-full rounded-xl border border-gray-300 p-2.5 font-mono text-right font-bold text-emerald-800"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 font-mono text-right font-bold text-emerald-800"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold text-gray-700 mb-1">الحالة الوظيفية</label>
+                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">الحالة الوظيفية</label>
                     <select
                       value={addForm.status}
                       onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 p-2.5 bg-white text-right font-bold"
+                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 bg-white text-right font-bold"
                     >
                       <option value="active">نشط</option>
                       <option value="on_leave">إجازة</option>
@@ -794,14 +766,14 @@ ${qrUrl}`;
                   <button
                     type="button"
                     onClick={() => setAddTab("personal")}
-                    className="bg-gray-200 text-gray-700 px-5 py-2 rounded-xl font-bold cursor-pointer"
+                    className="bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] px-5 py-2 rounded-xl font-bold cursor-pointer"
                   >
                     ← السابق
                   </button>
                   <button
                     type="button"
                     onClick={() => setAddTab("family")}
-                    className="bg-amber-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-amber-700 cursor-pointer"
+                    className="bg-[var(--color-brand-green)] text-white px-5 py-2 rounded-xl font-bold hover:bg-[var(--color-brand-green-hover)] cursor-pointer"
                   >
                     التالي: الأسرة والتابعين ←
                   </button>
@@ -812,36 +784,36 @@ ${qrUrl}`;
             {/* TAB 3: FAMILY & DEPENDENTS */}
             {addTab === "family" && (
               <div className="space-y-3">
-                <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-200 space-y-4">
+                <div className="bg-[var(--color-bg-soft)] p-4 rounded-2xl border border-[var(--color-border)] space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <label className="block font-bold text-gray-700 mb-1">عدد أفراد الأسرة</label>
+                      <label className="block font-bold text-[var(--color-text-secondary)] mb-1">عدد أفراد الأسرة</label>
                       <input
                         type="number"
                         min={1}
                         value={addForm.family_members_count}
                         onChange={(e) => setAddForm({ ...addForm, family_members_count: e.target.value })}
-                        className="w-full rounded-xl border border-gray-300 p-2.5 font-mono text-right"
+                        className="w-full rounded-xl border border-[var(--color-border)] p-2.5 font-mono text-right"
                       />
                     </div>
 
                     <div>
-                      <label className="block font-bold text-gray-700 mb-1">عدد الزوجات</label>
+                      <label className="block font-bold text-[var(--color-text-secondary)] mb-1">عدد الزوجات</label>
                       <input
                         type="number"
                         min={0}
                         value={addForm.wives_count}
                         onChange={(e) => setAddForm({ ...addForm, wives_count: e.target.value })}
-                        className="w-full rounded-xl border border-gray-300 p-2.5 font-mono text-right"
+                        className="w-full rounded-xl border border-[var(--color-border)] p-2.5 font-mono text-right"
                       />
                     </div>
 
                     <div>
-                      <label className="block font-bold text-gray-700 mb-1">ملكية السكن</label>
+                      <label className="block font-bold text-[var(--color-text-secondary)] mb-1">ملكية السكن</label>
                       <select
                         value={addForm.owns_house ? "yes" : "no"}
                         onChange={(e) => setAddForm({ ...addForm, owns_house: e.target.value === "yes" })}
-                        className="w-full rounded-xl border border-gray-300 p-2.5 bg-white text-right font-bold"
+                        className="w-full rounded-xl border border-[var(--color-border)] p-2.5 bg-white text-right font-bold"
                       >
                         <option value="no">إيجار / غير ملك</option>
                         <option value="yes">ملك خاص</option>
@@ -851,11 +823,11 @@ ${qrUrl}`;
 
                   <div className="border-t pt-3 space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-gray-800">قائمة التابعين والمعالين لـ الموظف:</span>
+                      <span className="font-bold text-[var(--color-text-primary)]">قائمة التابعين والمعالين لـ الموظف:</span>
                       <button
                         type="button"
                         onClick={addDependentRow}
-                        className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer"
+                        className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>+ إضافة تابع</span>
@@ -863,13 +835,13 @@ ${qrUrl}`;
                     </div>
 
                     {dependents.length === 0 && (
-                      <div className="p-3 text-center text-gray-400">لا يوجد تابعين مضافين. انقر على (+ إضافة تابع) لإضافتهم.</div>
+                      <div className="p-3 text-center text-[var(--color-text-muted)]">لا يوجد تابعين مضافين. انقر على (+ إضافة تابع) لإضافتهم.</div>
                     )}
 
                     {dependents.map((dep, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded-xl border border-gray-200 grid grid-cols-1 md:grid-cols-4 gap-2 items-center">
+                      <div key={idx} className="bg-white p-3 rounded-xl border border-[var(--color-border)] grid grid-cols-1 md:grid-cols-4 gap-2 items-center">
                         <div>
-                          <label className="block text-[11px] font-bold text-gray-600">اسم التابع</label>
+                          <label className="block text-[11px] font-bold text-[var(--color-text-muted)]">اسم التابع</label>
                           <input
                             value={dep.name}
                             onChange={(e) => updateDependentField(idx, "name", e.target.value)}
@@ -878,7 +850,7 @@ ${qrUrl}`;
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-gray-600">صلة القرابة</label>
+                          <label className="block text-[11px] font-bold text-[var(--color-text-muted)]">صلة القرابة</label>
                           <select
                             value={dep.relationship}
                             onChange={(e) => updateDependentField(idx, "relationship", e.target.value)}
@@ -890,7 +862,7 @@ ${qrUrl}`;
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-gray-600">تاريخ الميلاد</label>
+                          <label className="block text-[11px] font-bold text-[var(--color-text-muted)]">تاريخ الميلاد</label>
                           <input
                             type="date"
                             value={dep.date_of_birth}
@@ -916,14 +888,14 @@ ${qrUrl}`;
                   <button
                     type="button"
                     onClick={() => setAddTab("job")}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-xl font-bold cursor-pointer"
+                    className="bg-[var(--color-bg-soft)] hover:bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] px-5 py-2 rounded-xl font-bold cursor-pointer"
                   >
                     ← البيانات الوظيفية
                   </button>
                   <button
                     type="button"
                     onClick={() => setAddTab("docs")}
-                    className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2 rounded-xl font-bold cursor-pointer shadow-xs"
+                    className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white px-6 py-2 rounded-xl font-bold cursor-pointer shadow-xs"
                   >
                     التالي: الوثائق والمرفقات (الخطوة 4) ←
                   </button>
@@ -934,27 +906,27 @@ ${qrUrl}`;
             {/* TAB 4: DOCUMENTS & ATTACHMENTS */}
             {addTab === "docs" && (
               <div className="space-y-3">
-                <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-200 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="p-3 bg-white border border-gray-200 rounded-xl space-y-1.5 shadow-xs">
-                    <label className="block font-bold text-gray-800">🪪 صورة الهوية الوطنية / الإقامة</label>
+                <div className="bg-[var(--color-bg-soft)] p-4 rounded-2xl border border-[var(--color-border)] grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="p-3 bg-white border border-[var(--color-border)] rounded-xl space-y-1.5 shadow-xs">
+                    <label className="block font-bold text-[var(--color-text-primary)]">🪪 صورة الهوية الوطنية / الإقامة</label>
                     <input
                       type="file"
                       accept="image/*,.pdf"
                       onChange={(e) => setAddForm({ ...addForm, id_document_image: e.target.files[0] })}
-                      className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
+                      className="w-full text-xs text-[var(--color-text-muted)] file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-[var(--color-text-secondary)] hover:file:bg-amber-200"
                     />
-                    <p className="text-[11px] text-gray-500">صورة واضحة من بطاقة الهوية الوطنية أو الإقامة</p>
+                    <p className="text-[11px] text-[var(--color-text-muted)]">صورة واضحة من بطاقة الهوية الوطنية أو الإقامة</p>
                   </div>
 
-                  <div className="p-3 bg-white border border-gray-200 rounded-xl space-y-1.5 shadow-xs">
-                    <label className="block font-bold text-gray-800">📦 مرفقات إضافية (ZIP/PDF)</label>
+                  <div className="p-3 bg-white border border-[var(--color-border)] rounded-xl space-y-1.5 shadow-xs">
+                    <label className="block font-bold text-[var(--color-text-primary)]">📦 مرفقات إضافية (ZIP/PDF)</label>
                     <input
                       type="file"
                       accept=".zip,.rar,.pdf"
                       onChange={(e) => setAddForm({ ...addForm, other_docs_zip: e.target.files[0] })}
-                      className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200"
+                      className="w-full text-xs text-[var(--color-text-muted)] file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-100 file:text-[var(--color-text-secondary)] hover:file:bg-amber-200"
                     />
-                    <p className="text-[11px] text-gray-500">أرشيف أوراق التابعين أو السيرة الذاتية</p>
+                    <p className="text-[11px] text-[var(--color-text-muted)]">أرشيف أوراق التابعين أو السيرة الذاتية</p>
                   </div>
                 </div>
 
@@ -962,7 +934,7 @@ ${qrUrl}`;
                   <button
                     type="button"
                     onClick={() => setAddTab("family")}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-xl font-bold cursor-pointer"
+                    className="bg-[var(--color-bg-soft)] hover:bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] px-5 py-2 rounded-xl font-bold cursor-pointer"
                   >
                     ← الأسرة والتابعين
                   </button>
@@ -989,15 +961,15 @@ ${qrUrl}`;
           maxWidth="max-w-3xl"
         >
           <div className="space-y-4 text-xs">
-            <div className="bg-amber-50/80 p-4 rounded-2xl border border-amber-200 flex items-center justify-between gap-3">
+            <div className="bg-[var(--color-bg-soft)] p-4 rounded-2xl border border-[var(--color-border)] flex items-center justify-between gap-3">
               <div>
                 <div className="font-bold text-amber-900 text-sm">💡 يمكنك تحميل نموذج استيراد الموظفين المجهز:</div>
-                <div className="text-[11px] text-gray-600 mt-0.5">شيت CSV قياسي يحتوي حقول الهوية والوظيفة والراتب</div>
+                <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">شيت CSV قياسي يحتوي حقول الهوية والوظيفة والراتب</div>
               </div>
               <button
                 type="button"
                 onClick={downloadSampleTemplate}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Download className="w-4 h-4" />
                 <span>تحميل النموذج (.csv)</span>
@@ -1005,9 +977,9 @@ ${qrUrl}`;
             </div>
 
             <form onSubmit={handleSubmitImport} className="space-y-4">
-              <div className="border-2 border-dashed border-gray-300 hover:border-amber-500 rounded-2xl p-6 text-center bg-gray-50/50 transition-colors">
+              <div className="border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-brand-gold)] rounded-2xl p-6 text-center bg-[var(--color-bg-soft)]/50 transition-colors">
                 <Upload className="w-8 h-8 text-amber-600 mx-auto mb-2" />
-                <label className="block font-bold text-gray-800 text-xs mb-1 cursor-pointer">
+                <label className="block font-bold text-[var(--color-text-primary)] text-xs mb-1 cursor-pointer">
                   اختر ملف Excel (.xlsx, .xls) أو CSV من جهازك
                 </label>
                 <input
@@ -1031,10 +1003,10 @@ ${qrUrl}`;
 
               {previewRows.length > 0 && (
                 <div className="space-y-2">
-                  <div className="font-bold text-gray-800">معاينة أول 10 أسطر من شيت الموظفين:</div>
-                  <div className="overflow-x-auto max-h-48 border border-gray-200 rounded-xl">
-                    <table className="w-full text-xs text-right">
-                      <thead className="bg-amber-50 text-amber-900 border-b sticky top-0">
+                  <div className="font-bold text-[var(--color-text-primary)]">معاينة أول 10 أسطر من شيت الموظفين:</div>
+                  <div className="overflow-x-auto max-h-48 border border-[var(--color-border)] rounded-xl">
+                    <table className="ikram-table">
+                      <thead className="bg-[var(--color-bg-soft)] text-amber-900 border-b sticky top-0">
                         <tr>
                           {Object.keys(previewRows[0]).map((k, i) => (
                             <th key={i} className="p-2 font-bold whitespace-nowrap">{k}</th>
@@ -1059,7 +1031,7 @@ ${qrUrl}`;
                 <button
                   type="button"
                   onClick={() => setShowImportModal(false)}
-                  className="px-5 py-2.5 rounded-xl bg-gray-200 text-gray-700 font-bold cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] font-bold cursor-pointer"
                 >
                   إلغاء
                 </button>
@@ -1089,7 +1061,7 @@ ${qrUrl}`;
           isOpen={showDispatchModal}
           onClose={() => setShowDispatchModal(false)}
           title="🚀 تقديم ودعم موظفي الجمعية المباشر"
-          subtitle="خطوات إسناد وتوجيه السلال للموظفين وتوليد الـ QR الخاص بها"
+          subtitle="خطوات إسناد وتوجيه السلال للموظفين وتسجيل المرجع التاريخي الخاص بها"
           icon={Send}
           maxWidth="max-w-4xl"
         >
@@ -1101,16 +1073,16 @@ ${qrUrl}`;
                   <div
                     className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                       i === dispatchStep
-                        ? "bg-amber-600 text-white shadow-md"
+                        ? "bg-[var(--color-brand-green)] text-white shadow-md"
                         : i < dispatchStep
                         ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                        : "bg-gray-100 text-gray-500"
+                        : "bg-[var(--color-bg-soft)] text-[var(--color-text-muted)]"
                     }`}
                   >
                     <span>{i < dispatchStep ? "✓" : i + 1}</span>
                     {s}
                   </div>
-                  {i < DISPATCH_STEPS.length - 1 && <div className="w-4 h-0.5 bg-gray-200 mx-1" />}
+                  {i < DISPATCH_STEPS.length - 1 && <div className="w-4 h-0.5 bg-[var(--color-bg-soft)] mx-1" />}
                 </div>
               ))}
             </div>
@@ -1120,8 +1092,8 @@ ${qrUrl}`;
           {dispatchStep === 0 && (
             <div className="space-y-4 text-xs">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-gray-700">اختر الموظفين لتوجيه سلال الدعم لهم:</span>
-                <span className="text-amber-900 font-extrabold bg-amber-50 border border-amber-300 px-3 py-1 rounded-xl">
+                <span className="font-bold text-[var(--color-text-secondary)]">اختر الموظفين لتوجيه سلال الدعم لهم:</span>
+                <span className="text-amber-900 font-extrabold bg-[var(--color-bg-soft)] border border-amber-300 px-3 py-1 rounded-xl">
                   محدد: {selectedStaffIds.size} موظف
                 </span>
               </div>
@@ -1130,12 +1102,12 @@ ${qrUrl}`;
                 value={dispatchSearchQ}
                 onChange={(e) => setDispatchSearchQ(e.target.value)}
                 placeholder="بحث باسم الموظف، الهوية، الجوال، أو المسمى الوظيفي..."
-                className="w-full rounded-xl border border-gray-300 p-2.5 text-xs font-bold"
+                className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-xs font-bold"
               />
 
-              <div className="overflow-x-auto max-h-60 overflow-y-auto border border-gray-200 rounded-xl">
-                <table className="w-full text-xs text-right">
-                  <thead className="bg-amber-50 text-amber-900 border-b sticky top-0">
+              <div className="overflow-x-auto max-h-60 overflow-y-auto border border-[var(--color-border)] rounded-xl">
+                <table className="ikram-table">
+                  <thead className="bg-[var(--color-bg-soft)] text-amber-900 border-b sticky top-0">
                     <tr>
                       <th className="p-2 w-8">#</th>
                       <th className="p-2 font-bold">اسم الموظف</th>
@@ -1151,7 +1123,7 @@ ${qrUrl}`;
                         <tr
                           key={s.id}
                           onClick={() => toggleSelectStaff(s.id)}
-                          className={`border-b cursor-pointer ${selectedStaffIds.has(s.id) ? "bg-amber-50 font-bold" : "hover:bg-gray-50"}`}
+                          className={`border-b cursor-pointer ${selectedStaffIds.has(s.id) ? "bg-[var(--color-bg-soft)] font-bold" : "hover:bg-[var(--color-bg-soft)]"}`}
                         >
                           <td className="p-2">
                             <input type="checkbox" checked={selectedStaffIds.has(s.id)} readOnly className="rounded accent-amber-600" />
@@ -1171,7 +1143,7 @@ ${qrUrl}`;
           {/* STEP 1: Select Basket */}
           {dispatchStep === 1 && (
             <div className="space-y-4 text-xs">
-              <h4 className="font-bold text-gray-700">اختر سلة الدعم المخصصة للموظف من المستودع:</h4>
+              <h4 className="font-bold text-[var(--color-text-secondary)]">اختر سلة الدعم المخصصة للموظف من المستودع:</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {baskets.map((b) => (
                   <button
@@ -1179,11 +1151,11 @@ ${qrUrl}`;
                     type="button"
                     onClick={() => setBasketId(String(b.id))}
                     className={`p-4 rounded-2xl border-2 text-right transition-all cursor-pointer ${
-                      String(basketId) === String(b.id) ? "border-amber-500 bg-amber-50 shadow-md font-bold" : "border-gray-200 bg-white"
+                      String(basketId) === String(b.id) ? "border-amber-500 bg-[var(--color-bg-soft)] shadow-md font-bold" : "border-[var(--color-border)] bg-white"
                     }`}
                   >
-                    <div className="font-bold text-sm text-gray-800">{b.name}</div>
-                    <div className="text-[11px] text-gray-500 mt-1">{b.description || "سلة مساعدة مخصصة"}</div>
+                    <div className="font-bold text-sm text-[var(--color-text-primary)]">{b.name}</div>
+                    <div className="text-[11px] text-[var(--color-text-muted)] mt-1">{b.description || "سلة مساعدة مخصصة"}</div>
                     <div className="text-[11px] font-bold text-emerald-700 mt-2">المتوفّر: {b.current_quantity ?? b.stock_quantity ?? 0} وحدة</div>
                   </button>
                 ))}
@@ -1194,7 +1166,7 @@ ${qrUrl}`;
           {/* STEP 2: Date & Location */}
           {dispatchStep === 2 && (
             <div className="space-y-4 text-xs">
-              <h4 className="font-bold text-gray-700">تحديد موعد وموقع التسليم للموظفين:</h4>
+              <h4 className="font-bold text-[var(--color-text-secondary)]">تحديد موعد وموقع التسليم للموظفين:</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block font-bold mb-1">تاريخ التسليم المجدول *</label>
@@ -1217,17 +1189,17 @@ ${qrUrl}`;
               </h4>
 
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="bg-amber-50 p-3.5 rounded-2xl border border-amber-200">
+                <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-2xl border border-[var(--color-border)]">
                   <div className="text-2xl font-extrabold text-amber-900">{selectedStaffIds.size}</div>
-                  <div className="text-[11px] text-gray-600 font-bold mt-1">عدد الموظفين المحددين</div>
+                  <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-1">عدد الموظفين المحددين</div>
                 </div>
-                <div className="bg-amber-50 p-3.5 rounded-2xl border border-amber-200">
+                <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-2xl border border-[var(--color-border)]">
                   <div className="text-sm font-extrabold text-amber-900">{selectedBasketObj?.name || "سلة موظف مخصصة"}</div>
-                  <div className="text-[11px] text-gray-600 font-bold mt-1">نوع السلة المختارة</div>
+                  <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-1">نوع السلة المختارة</div>
                 </div>
-                <div className="bg-amber-50 p-3.5 rounded-2xl border border-amber-200">
-                  <div className="text-sm font-extrabold text-gray-800">{scheduledAt}</div>
-                  <div className="text-[11px] text-gray-600 font-bold mt-1">موعد التسليم</div>
+                <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-2xl border border-[var(--color-border)]">
+                  <div className="text-sm font-extrabold text-[var(--color-text-primary)]">{scheduledAt}</div>
+                  <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-1">موعد التسليم</div>
                 </div>
               </div>
             </div>
@@ -1239,7 +1211,7 @@ ${qrUrl}`;
               <button
                 disabled={dispatchStep === 0}
                 onClick={() => setDispatchStep((s) => s - 1)}
-                className="px-5 py-2.5 rounded-xl bg-gray-200 text-gray-700 font-bold disabled:opacity-50 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] font-bold disabled:opacity-50 cursor-pointer"
               >
                 السابق
               </button>
@@ -1247,7 +1219,7 @@ ${qrUrl}`;
                 <button
                   disabled={(dispatchStep === 0 && selectedStaffIds.size === 0) || (dispatchStep === 1 && !basketId)}
                   onClick={() => setDispatchStep((s) => s + 1)}
-                  className="px-6 py-2.5 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700 disabled:opacity-50 cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-[var(--color-brand-green)] text-white font-bold hover:bg-[var(--color-brand-green-hover)] disabled:opacity-50 cursor-pointer"
                 >
                   التالي
                 </button>
@@ -1257,7 +1229,7 @@ ${qrUrl}`;
                   onClick={handleSubmitStaffDispatch}
                   className="px-8 py-2.5 rounded-xl bg-emerald-600 text-white font-extrabold hover:bg-emerald-700 cursor-pointer shadow-md text-xs"
                 >
-                  {submittingDispatch ? "جاري الإرسال وتوليد الـ QR..." : "🚀 تأكيد وإرسال الدعم وتوليد الـ QR"}
+                  {submittingDispatch ? "جاري الإرسال وتسجيل المرجع التاريخي..." : "🚀 تأكيد وإرسال الدعم وتسجيل المرجع التاريخي"}
                 </button>
               )}
             </div>
@@ -1267,34 +1239,26 @@ ${qrUrl}`;
           {dispatchStep === 4 && dispatchResult && (
             <div className="space-y-4 text-xs">
               <div className="text-center py-4 bg-emerald-50 rounded-2xl border border-emerald-200">
-                <div className="text-emerald-700 font-extrabold text-base">تم توجيه سلال الدعم للموظفين وتوليد أكواد الـ QR بنجاح 🚀</div>
+                <div className="text-emerald-700 font-extrabold text-base">تم توجيه سلال الدعم للموظفين وتسجيل المراجع التاريخية بنجاح 🚀</div>
               </div>
 
               <div className="space-y-3 max-h-60 overflow-y-auto">
                 {(dispatchResult.distributions || []).map((dist, idx) => {
                   const sObj = selectedStaffList.find((s) => s.id === dist.staff_id) || { name: "موظف " + (idx + 1) };
                   const code = dist.barcode_code || dist.qr_code || "IKRAM-STAFF-SUPPORT";
-                  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${code}`;
 
                   return (
-                    <div key={dist.id || idx} className="p-3 bg-amber-50/50 rounded-xl border border-amber-200 flex flex-wrap items-center justify-between gap-3">
+                    <div key={dist.id || idx} className="p-3 bg-[var(--color-bg-soft)] rounded-xl border border-[var(--color-border)] flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <div className="font-bold text-gray-900">👤 {sObj.name} ({sObj.phone})</div>
-                        <div className="text-[11px] text-gray-600">💼 المسمى: {sObj.job_title} | 📦 السلة: {selectedBasketObj?.name}</div>
+                        <div className="font-bold text-[var(--color-text-primary)]">👤 {sObj.name} ({sObj.phone})</div>
+                        <div className="text-[11px] text-[var(--color-text-muted)]">💼 المسمى: {sObj.job_title} | 📦 السلة: {selectedBasketObj?.name}</div>
                       </div>
 
                       <div className="flex items-center gap-2 bg-white p-2 rounded-lg border">
-                        <img src={qrUrl} alt="QR" className="w-12 h-12" />
                         <div className="font-mono font-bold text-amber-900">{code}</div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => sendStaffWhatsAppMsg(dist, sObj)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>💬 إرسال إشعار الواتساب</span>
-                      </button>
+                      <a href="/support-delivery" className="border rounded-lg px-3 py-3">تسليم الدعم الموحد</a>
                     </div>
                   );
                 })}

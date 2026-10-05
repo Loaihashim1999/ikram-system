@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Services\NotificationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class InventoryMovement extends Model
@@ -15,7 +17,12 @@ class InventoryMovement extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'inventory_item_id', 'type', 'quantity', 'reason', 'user_id',
+        'inventory_item_id', 'type', 'quantity', 'reason', 'user_id', 'balance_after', 'support_distribution_id',
+    ];
+
+    protected $casts = [
+        'quantity' => 'decimal:2',
+        'balance_after' => 'decimal:2',
     ];
 
     protected static function boot()
@@ -27,11 +34,18 @@ class InventoryMovement extends Model
             }
         });
         static::created(function ($movement) {
-            \App\Services\NotificationService::notifyAll(
+            if ($movement->support_distribution_id) {
+                DB::afterCommit(fn () => NotificationService::notifyAll(
+                    'stock_changed', 'تم صرف مخزون لعملية الدعم '.$movement->support_distribution_id, $movement
+                ));
+
+                return;
+            }
+            DB::afterCommit(fn () => NotificationService::notifyAll(
                 'stock_changed',
                 "تم تسجيل حركة مخزون جديدة: نوع الحركة ({$movement->type}) بمقدار ({$movement->quantity})",
                 $movement
-            );
+            ));
         });
     }
 
@@ -43,6 +57,11 @@ class InventoryMovement extends Model
     public function inventoryItem()
     {
         return $this->belongsTo(InventoryItem::class, 'inventory_item_id');
+    }
+
+    public function supportDistribution()
+    {
+        return $this->belongsTo(SupportDistribution::class);
     }
 
     public function user()

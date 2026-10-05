@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { canViewSupport, canViewRepresentatives, hasModuleAction } from '../../utils/modulePermissions';
 import Scrim from '../overlays/Scrim';
 import logoImg from '../../assets/logo.png';
 import {
@@ -13,7 +14,6 @@ import {
   Settings,
   Shield,
   ScrollText,
-  QrCode,
   UserCheck,
   X,
 } from 'lucide-react';
@@ -32,12 +32,12 @@ export default function Sidebar({ isOpen, onClose }) {
   if (role === 'delivery_driver' || role === 'driver') {
     menuItems = [
       { path: '/delivery', label: 'إدارة وتوصيل المنازل', icon: Truck },
-      { path: '/receiver', label: 'صفحة الاستلام والمسح (QR Scanner)', icon: QrCode },
+      { path: '/receiver', label: 'الاستلام المباشر', icon: Truck },
     ];
   } else if (role === 'assistant_admin') {
     menuItems = [
       { path: '/dashboard', label: 'لوحة التحكم', icon: Home },
-      { path: '/receiver', label: 'صفحة الاستلام والمسح', icon: QrCode },
+      { path: '/receiver', label: 'الاستلام المباشر', icon: Truck },
       { path: '/beneficiaries', label: 'إدارة وقوائم المستفيدين', icon: Users },
       { path: '/daily-beneficiaries', label: 'المستفيدون اليوميون', icon: UserCheck },
       { path: '/warehouse', label: 'المستودع والمخزون', icon: Package },
@@ -54,7 +54,7 @@ export default function Sidebar({ isOpen, onClose }) {
       { path: '/warehouse', label: 'المستودع والمخزون', icon: Package },
       { path: '/staff', label: 'إدارة وقوائم الموظفين', icon: Briefcase },
       { path: '/representatives', label: 'إدارة الجهات المستفيدة', icon: Building2 },
-      { path: '/receiver', label: 'صفحة الاستلام والمسح', icon: QrCode },
+      { path: '/receiver', label: 'الاستلام المباشر', icon: Truck },
       { path: '/delivery', label: 'إدارة وتوصيل المنازل', icon: Truck },
       { path: '/governance', label: 'الحوكمة والمؤشرات', icon: ShieldCheck },
       { path: '/audit', label: 'سجل التدقيق والوثائق', icon: ScrollText },
@@ -63,6 +63,7 @@ export default function Sidebar({ isOpen, onClose }) {
         icon: Settings,
         children: [
           { path: '/admin/users', label: 'إدارة الحسابات والصلاحيات', icon: Shield },
+          { path: '/admin/drivers', label: 'دليل السائقين', icon: Truck },
           { path: '/admin/settings', label: 'إعدادات النظام المالية', icon: Settings },
         ],
       },
@@ -70,6 +71,25 @@ export default function Sidebar({ isOpen, onClose }) {
   }
 
   const isPathAllowed = (path) => {
+    if (path.startsWith('/delivery') || path.startsWith('/support-delivery') || path.startsWith('/receiver')) return canViewSupport(user);
+    if (path.startsWith('/representatives')) return canViewRepresentatives(user);
+    if (path.startsWith('/governance')) return hasModuleAction(user, 'governance', 'view');
+    const routeRoles = [
+      ['/support-delivery', ['admin', 'assistant_admin', 'staff']],
+      ['/dashboard', ['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly']],
+      ['/beneficiaries', ['admin', 'assistant_admin', 'reception', 'staff', 'readonly']],
+      ['/daily-beneficiaries', ['admin', 'assistant_admin', 'reception', 'staff', 'readonly']],
+      ['/representatives', ['admin', 'assistant_admin', 'staff']],
+      ['/staff', ['admin', 'assistant_admin']],
+      ['/warehouse', ['admin', 'assistant_admin', 'warehouse', 'staff', 'readonly']],
+      ['/delivery', ['admin', 'assistant_admin', 'staff', 'delivery_driver', 'driver']],
+      ['/statistics', ['admin', 'assistant_admin', 'readonly']],
+      ['/audit', ['admin']],
+      ['/admin', ['admin']],
+    ];
+    const routeRule = routeRoles.find(([base]) => path === base || path.startsWith(`${base}/`));
+    if (routeRule && !routeRule[1].includes(role)) return false;
+
     if (!userPerms || typeof userPerms !== 'object') return true;
     if (role === 'admin' && !userPerms.beneficiaries) return true;
 
@@ -79,8 +99,7 @@ export default function Sidebar({ isOpen, onClose }) {
     if (path.startsWith('/staff')) return userPerms.staff?.view !== false;
     if (path.startsWith('/representatives')) return userPerms.representatives?.view !== false;
     if (path.startsWith('/delivery')) return userPerms.delivery?.view !== false;
-    if (path.startsWith('/receiver')) return userPerms.receiver?.view !== false;
-    if (path.startsWith('/governance')) return userPerms.governance?.view !== false;
+    if (path.startsWith('/support-delivery')) return role === 'admin' || userPerms.support?.view === true;
     if (path.startsWith('/audit')) return userPerms.audit?.view !== false;
     if (path.startsWith('/admin')) return userPerms.settings?.view !== false;
 
@@ -97,7 +116,7 @@ export default function Sidebar({ isOpen, onClose }) {
     return item;
   }).filter(Boolean);
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => location.pathname === path || (path !== '/dashboard' && location.pathname.startsWith(`${path}/`));
 
   return (
     <>
@@ -106,7 +125,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
       <aside
         className={`
-          fixed top-0 right-0 h-screen bg-white border-l border-[#E5E2D9] z-50
+          ikram-sidebar fixed top-0 right-0 h-screen z-50
           w-72 overflow-y-auto
           transition-transform duration-300 ease-in-out
           lg:translate-x-0
@@ -116,7 +135,7 @@ export default function Sidebar({ isOpen, onClose }) {
         dir="rtl"
       >
         {/* Header */}
-        <div className="p-4 border-b border-[#E5E2D9] flex items-center justify-between gap-2">
+        <div className="p-4 border-b border-white/10 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 flex-1">
             <img
               src={logoImg}
@@ -124,15 +143,15 @@ export default function Sidebar({ isOpen, onClose }) {
               className="h-10 w-auto object-contain"
             />
             <div>
-              <h2 className="text-sm font-extrabold text-[#3F6B3A] leading-tight">جمعية إكرام</h2>
-              <p className="text-[10px] text-[#6B7280]">لخدمة ضيوف الرحمن</p>
+              <h2 className="text-sm font-extrabold leading-tight">جمعية إكرام</h2>
+              <p className="text-[11px] text-white/75">لخدمة ضيوف الرحمن</p>
             </div>
           </div>
 
 
           <button
             onClick={onClose}
-            className="lg:hidden p-2 rounded-xl hover:bg-[#FAF8F5] text-[#111827] cursor-pointer"
+            className="lg:hidden p-2 rounded-xl hover:bg-white/10 text-white cursor-pointer"
             aria-label="إغلاق القائمة"
           >
             <X size={20} />
@@ -141,8 +160,8 @@ export default function Sidebar({ isOpen, onClose }) {
 
 
         {/* User Role Badge */}
-        <div className="px-4 py-2.5 bg-[#FAF8F5] border-b border-[#E5E2D9] flex items-center justify-between text-xs">
-          <span className="font-bold text-[#4B5563]">نوع الحساب:</span>
+        <div className="px-4 py-2.5 bg-white/5 border-b border-white/10 flex items-center justify-between text-xs">
+          <span className="font-bold">نوع الحساب:</span>
           <span className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${
             role === 'admin' ? 'bg-amber-100 text-amber-900 border-amber-300' :
             role === 'assistant_admin' ? 'bg-green-100 text-green-900 border-green-300' :
@@ -153,12 +172,12 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
 
         {/* Navigation items */}
-        <nav className="p-3 space-y-1 text-right">
+        <nav className="ikram-nav p-3 space-y-1 text-right" aria-label="التنقل الرئيسي">
           {filteredMenuItems.map((item, index) => (
             <div key={index}>
               {item.children ? (
                 <div className="space-y-1 pt-1">
-                  <div className="flex items-center gap-2.5 px-3 py-2 text-[#6B7280] font-bold text-xs">
+                  <div className="flex items-center gap-2.5 px-3 py-2 text-white/70 font-bold text-xs">
                     <item.icon size={16} />
                     <span>{item.label}</span>
                   </div>
@@ -167,13 +186,9 @@ export default function Sidebar({ isOpen, onClose }) {
                       key={childIndex}
                       to={child.path}
                       onClick={onClose}
-                      className={`flex items-center gap-2.5 px-6 py-2 rounded-xl transition-all text-xs font-bold ${
-                        isActive(child.path)
-                          ? 'bg-[#FAF8F5] text-[#C9A24A] font-extrabold border-r-4 border-[#C9A24A]'
-                          : 'text-[#4B5563] hover:bg-[#FAF8F5] hover:text-[#111827]'
-                      }`}
+                      className="flex items-center gap-2.5 px-6 py-2 text-xs font-bold"
                     >
-                      <child.icon size={15} />
+                      <child.icon size={18} />
                       <span>{child.label}</span>
                     </NavLink>
                   ))}
@@ -182,11 +197,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 <NavLink
                   to={item.path}
                   onClick={onClose}
-                  className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl transition-all text-xs font-bold ${
-                    isActive(item.path)
-                      ? 'bg-[#FAF8F5] text-[#C9A24A] font-extrabold border-r-4 border-[#C9A24A]'
-                      : 'text-[#4B5563] hover:bg-[#FAF8F5] hover:text-[#111827]'
-                  }`}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-bold"
                 >
                   <item.icon size={18} />
                   <span>{item.label}</span>

@@ -45,21 +45,21 @@ export default function Drawer({
   return (
     <Scrim isOpen={isOpen} onClose={onClose} zIndex="z-50">
       <div
-        className={`fixed top-0 bottom-0 ${positionClasses[side]} ${width} bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${translateClasses[side]}`}
+        className={`ikram-dialog fixed top-0 bottom-0 ${positionClasses[side]} ${width} z-50 flex flex-col transition-transform duration-300 ease-in-out ${translateClasses[side]}`}
         dir="rtl"
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 border-b border-[#E5E2D9] flex items-center justify-between bg-[#FAF8F5]">
+        <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-bg-soft)]">
           <div>
-            <h3 className="font-bold text-sm sm:text-base text-[#111827]">{title}</h3>
-            {subtitle && <p className="text-xs text-[#6B7280] mt-0.5">{subtitle}</p>}
+            <h3 className="font-bold text-sm sm:text-base text-[var(--color-text-primary)]">{title}</h3>
+            {subtitle && <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-soft)] transition-colors cursor-pointer"
             aria-label="إغلاق"
           >
             <X size={18} />
@@ -67,13 +67,13 @@ export default function Drawer({
         </div>
 
         {/* Body */}
-        <div className="p-4 overflow-y-auto flex-1 text-xs sm:text-sm text-[#1F2937] space-y-3">
+        <div className="p-4 overflow-y-auto flex-1 text-xs sm:text-sm text-[var(--color-text-secondary)] space-y-3">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="p-3.5 border-t border-[#E5E2D9] bg-[#FAF8F5] flex items-center justify-end gap-2">
+          <div className="p-3.5 border-t border-[var(--color-border)] bg-[var(--color-bg-soft)] flex items-center justify-end gap-2">
             {footer}
           </div>
         )}

@@ -1,6 +1,29 @@
 import { useState } from "react";
 import { BarChart3, TrendingUp, Filter, PieChart as PieIcon } from "lucide-react";
 
+function ChartTable({ caption, columns, rows }) {
+  if (!rows?.length) return null;
+  return (
+    <table className="ikram-table ikram-table-fluid mt-3 text-xs">
+      <caption className="sr-only">{caption}</caption>
+      <thead>
+        <tr>
+          {columns.map((column) => <th key={column.key} scope="col">{column.header}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, index) => (
+          <tr key={index}>
+            {columns.map((column) => (
+              <td key={column.key} className={column.numeric ? "ikram-numeric" : undefined}>{row[column.key]}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 /**
  * ══════════════════════════════════════════════════════════════════════════════
  * 1. Column Chart: إجمالي المستفيدين حسب فئات الاستحقاق
@@ -13,7 +36,7 @@ export function ColumnChart({ data, title }) {
 
   if (items.length === 0) {
     return (
-      <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-xs flex flex-col justify-center items-center h-80 text-slate-400 text-xs">
+      <div className="ikram-panel p-5 flex flex-col justify-center items-center h-80 text-slate-400 text-xs">
         <BarChart3 className="w-8 h-8 text-slate-300 mb-2" />
         لا تتوفر بيانات للفئات خلال الفترة المحددة.
       </div>
@@ -21,13 +44,13 @@ export function ColumnChart({ data, title }) {
   }
 
   const chartHeight = 180;
-  const colors = ["#2E5A27", "#3F6B3A", "#8C6C26", "#C9A24A", "#0284C7", "#10B981"];
+  const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--color-brand-green)"];
 
   return (
-    <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-xs space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#E5E2D9]">
+    <div className="ikram-panel p-5 space-y-4">
+      <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
-          <span className="p-1.5 bg-[#3F6B3A]/10 text-[#3F6B3A] rounded-lg">
+          <span className="p-1.5 bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] rounded-lg">
             <BarChart3 className="w-4 h-4" />
           </span>
           <h4 className="font-bold text-slate-800 text-sm">{title || "إجمالي المستفيدين حسب فئات الاستحقاق"}</h4>
@@ -60,7 +83,7 @@ export function ColumnChart({ data, title }) {
                 )}
 
                 {/* Count Badge on Top of Bar */}
-                <span className={`text-[11px] font-bold font-mono mb-1.5 transition-colors ${isHovered ? "text-[#3F6B3A] scale-110" : "text-slate-600"}`}>
+                <span className={`text-[11px] font-bold font-mono mb-1.5 transition-colors ${isHovered ? "text-[var(--color-brand-green)] scale-110" : "text-slate-600"}`}>
                   {item.count}
                 </span>
 
@@ -87,6 +110,11 @@ export function ColumnChart({ data, title }) {
           ))}
         </div>
       </div>
+      <ChartTable
+        caption={title || "إجمالي المستفيدين حسب فئات الاستحقاق"}
+        columns={[{ key: "label", header: "الفئة" }, { key: "count", header: "العدد", numeric: true }]}
+        rows={items.map((item) => ({ label: item.label, count: item.count || 0 }))}
+      />
     </div>
   );
 }
@@ -102,7 +130,7 @@ export function LineChart({ data, title }) {
 
   if (items.length === 0) {
     return (
-      <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-xs flex flex-col justify-center items-center h-80 text-slate-400 text-xs">
+      <div className="ikram-panel p-5 flex flex-col justify-center items-center h-80 text-slate-400 text-xs">
         <TrendingUp className="w-8 h-8 text-slate-300 mb-2" />
         لا تتوفر سلاسل زمنية لهذه الفترة.
       </div>
@@ -137,8 +165,8 @@ export function LineChart({ data, title }) {
   const pathDist = pointsDist.reduce((acc, p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`), "");
 
   return (
-    <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-xs space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#E5E2D9]">
+    <div className="ikram-panel p-5 space-y-4">
+      <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
           <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
             <TrendingUp className="w-4 h-4" />
@@ -146,8 +174,8 @@ export function LineChart({ data, title }) {
           <h4 className="font-bold text-slate-800 text-sm">{title || "تطور تسجيل المستفيدين وتقديم المساعدات عبر الأشهر"}</h4>
         </div>
         <div className="flex items-center gap-3 text-xs">
-          <span className="flex items-center gap-1 text-[#3F6B3A] font-bold">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#3F6B3A] inline-block" />
+          <span className="flex items-center gap-1 text-[var(--color-brand-green)] font-bold">
+            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-brand-green)] inline-block" />
             المسجلون
           </span>
           <span className="flex items-center gap-1 text-blue-600 font-bold">
@@ -173,7 +201,7 @@ export function LineChart({ data, title }) {
           })}
 
           {/* Line 1: Registrations (Green) */}
-          <path d={pathReg} fill="none" stroke="#3F6B3A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={pathReg} fill="none" stroke="var(--color-brand-green)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
           {/* Line 2: Distributions (Blue) */}
           <path d={pathDist} fill="none" stroke="#0284C7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
@@ -185,7 +213,7 @@ export function LineChart({ data, title }) {
                 cx={p.x}
                 cy={p.y}
                 r={hoveredIdx === idx ? 6 : 4}
-                fill="#3F6B3A"
+                fill="var(--color-brand-green)"
                 stroke="#FFFFFF"
                 strokeWidth="2"
                 className="transition-all"
@@ -226,6 +254,11 @@ export function LineChart({ data, title }) {
           ))}
         </div>
       </div>
+      <ChartTable
+        caption={title || "تطور التسجيل والمساعدات"}
+        columns={[{ key: "period", header: "الفترة" }, { key: "registrations", header: "التسجيل", numeric: true }, { key: "distributions", header: "المساعدات", numeric: true }]}
+        rows={items.map((item) => ({ period: item.period, registrations: item.registrations || 0, distributions: item.distributions || 0 }))}
+      />
     </div>
   );
 }
@@ -240,7 +273,7 @@ export function FunnelChart({ stages, title }) {
 
   if (stageList.length === 0) {
     return (
-      <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-xs flex flex-col justify-center items-center h-80 text-slate-400 text-xs">
+      <div className="ikram-panel p-5 flex flex-col justify-center items-center h-80 text-slate-400 text-xs">
         <Filter className="w-8 h-8 text-slate-300 mb-2" />
         لا تتوفر بيانات مسار استحقاق.
       </div>
@@ -248,17 +281,17 @@ export function FunnelChart({ stages, title }) {
   }
 
   const colors = [
-    { bg: "bg-[#2E5A27]", text: "text-emerald-800", border: "border-emerald-200", bar: "#2E5A27" },
-    { bg: "bg-[#3F6B3A]", text: "text-green-800", border: "border-green-200", bar: "#3F6B3A" },
-    { bg: "bg-[#8C6C26]", text: "text-amber-800", border: "border-amber-200", bar: "#8C6C26" },
-    { bg: "bg-[#C9A24A]", text: "text-amber-900", border: "border-amber-300", bar: "#C9A24A" },
+    { bar: "var(--chart-1)" },
+    { bar: "var(--chart-2)" },
+    { bar: "var(--chart-3)" },
+    { bar: "var(--chart-4)" },
   ];
 
   return (
-    <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-xs space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#E5E2D9]">
+    <div className="ikram-panel p-5 space-y-4">
+      <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
-          <span className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
+          <span className="p-1.5 bg-[var(--color-bg-soft)] text-amber-600 rounded-lg">
             <Filter className="w-4 h-4" />
           </span>
           <h4 className="font-bold text-slate-800 text-sm">{title || "مسار المستفيدين حسب مراحل الاستحقاق والدعم"}</h4>
@@ -281,7 +314,7 @@ export function FunnelChart({ stages, title }) {
                   {st.stage}
                 </span>
                 <span className="font-mono text-slate-600 font-bold">
-                  {st.count} مستفيد <span className="text-[#3F6B3A]">({st.percentage}%)</span>
+                  {st.count} مستفيد <span className="text-[var(--color-brand-green)]">({st.percentage}%)</span>
                 </span>
               </div>
 
@@ -301,9 +334,14 @@ export function FunnelChart({ stages, title }) {
           );
         })}
       </div>
-      <p className="text-[11px] text-slate-400 text-center pt-1">
+      <p className="text-[11px] text-[var(--color-text-muted)] text-center pt-1">
         يوضح هذا المسار انتقال المستفيدين من مرحلة التسجيل الأولي وحتى استلام السلال والمساعدات فعلياً.
       </p>
+      <ChartTable
+        caption={title || "مسار المستفيدين حسب مراحل الاستحقاق والدعم"}
+        columns={[{ key: "stage", header: "المرحلة" }, { key: "count", header: "العدد", numeric: true }, { key: "percentage", header: "النسبة", numeric: true }]}
+        rows={stageList.map((stage) => ({ stage: stage.stage, count: stage.count, percentage: `${stage.percentage}%` }))}
+      />
     </div>
   );
 }
@@ -320,7 +358,7 @@ export function PieChart({ data, secondaryData, title }) {
 
   if (currentData.length === 0 || total === 0) {
     return (
-      <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-xs flex flex-col justify-center items-center h-80 text-slate-400 text-xs">
+      <div className="ikram-panel p-5 flex flex-col justify-center items-center h-80 text-slate-400 text-xs">
         <PieIcon className="w-8 h-8 text-slate-300 mb-2" />
         لا تتوفر نسب توزيع لهذه الفترة.
       </div>
@@ -333,8 +371,8 @@ export function PieChart({ data, secondaryData, title }) {
   let cumulativePercent = 0;
 
   return (
-    <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-xs space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#E5E2D9]">
+    <div className="ikram-panel p-5 space-y-4">
+      <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
           <span className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
             <PieIcon className="w-4 h-4" />
@@ -350,7 +388,7 @@ export function PieChart({ data, secondaryData, title }) {
             type="button"
             onClick={() => setViewMode("citizenship")}
             className={`px-2.5 py-1 rounded-md transition-colors ${
-              viewMode === "citizenship" ? "bg-white text-[#3F6B3A] shadow-xs" : "text-slate-500 hover:text-slate-800"
+              viewMode === "citizenship" ? "bg-white text-[var(--color-brand-green)] shadow-xs" : "text-slate-500 hover:text-slate-800"
             }`}
           >
             مواطن / مقيم
@@ -384,7 +422,7 @@ export function PieChart({ data, secondaryData, title }) {
                   cy="50"
                   r={radius}
                   fill="transparent"
-                  stroke={slice.color || "#3F6B3A"}
+                  stroke={slice.color || "var(--color-brand-green)"}
                   strokeWidth="14"
                   strokeDasharray={strokeDasharray}
                   strokeDashoffset={strokeDashoffset}
@@ -404,7 +442,7 @@ export function PieChart({ data, secondaryData, title }) {
           {currentData.map((item, idx) => {
             const pct = Math.round(((item.count || 0) / total) * 100);
             return (
-              <div key={idx} className="p-2.5 rounded-xl border border-slate-100 bg-[#FAF8F5] space-y-1">
+              <div key={idx} className="p-2.5 rounded-xl border border-slate-100 bg-[var(--color-bg-soft)] space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
@@ -422,6 +460,11 @@ export function PieChart({ data, secondaryData, title }) {
           })}
         </div>
       </div>
+      <ChartTable
+        caption={title || "التوزيع النسبي"}
+        columns={[{ key: "label", header: "البند" }, { key: "count", header: "العدد", numeric: true }, { key: "percentage", header: "النسبة", numeric: true }]}
+        rows={currentData.map((item) => ({ label: item.label, count: item.count || 0, percentage: `${Math.round(((item.count || 0) / total) * 100)}%` }))}
+      />
     </div>
   );
 }

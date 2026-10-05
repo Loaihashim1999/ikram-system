@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'email')) {
+            if (! Schema::hasColumn('users', 'email')) {
                 $table->string('email', 100)->nullable()->unique()->after('full_name');
             }
         });
@@ -23,10 +23,14 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            if (Schema::hasColumn('users', 'email')) {
+        // SQLite requires the index to be dropped before its column.
+        if (Schema::hasColumn('users', 'email')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropUnique(['email']);
+            });
+            Schema::table('users', function (Blueprint $table) {
                 $table->dropColumn('email');
-            }
-        });
+            });
+        }
     }
 };

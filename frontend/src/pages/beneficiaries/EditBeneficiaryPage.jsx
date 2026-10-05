@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getApiBaseUrl } from '../../utils/documentUrl';
 import { getBeneficiary, updateBeneficiary } from '../../api/beneficiaries';
+import api from '../../api/axios';
 import MainLayout from '../../components/layout/MainLayout';
 import { calculateIncomeAndClassification } from '../../utils/financialCalculations';
 import PageHeader from '../../components/ui/PageHeader';
@@ -66,6 +68,29 @@ export default function EditBeneficiaryPage() {
   const [dependents, setDependents] = useState([]);
   const [files, setFiles] = useState({});
   const [existingDocs, setExistingDocs] = useState({});
+
+  // Dynamic thresholds loaded from settings (mirrors AddBeneficiaryPage)
+  const [thresholds, setThresholds] = useState({
+    firstClassMaxIncome: 3000,
+    secondClassMaxIncome: 6000,
+    residentDegreeThreshold: 3000,
+    elderlyMinAge: 60,
+  });
+
+  useEffect(() => {
+    api.get("/settings")
+      .then((res) => {
+        if (res.data?.data) {
+          setThresholds({
+            firstClassMaxIncome: parseFloat(res.data.data.first_class_max_income) || 3000,
+            secondClassMaxIncome: parseFloat(res.data.data.second_class_max_income) || 6000,
+            residentDegreeThreshold: parseFloat(res.data.data.resident_need_threshold) || parseFloat(res.data.data.resident_degree_threshold) || 3000,
+            elderlyMinAge: parseFloat(res.data.data.elderly_min_age) || 60,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -210,8 +235,9 @@ export default function EditBeneficiaryPage() {
       monthlyRentAmount: form.monthly_rent_amount,
       hasSpecialNeeds: form.has_special_needs,
       dateOfBirth: form.date_of_birth,
+      thresholds,
     });
-  }, [form]);
+  }, [form, thresholds]);
 
   const totalIncome = calcResult.eligibleIncome;
   const calcCategoryLabel = () => calcResult.categoryLabel;
@@ -229,13 +255,17 @@ export default function EditBeneficiaryPage() {
         monthly_rent: calcResult.monthlyRent,
         net_income: calcResult.eligibleIncome,
       };
+      // Append fields — arrays use indexed keys so Laravel receives a real array
+      // (same serialization as AddBeneficiaryPage; raw append stringifies arrays).
       Object.keys(payload).forEach((key) => {
-        if (payload[key] !== null && payload[key] !== undefined) {
-          if (typeof payload[key] === "boolean") {
-            fd.append(key, payload[key] ? "1" : "0");
-          } else {
-            fd.append(key, payload[key]);
-          }
+        const value = payload[key];
+        if (value === null || value === undefined) return;
+        if (Array.isArray(value)) {
+          value.forEach((item, i) => fd.append(`${key}[${i}]`, item));
+        } else if (typeof value === "boolean") {
+          fd.append(key, value ? "1" : "0");
+        } else {
+          fd.append(key, value);
         }
       });
 
@@ -276,16 +306,16 @@ export default function EditBeneficiaryPage() {
       <MainLayout>
         <div className="flex flex-col items-center justify-center py-24 gap-3" dir="rtl">
           <Loader2 size={44} className="text-amber-600 animate-spin" />
-          <span className="text-gray-600 font-bold text-sm">جاري تحميل بيانات المستفيد...</span>
+          <span className="text-[var(--color-text-muted)] font-bold text-sm">جاري تحميل بيانات المستفيد...</span>
         </div>
       </MainLayout>
     );
   }
 
-  const inputCls = "w-full px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-right text-xs bg-white font-medium transition-all";
-  const labelCls = "block text-xs font-bold text-gray-700 mb-1.5 text-right";
-  const sectionCls = "bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-6";
-  const headerCls = "text-base font-extrabold text-amber-900 mb-5 border-b border-amber-100 pb-3 flex items-center justify-between";
+  const inputCls = "ikram-control";
+  const labelCls = "ikram-label";
+  const sectionCls = "ikram-panel p-4 sm:p-6 mb-6";
+  const headerCls = "text-base font-extrabold text-amber-900 mb-5 border-b border-[var(--color-border)] pb-3 flex items-center justify-between";
 
   return (
     <MainLayout>
@@ -308,12 +338,12 @@ export default function EditBeneficiaryPage() {
         />
 
         {/* Navigation Tabs Bar */}
-        <div className="flex border-b border-gray-200 bg-white rounded-2xl p-1.5 mb-6 shadow-xs gap-1 text-xs font-bold overflow-x-auto">
+        <div className="ikram-panel mb-6 flex gap-1 overflow-x-auto p-1.5 text-xs font-bold" role="tablist" aria-label="أقسام تعديل المستفيد">
           <button
             type="button"
             onClick={() => setActiveTab("basic")}
             className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "basic" ? "bg-amber-600 text-white shadow-xs font-extrabold" : "text-gray-600 hover:bg-gray-50"
+              activeTab === "basic" ? "bg-[var(--color-brand-green)] text-white shadow-xs font-extrabold" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"
             }`}
           >
             <User className="w-4 h-4" />
@@ -323,7 +353,7 @@ export default function EditBeneficiaryPage() {
             type="button"
             onClick={() => setActiveTab("address")}
             className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "address" ? "bg-amber-600 text-white shadow-xs font-extrabold" : "text-gray-600 hover:bg-gray-50"
+              activeTab === "address" ? "bg-[var(--color-brand-green)] text-white shadow-xs font-extrabold" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"
             }`}
           >
             <MapPin className="w-4 h-4" />
@@ -333,7 +363,7 @@ export default function EditBeneficiaryPage() {
             type="button"
             onClick={() => setActiveTab("family")}
             className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "family" ? "bg-amber-600 text-white shadow-xs font-extrabold" : "text-gray-600 hover:bg-gray-50"
+              activeTab === "family" ? "bg-[var(--color-brand-green)] text-white shadow-xs font-extrabold" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"
             }`}
           >
             <Users className="w-4 h-4" />
@@ -343,7 +373,7 @@ export default function EditBeneficiaryPage() {
             type="button"
             onClick={() => setActiveTab("financial")}
             className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "financial" ? "bg-amber-600 text-white shadow-xs font-extrabold" : "text-gray-600 hover:bg-gray-50"
+              activeTab === "financial" ? "bg-[var(--color-brand-green)] text-white shadow-xs font-extrabold" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"
             }`}
           >
             <DollarSign className="w-4 h-4" />
@@ -353,7 +383,7 @@ export default function EditBeneficiaryPage() {
             type="button"
             onClick={() => setActiveTab("documents")}
             className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "documents" ? "bg-amber-600 text-white shadow-xs font-extrabold" : "text-gray-600 hover:bg-gray-50"
+              activeTab === "documents" ? "bg-[var(--color-brand-green)] text-white shadow-xs font-extrabold" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"
             }`}
           >
             <FileText className="w-4 h-4" />
@@ -538,7 +568,7 @@ export default function EditBeneficiaryPage() {
                 <button
                   type="button"
                   onClick={addDependent}
-                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                  className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
                 >
                   <Plus size={14} />
                   <span>إضافة فرد تابع جديد</span>
@@ -547,7 +577,7 @@ export default function EditBeneficiaryPage() {
 
               <div className="flex flex-wrap gap-2 mb-4">
                 {(form.beneficiary_type === "resident" ? [["salary", "راتب شهري"], ["family_support", "دعم الأسرة"]] : [["salary", "راتب شهري"], ["social_security", "ضمان اجتماعي"], ["citizen_account", "حساب المواطن"], ["retirement", "معاش تقاعدي"], ["family_support", "دعم الأسرة"]]).map(([source, label]) => (
-                  <button key={source} type="button" onClick={() => toggleIncome(source)} className={`px-3 py-2 rounded-xl border text-xs font-bold ${form.income_sources.includes(source) ? "bg-amber-600 text-white" : "bg-white"}`}>{label}</button>
+                  <button key={source} type="button" onClick={() => toggleIncome(source)} className={`px-3 py-2 rounded-xl border text-xs font-bold ${form.income_sources.includes(source) ? "bg-[var(--color-brand-green)] text-white" : "bg-white"}`}>{label}</button>
                 ))}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -580,7 +610,7 @@ export default function EditBeneficiaryPage() {
                       />
                     </div>
 
-                    <div className="col-span-full bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs flex items-center justify-between font-bold text-amber-900">
+                    <div className="col-span-full bg-[var(--color-bg-soft)] p-3 rounded-xl border border-[var(--color-border)] text-xs flex items-center justify-between font-bold text-amber-900">
                       <span>احتساب خصم السكن:</span>
                       <span className="font-mono">
                         الإيجار السنوي: {(parseFloat(form.annual_rent_amount) || (parseFloat(form.monthly_rent_amount) ? Math.round(parseFloat(form.monthly_rent_amount) * 12) : 0)).toLocaleString()} ريال ← الإيجار الشهري المحتسب: {(parseFloat(form.monthly_rent_amount) || (parseFloat(form.annual_rent_amount) ? Math.round((parseFloat(form.annual_rent_amount) / 12) * 100) / 100 : 0)).toLocaleString()} ريال
@@ -591,7 +621,7 @@ export default function EditBeneficiaryPage() {
 
                 <div>
                   <label className={labelCls}>تصنيف الدرجة الفئوية</label>
-                  <div className={inputCls + " font-extrabold text-amber-900 bg-gray-50"}>{calcResult.categoryLabel}</div>
+                  <div className={inputCls + " font-extrabold text-amber-900 bg-[var(--color-bg-soft)]"}>{calcResult.categoryLabel}</div>
                 </div>
 
                 <div className="flex items-center gap-2 pt-6">
@@ -601,17 +631,17 @@ export default function EditBeneficiaryPage() {
                     name="has_special_needs"
                     checked={form.has_special_needs}
                     onChange={handleChange}
-                    className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500 cursor-pointer"
+                    className="w-4 h-4 text-amber-600 rounded focus:ring-[var(--color-brand-gold)] cursor-pointer"
                   />
-                  <label htmlFor="has_special_needs" className="text-xs font-extrabold text-gray-800 cursor-pointer select-none">
+                  <label htmlFor="has_special_needs" className="text-xs font-extrabold text-[var(--color-text-primary)] cursor-pointer select-none">
                     ♿ مسجل من ذوي الاحتياجات الخاصة (الإعاقة)
                   </label>
                 </div>
               </div>
 
               {/* Dependents Table */}
-              <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50/50">
-                <h3 className="font-bold text-xs text-gray-800 mb-3 flex items-center justify-between">
+              <div className="border border-[var(--color-border)] rounded-2xl p-4 bg-[var(--color-bg-soft)]/50">
+                <h3 className="font-bold text-xs text-[var(--color-text-primary)] mb-3 flex items-center justify-between">
                   <span>قائمة الأفراد التابعين للأسرة:</span>
                   <span className="text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full font-mono font-bold text-[11px]">
                     إجمالي التابعين: {dependents.length}
@@ -619,13 +649,13 @@ export default function EditBeneficiaryPage() {
                 </h3>
 
                 {dependents.length === 0 ? (
-                  <div className="p-6 text-center text-gray-400 text-xs bg-white rounded-xl border border-dashed border-gray-200">
+                  <div className="p-6 text-center text-[var(--color-text-muted)] text-xs bg-white rounded-xl border border-dashed border-[var(--color-border)]">
                     لا يوجد تابعين مسجلين حالياً. انقر على "إضافة فرد تابع جديد" بالأعلى لإدراجهم.
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {dependents.map((dep, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded-xl border border-gray-200 flex flex-wrap md:flex-nowrap items-center gap-3 shadow-2xs">
+                      <div key={idx} className="bg-white p-3 rounded-xl border border-[var(--color-border)] flex flex-wrap md:flex-nowrap items-center gap-3 shadow-2xs">
                         <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-900 font-bold text-xs flex items-center justify-center font-mono">
                           {idx + 1}
                         </span>
@@ -635,13 +665,13 @@ export default function EditBeneficiaryPage() {
                           placeholder="الاسم الكامل للتابع"
                           value={dep.name}
                           onChange={(e) => updateDependent(idx, "name", e.target.value)}
-                          className="flex-1 px-3 py-1.5 rounded-lg border text-xs focus:ring-1 focus:ring-amber-500"
+                          className="flex-1 px-3 py-1.5 rounded-lg border text-xs focus:ring-1 focus:ring-[var(--color-brand-gold)]"
                         />
 
                         <select
                           value={dep.relationship}
                           onChange={(e) => updateDependent(idx, "relationship", e.target.value)}
-                          className="w-32 px-2 py-1.5 rounded-lg border text-xs bg-white focus:ring-1 focus:ring-amber-500 font-bold"
+                          className="w-32 px-2 py-1.5 rounded-lg border text-xs bg-white focus:ring-1 focus:ring-[var(--color-brand-gold)] font-bold"
                         >
                           {RELATIONSHIP_OPTIONS.map(rel => (
                             <option key={rel} value={rel}>{rel}</option>
@@ -652,14 +682,15 @@ export default function EditBeneficiaryPage() {
                           type="date"
                           value={dep.date_of_birth}
                           onChange={(e) => updateDependent(idx, "date_of_birth", e.target.value)}
-                          className="w-36 px-2 py-1.5 rounded-lg border text-xs focus:ring-1 focus:ring-amber-500 font-mono"
+                          className="w-36 px-2 py-1.5 rounded-lg border text-xs focus:ring-1 focus:ring-[var(--color-brand-gold)] font-mono"
                         />
 
                         <button
                           type="button"
                           onClick={() => removeDependent(idx)}
-                          className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-danger)]"
                           title="حذف التابع"
+                          aria-label="حذف التابع"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -753,35 +784,35 @@ export default function EditBeneficiaryPage() {
                       placeholder="مثال: 1000"
                       className={inputCls + " font-mono font-bold border-amber-300"}
                     />
-                    <span className="text-[11px] text-[#6B7280] block mt-1">يُخصم من إجمالي الدخل لتحديد الدخل المحتسب</span>
+                    <span className="text-[11px] text-[var(--color-text-muted)] block mt-1">يُخصم من إجمالي الدخل لتحديد الدخل المحتسب</span>
                   </div>
                 )}
               </div>
 
               {/* Formula & Calculation Box */}
-              <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-200 text-xs space-y-2">
+              <div className="p-4 bg-[var(--color-bg-soft)] rounded-2xl border border-[var(--color-border)] text-xs space-y-2">
                 <div className="flex items-center gap-2 font-bold text-amber-900">
                   <Calculator size={16} />
                   <span>معادلة الاحتساب بعد اقتطاع الإيجار:</span>
                 </div>
-                <p className="font-mono text-gray-700 bg-white p-2.5 rounded-xl border border-amber-100">{calcResult.formulaText}</p>
+                <p className="font-mono text-[var(--color-text-secondary)] bg-white p-2.5 rounded-xl border border-[var(--color-border)]">{calcResult.formulaText}</p>
               </div>
 
               {/* Financial Summary Cards */}
               <div className="grid sm:grid-cols-3 gap-3 pt-2">
-                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs">
-                  <span className="text-xs text-gray-500 block font-bold mb-1">إجمالي الدخل الشهري</span>
-                  <strong className="text-base font-mono text-gray-900">{calcResult.totalGrossIncome.toLocaleString()} ريال</strong>
+                <div className="bg-white p-4 rounded-2xl border border-[var(--color-border)] shadow-2xs">
+                  <span className="text-xs text-[var(--color-text-muted)] block font-bold mb-1">إجمالي الدخل الشهري</span>
+                  <strong className="text-base font-mono text-[var(--color-text-primary)]">{calcResult.totalGrossIncome.toLocaleString()} ريال</strong>
                 </div>
 
-                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs">
-                  <span className="text-xs text-gray-500 block font-bold mb-1">الإيجار الشهري</span>
-                  <strong className="text-base font-mono text-red-600">{calcResult.monthlyRent.toLocaleString()} ريال</strong>
+                <div className="bg-white p-4 rounded-2xl border border-[var(--color-border)] shadow-2xs">
+                  <span className="text-xs text-[var(--color-text-muted)] block font-bold mb-1">الإيجار الشهري</span>
+                  <strong className="text-base ikram-numeric text-[var(--color-danger)]">{calcResult.monthlyRent.toLocaleString()} ريال</strong>
                 </div>
 
                 <div className="bg-white p-4 rounded-2xl border-2 border-emerald-500 shadow-2xs">
-                  <span className="text-xs text-emerald-700 font-bold block mb-1">صافي الدخل بعد الإيجار</span>
-                  <strong className="text-base font-mono text-emerald-700">{calcResult.eligibleIncome.toLocaleString()} ريال</strong>
+                  <span className="text-xs text-[var(--color-success)] font-bold block mb-1">صافي الدخل بعد الإيجار</span>
+                  <strong className="text-base ikram-numeric text-[var(--color-success)]">{calcResult.eligibleIncome.toLocaleString()} ريال</strong>
                 </div>
               </div>
 
@@ -793,8 +824,11 @@ export default function EditBeneficiaryPage() {
                     {totalIncome.toLocaleString()} ريال سعودي
                   </span>
                 </div>
-                <div className="bg-white/20 backdrop-blur-xs px-4 py-2 rounded-xl text-xs font-extrabold border border-white/30">
-                  الفئة المحسوبة: {calcCategoryLabel()}
+                <div className="bg-white/20 backdrop-blur-xs px-4 py-2 rounded-xl text-xs font-extrabold border border-white/30 flex items-center gap-2">
+                  <span>الفئة المحسوبة: {calcCategoryLabel()}</span>
+                  {form.beneficiary_type === 'resident' && calcResult.needLevelLabel && (
+                    <span className="bg-white/30 px-2 py-0.5 rounded-md text-[11px]">مستوى الاحتياج: {calcResult.needLevelLabel}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -817,32 +851,40 @@ export default function EditBeneficiaryPage() {
                   existingUrl={existingDocs.national_id_image}
                   onChange={handleFileChange}
                 />
-                <FileUploadItem
-                  name="citizen_account_image"
-                  label="2. صورة إثبات حساب المواطن / الراتب"
-                  existingUrl={existingDocs.citizen_account_image}
-                  onChange={handleFileChange}
-                />
-                <FileUploadItem
-                  name="social_security_image"
-                  label="3. صورة مشهد الضمان الاجتماعي"
-                  existingUrl={existingDocs.social_security_image}
-                  onChange={handleFileChange}
-                />
-                <FileUploadItem
-                  name="pension_certificate_image"
-                  label="4. صورة مشهد راتب التقاعد"
-                  existingUrl={existingDocs.pension_certificate_image}
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={handleFileChange}
-                />
-                <FileUploadItem
-                  name="rental_contract_image"
-                  label="5. عقد الإيجار / فاتورة الكهرباء"
-                  existingUrl={existingDocs.rental_contract_image}
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={handleFileChange}
-                />
+                {(form.income_sources?.includes("citizen_account") || existingDocs.citizen_account_image) && (
+                  <FileUploadItem
+                    name="citizen_account_image"
+                    label="2. صورة إثبات حساب المواطن"
+                    existingUrl={existingDocs.citizen_account_image}
+                    onChange={handleFileChange}
+                  />
+                )}
+                {(form.income_sources?.includes("social_security") || existingDocs.social_security_image) && (
+                  <FileUploadItem
+                    name="social_security_image"
+                    label="3. صورة مشهد الضمان الاجتماعي"
+                    existingUrl={existingDocs.social_security_image}
+                    onChange={handleFileChange}
+                  />
+                )}
+                {(form.income_sources?.includes("retirement") || existingDocs.pension_certificate_image) && (
+                  <FileUploadItem
+                    name="pension_certificate_image"
+                    label="4. صورة مشهد راتب التقاعد"
+                    existingUrl={existingDocs.pension_certificate_image}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleFileChange}
+                  />
+                )}
+                {(form.housing_type === "rent" || existingDocs.rental_contract_image) && (
+                  <FileUploadItem
+                    name="rental_contract_image"
+                    label="5. عقد الإيجار / فاتورة الكهرباء"
+                    existingUrl={existingDocs.rental_contract_image}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleFileChange}
+                  />
+                )}
                 <FileUploadItem
                   name="national_address_image"
                   label="6. صورة إثبات العنوان الوطني"
@@ -854,7 +896,7 @@ export default function EditBeneficiaryPage() {
           )}
 
           {/* Form Action Controls */}
-          <div className="flex items-center justify-between bg-white p-5 rounded-2xl shadow-sm border border-gray-100 sticky bottom-4 z-10">
+          <div className="ikram-panel sticky bottom-4 z-10 flex flex-col items-stretch justify-between gap-3 p-4 sm:flex-row sm:items-center sm:p-5">
             <Button
               type="button"
               variant="outline"
@@ -912,17 +954,16 @@ function FileUploadItem({ name, label, existingUrl, onChange, accept = "image/*"
 
   const getDocFullUrl = (urlStr) => {
     if (!urlStr) return "";
-    if (urlStr.startsWith("http://") || urlStr.startsWith("https://")) return urlStr;
-    const clean = urlStr.startsWith("/") ? urlStr.slice(1) : urlStr;
-    const path = clean.startsWith("storage/") ? clean : `storage/${clean}`;
-    const apiBase = (import.meta.env.VITE_API_URL || "https://ikram-system.onrender.com").replace(/\/api\/?$/, "");
-    return `${apiBase}/${path}`;
+    const target = new URL(urlStr, `${getApiBaseUrl()}/`);
+    if (!/^\/api\/beneficiaries\/[^/]+\/documents\/[a-z_]+$/.test(target.pathname)) return "";
+    const apiBase = getApiBaseUrl();
+    return `${apiBase}${target.pathname}${target.search}`;
   };
 
   return (
-    <div className="border-2 border-dashed border-gray-200 rounded-2xl p-4 hover:border-amber-400 transition-colors bg-white flex flex-col justify-between">
+    <div className="border-2 border-dashed border-[var(--color-border)] rounded-2xl p-4 hover:border-[var(--color-brand-gold)] transition-colors bg-white flex flex-col justify-between">
       <div>
-        <label className="block text-xs font-bold text-gray-800 mb-1">{label}</label>
+        <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-1">{label}</label>
         
         {existingUrl && !selectedFile && (
           <div className="mb-2 flex items-center justify-between text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 p-2 rounded-xl">
@@ -943,7 +984,7 @@ function FileUploadItem({ name, label, existingUrl, onChange, accept = "image/*"
           name={name}
           accept={accept}
           onChange={handleSelect}
-          className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-amber-50 file:text-amber-800 file:font-bold cursor-pointer"
+          className="block w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-[var(--color-bg-soft)] file:text-[var(--color-text-secondary)] file:font-bold cursor-pointer"
         />
       </div>
 

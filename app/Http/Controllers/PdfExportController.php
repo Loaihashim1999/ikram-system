@@ -3,37 +3,111 @@
 namespace App\Http\Controllers;
 
 use App\Models\Beneficiary;
+use App\Models\BeneficiaryPolicyEvaluation;
 use App\Models\DailyInventoryMovement;
 use App\Models\DailyReceivingTransaction;
 use App\Models\Distribution;
+use App\Models\DriverAssignment;
 use App\Models\NeighborhoodRep;
+use App\Models\PolicyDecision;
 use App\Models\Staff;
+use App\Models\SupportDistribution;
+use App\Models\SupportReceipt;
 use App\Models\User;
+use App\Services\GovernanceReportService;
+use App\Support\AssociationIdentity;
+use App\Support\Pdf\AssociationFrame;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Mpdf\Mpdf;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class PdfExportController extends Controller
 {
     private function createMpdf(string $orientation = 'P'): Mpdf
     {
-        $tempDir = storage_path('app/mpdf');
-        if (!file_exists($tempDir)) {
-            @mkdir($tempDir, 0777, true);
+        return AssociationFrame::open($orientation);
+    }
+
+    private function writeDocument(Mpdf $mpdf, string $html, string $orientation = 'P'): void
+    {
+        $mpdf->WriteHTML($html);
+    }
+
+    private function pdfResponse(Mpdf $mpdf, string $filename, string $disposition = 'inline')
+    {
+        $safeFilename = preg_replace('/[^A-Za-z0-9._-]/', '-', $filename) ?: 'ikram-document.pdf';
+        if (! str_ends_with(strtolower($safeFilename), '.pdf')) {
+            $safeFilename .= '.pdf';
         }
 
-        return new Mpdf([
-            'mode' => 'utf-8',
-            'format' => 'A4',
-            'orientation' => $orientation,
-            'margin_top' => $orientation === 'L' ? 18 : 58,
-            'margin_bottom' => $orientation === 'L' ? 18 : 32,
-            'margin_left' => 12,
-            'margin_right' => 12,
-            'autoScriptToLang' => true,
-            'autoLangToFont' => true,
-            'tempDir' => $tempDir,
+        return response($mpdf->Output('', 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => $disposition.'; filename="'.$safeFilename.'"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'Pragma' => 'no-cache',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
+    }
+
+    public function exportSupportProof(string $id)
+    {
+        $support = SupportDistribution::findOrFail($id);
+        abort_unless($support->status === 'completed', 409, 'إثبات الاستلام متاح بعد اكتمال الدعم.');
+        $receipt = SupportReceipt::where('support_distribution_id', $id)->firstOrFail();
+        $legacy = $receipt->proof_snapshot === null;
+        $proof = $receipt->proof_snapshot;
+        if ($legacy) {
+            // Historical rows have no reliable delivery-time contacts. Never backfill them.
+            $support->load(['items.inventoryItem', 'beneficiary', 'staff', 'organization']);
+            $assignment = $receipt->driver_assignment_id ? DriverAssignment::with('driver')->findOrFail($receipt->driver_assignment_id) : null;
+            $recipient = $support->{$support->recipient_type};
+            $proof = ['task_reference' => $support->id, 'fulfillment_method' => $support->fulfillment_method,
+                'recipient' => ['display_name' => $support->recipient_name, 'reference' => $support->recipient_reference,
+                    'phone' => $support->recipient_type === 'organization' ? $recipient?->contact : $recipient?->phone,
+                    'full_address' => implode('، ', array_filter([$recipient?->city, $recipient?->district, $recipient?->street ?? $recipient?->national_address]))],
+                'driver' => $assignment ? ['id' => $assignment->driver_id, 'name' => $assignment->driver?->full_name] : null,
+                'pickup_location' => $support->pickup_location_name,
+                'employee' => ['name' => User::find($receipt->confirmed_by)?->full_name],
+                'confirmed_at' => $receipt->confirmed_at->toIso8601String(), 'verification_method' => 'receipt_code',
+                'items' => $support->items->map(fn ($item) => ['name' => $item->inventoryItem?->name,
+                    'quantity' => $item->fulfilled_quantity, 'unit' => $item->unit_snapshot])->values()->all()];
+        }
+        $html = view('pdf.support_proof', [
+            'receipt' => $receipt, 'proof' => $proof, 'legacy' => $legacy,
+            'confirmedAt' => Carbon::parse($proof['confirmed_at']), 'generatedAt' => now(),
+        ])->render();
+        $mpdf = $this->createMpdf();
+        $this->writeDocument($mpdf, $html);
+
+        return $this->pdfResponse($mpdf, ($proof['fulfillment_method'] === 'delivery' ? 'delivery-proof-' : 'handover-receipt-').$receipt->id.'.pdf')
+            ->header('X-Proof-Source', $legacy ? 'legacy-current-data' : 'confirmation-snapshot');
+    }
+
+    public function exportBeneficiaryCard(string $id)
+    {
+        $beneficiary = Beneficiary::with(['dependents', 'category'])->findOrFail($id);
+        $evaluation = BeneficiaryPolicyEvaluation::with('policyVersion')
+            ->where('beneficiary_id', $beneficiary->id)
+            ->where('evaluation_status', BeneficiaryPolicyEvaluation::STATUS_COMPLETED)
+            ->latest('evaluated_at')
+            ->latest('id')
+            ->first();
+        $decision = $evaluation
+            ? PolicyDecision::where('evaluation_id', $evaluation->id)->latest('decided_at')->latest('id')->first()
+            : null;
+        try {
+            $mpdf = $this->createMpdf();
+            $this->writeDocument($mpdf, view('pdf.beneficiary_card', compact('beneficiary', 'evaluation', 'decision'))->render());
+
+            return $this->pdfResponse($mpdf, 'beneficiary-card.pdf', 'attachment');
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['message' => 'تعذر إصدار ملف PDF. يرجى المحاولة مجدداً أو التواصل مع المسؤول.'], 500);
+        }
     }
 
     /**
@@ -42,16 +116,16 @@ class PdfExportController extends Controller
     public function exportIndividualReceipt($distributionId)
     {
         $distribution = Distribution::with(['beneficiary.dependents', 'basket'])->find($distributionId);
-        
+
         // Fallback: Check if the ID provided is a beneficiary ID
-        if (!$distribution) {
+        if (! $distribution) {
             $distribution = Distribution::with(['beneficiary.dependents', 'basket'])
                 ->where('beneficiary_id', $distributionId)
                 ->latest()
                 ->first();
         }
 
-        if (!$distribution) {
+        if (! $distribution) {
             return response()->json(['error' => 'لا يوجد سند توزيع مسجل لهذا المستفيد حتى الآن'], 404);
         }
 
@@ -67,21 +141,13 @@ class PdfExportController extends Controller
             ])->render();
 
             $mpdf = $this->createMpdf();
-            $mpdf->WriteHTML($html);
+            $this->writeDocument($mpdf, $html);
 
-            return response($mpdf->Output('', 'S'), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => "inline; filename=\"سند_استلام_فردي_{$distribution->barcode_code}.pdf\"",
-            ]);
+            return $this->pdfResponse($mpdf, 'individual-receipt.pdf');
         } catch (\Throwable $e) {
-            $html = view('pdf.individual_receipt', [
-                'distribution' => $distribution,
-                'beneficiary' => $beneficiary,
-            ])->render();
+            report($e);
 
-            return response($html . '<script>window.onload = function() { window.print(); };</script>', 200, [
-                'Content-Type' => 'text/html; charset=utf-8',
-            ]);
+            return response()->json(['message' => 'تعذر إصدار ملف PDF. يرجى المحاولة مجدداً أو التواصل مع المسؤول.'], 500);
         }
     }
 
@@ -91,13 +157,14 @@ class PdfExportController extends Controller
     public function exportTotalDelivery($beneficiaryId)
     {
         $beneficiary = Beneficiary::find($beneficiaryId);
-        if (!$beneficiary) {
+        if (! $beneficiary) {
             return response()->json(['error' => 'المستفيد غير موجود'], 404);
         }
 
         $distributions = Distribution::with('basket')
             ->where('beneficiary_id', $beneficiaryId)
-            ->latest()
+            ->orderByDesc('scheduled_at')
+            ->orderByDesc('id')
             ->get();
 
         try {
@@ -107,21 +174,13 @@ class PdfExportController extends Controller
             ])->render();
 
             $mpdf = $this->createMpdf();
-            $mpdf->WriteHTML($html);
+            $this->writeDocument($mpdf, $html);
 
-            return response($mpdf->Output('', 'S'), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => "inline; filename=\"سند_استلام_شامل_{$beneficiary->national_id}.pdf\"",
-            ]);
+            return $this->pdfResponse($mpdf, 'beneficiary-distribution-history.pdf');
         } catch (\Throwable $e) {
-            $html = view('pdf.total_delivery', [
-                'beneficiary' => $beneficiary,
-                'distributions' => $distributions,
-            ])->render();
+            report($e);
 
-            return response($html . '<script>window.onload = function() { window.print(); };</script>', 200, [
-                'Content-Type' => 'text/html; charset=utf-8',
-            ]);
+            return response()->json(['message' => 'تعذر إصدار ملف PDF. يرجى المحاولة مجدداً أو التواصل مع المسؤول.'], 500);
         }
     }
 
@@ -131,12 +190,12 @@ class PdfExportController extends Controller
     public function exportRepresentativeReceipt($repId)
     {
         $representative = NeighborhoodRep::find($repId);
-        if (!$representative) {
+        if (! $representative) {
             return response()->json(['error' => 'مندوب الحي غير موجود'], 404);
         }
 
-        $linkedBeneficiaries = Beneficiary::where('district', 'like', "%{$representative->district_name}%")
-            ->orWhere('city', 'like', "%{$representative->district_name}%")
+        $linkedBeneficiaries = Beneficiary::where('district', $representative->district_name)
+            ->orWhere('city', $representative->district_name)
             ->get();
 
         try {
@@ -146,21 +205,13 @@ class PdfExportController extends Controller
             ])->render();
 
             $mpdf = $this->createMpdf();
-            $mpdf->WriteHTML($html);
+            $this->writeDocument($mpdf, $html);
 
-            return response($mpdf->Output('', 'S'), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => "inline; filename=\"سند_تسليم_مندوب_{$representative->district_name}.pdf\"",
-            ]);
+            return $this->pdfResponse($mpdf, 'representative-receipt.pdf');
         } catch (\Throwable $e) {
-            $html = view('pdf.representative_receipt', [
-                'representative' => $representative,
-                'linkedBeneficiaries' => $linkedBeneficiaries,
-            ])->render();
+            report($e);
 
-            return response($html . '<script>window.onload = function() { window.print(); };</script>', 200, [
-                'Content-Type' => 'text/html; charset=utf-8',
-            ]);
+            return response()->json(['message' => 'تعذر إصدار ملف PDF. يرجى المحاولة مجدداً أو التواصل مع المسؤول.'], 500);
         }
     }
 
@@ -170,7 +221,7 @@ class PdfExportController extends Controller
     public function exportStaffReceipt($staffId)
     {
         $staff = Staff::with(['dependents', 'distributions.basket'])->find($staffId);
-        if (!$staff) {
+        if (! $staff) {
             return response()->json(['error' => 'الموظف غير موجود'], 404);
         }
 
@@ -181,21 +232,13 @@ class PdfExportController extends Controller
             ])->render();
 
             $mpdf = $this->createMpdf();
-            $mpdf->WriteHTML($html);
+            $this->writeDocument($mpdf, $html);
 
-            return response($mpdf->Output('', 'S'), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => "inline; filename=\"سند_استلام_موظف_{$staff->national_id}.pdf\"",
-            ]);
+            return $this->pdfResponse($mpdf, 'staff-receipt.pdf');
         } catch (\Throwable $e) {
-            $html = view('pdf.staff_receipt', [
-                'staff' => $staff,
-                'distributions' => $staff->distributions,
-            ])->render();
+            report($e);
 
-            return response($html . '<script>window.onload = function() { window.print(); };</script>', 200, [
-                'Content-Type' => 'text/html; charset=utf-8',
-            ]);
+            return response()->json(['message' => 'تعذر إصدار ملف PDF. يرجى المحاولة مجدداً أو التواصل مع المسؤول.'], 500);
         }
     }
 
@@ -216,20 +259,13 @@ class PdfExportController extends Controller
             ])->render();
 
             $mpdf = $this->createMpdf('P');
-            $mpdf->WriteHTML($html);
+            $this->writeDocument($mpdf, $html, 'P');
 
-            return response($mpdf->Output('', 'S'), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => "inline; filename=\"سند_استلام_يومي_{$transaction->document_number}.pdf\"",
-            ]);
+            return $this->pdfResponse($mpdf, 'daily-receiving-voucher.pdf');
         } catch (\Throwable $e) {
-            $html = view('pdf.daily_receiving_voucher', [
-                'transaction' => $transaction,
-            ])->render();
+            report($e);
 
-            return response($html . '<script>window.onload = function() { window.print(); };</script>', 200, [
-                'Content-Type' => 'text/html; charset=utf-8',
-            ]);
+            return response()->json(['message' => 'تعذر إصدار ملف PDF. يرجى المحاولة مجدداً أو التواصل مع المسؤول.'], 500);
         }
     }
 
@@ -238,7 +274,8 @@ class PdfExportController extends Controller
      */
     public function exportDailyReport(Request $request)
     {
-        $dateStr = $request->get('date', Carbon::today()->toDateString());
+        $validated = $request->validate(['date' => ['nullable', 'date_format:Y-m-d']]);
+        $dateStr = $validated['date'] ?? Carbon::today()->toDateString();
         $date = Carbon::parse($dateStr);
 
         $dailyReceivingList = DailyReceivingTransaction::with(['beneficiary', 'inventoryItem', 'authorizedUser'])
@@ -266,25 +303,13 @@ class PdfExportController extends Controller
             ])->render();
 
             $mpdf = $this->createMpdf('L');
-            $mpdf->WriteHTML($html);
+            $this->writeDocument($mpdf, $html, 'L');
 
-            return response($mpdf->Output('', 'S'), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => "inline; filename=\"التقرير_اليومي_{$dateStr}.pdf\"",
-            ]);
+            return $this->pdfResponse($mpdf, 'daily-report-'.$dateStr.'.pdf');
         } catch (\Throwable $e) {
-            $html = view('pdf.daily_report', [
-                'date' => $dateStr,
-                'dailyReceivingList' => $dailyReceivingList,
-                'dailyMovements' => $dailyMovements,
-                'dailyReceivingCount' => $dailyReceivingCount,
-                'dailyBasketsCount' => $dailyBasketsCount,
-                'generalDeliveriesCount' => $generalDeliveriesCount,
-            ])->render();
+            report($e);
 
-            return response($html . '<script>window.onload = function() { window.print(); };</script>', 200, [
-                'Content-Type' => 'text/html; charset=utf-8',
-            ]);
+            return response()->json(['message' => 'تعذر إصدار ملف PDF. يرجى المحاولة مجدداً أو التواصل مع المسؤول.'], 500);
         }
     }
 
@@ -293,25 +318,22 @@ class PdfExportController extends Controller
      */
     public function exportWeeklyComprehensiveReport(Request $request)
     {
-        $report = app(\App\Services\GovernanceReportService::class)->build($request);
+        $report = app(GovernanceReportService::class)->build($request);
         $html = view('pdf.weekly_comprehensive_report', compact('report'))->render();
-        $mpdf = $this->createMpdf('P');
-        $mpdf->WriteHTML($html);
-        $pdf = $mpdf->Output('', 'S');
-        return response($pdf, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="governance-report.pdf"',
-            'Cache-Control' => 'private, no-store',
-        ]);
+        $mpdf = $this->createMpdf('L');
+        $this->writeDocument($mpdf, $html, 'L');
+
+        return $this->pdfResponse($mpdf, 'governance-report.pdf');
     }
 
     public function exportComprehensiveExcel(Request $request)
     {
-        $report = app(\App\Services\GovernanceReportService::class)->build($request);
-        $workbook = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $report = app(GovernanceReportService::class)->build($request);
+        $workbook = new Spreadsheet;
         $cover = $workbook->getActiveSheet()->setTitle('Report');
         $cover->fromArray([
-            ['IKRAM Governance report'],
+            [AssociationIdentity::name()],
+            ['تقرير الحوكمة'],
             ['From', $report['analytics']['period']['start_date']],
             ['To', $report['analytics']['period']['end_date']],
             ['Generated', $report['generated_at']],
@@ -322,23 +344,44 @@ class PdfExportController extends Controller
         foreach ($report['datasets'] as $name => $rows) {
             $sheet = $workbook->createSheet()->setTitle(substr($name, 0, 31));
             $sheet->setRightToLeft(true);
-            if (!$rows) { $sheet->setCellValue('A1', 'No matching records'); continue; }
+            if (! $rows) {
+                $sheet->setCellValue('A1', 'No matching records');
+
+                continue;
+            }
             $headers = array_keys(reset($rows));
             $sheet->fromArray($headers, null, 'A1');
             $rowNumber = 2;
             foreach ($rows as $row) {
                 foreach (array_values($row) as $col => $value) {
-                    $sheet->setCellValueExplicit([$col + 1, $rowNumber], is_scalar($value) ? (string)$value : json_encode($value, JSON_UNESCAPED_UNICODE), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                    $coordinate = [$col + 1, $rowNumber];
+                    $header = $headers[$col];
+                    $numericColumns = ['family_members_count', 'monthly_salary', 'total_income', 'monthly_rent', 'net_income', 'policy_score', 'total_received_count', 'quantity', 'current_quantity', 'reserved_quantity', 'min_threshold'];
+                    if (is_int($value) || is_float($value) || ($value !== null && is_numeric($value) && in_array($header, $numericColumns, true))) {
+                        $sheet->setCellValueExplicit($coordinate, (float) $value, DataType::TYPE_NUMERIC);
+                    } elseif (is_bool($value)) {
+                        $sheet->setCellValueExplicit($coordinate, $value, DataType::TYPE_BOOL);
+                    } else {
+                        $text = is_scalar($value) || $value === null ? (string) $value : json_encode($value, JSON_UNESCAPED_UNICODE);
+                        // Prevent spreadsheet formula injection while preserving the displayed text.
+                        if (preg_match('/^[=+\-@]/u', ltrim($text))) {
+                            $text = "'".$text;
+                        }
+                        $sheet->setCellValueExplicit($coordinate, $text, DataType::TYPE_STRING);
+                    }
                 }
                 $rowNumber++;
             }
             $sheet->freezePane('A2');
             $sheet->setAutoFilter($sheet->calculateWorksheetDimension());
             $sheet->getStyle('1:1')->getFont()->setBold(true);
-            foreach (range(1, count($headers)) as $column) $sheet->getColumnDimensionByColumn($column)->setWidth(22);
+            foreach (range(1, count($headers)) as $column) {
+                $sheet->getColumnDimensionByColumn($column)->setWidth(22);
+            }
         }
+
         return response()->streamDownload(function () use ($workbook) {
-            (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($workbook))->save('php://output');
+            (new Xlsx($workbook))->save('php://output');
         }, 'governance-data.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Cache-Control' => 'private, no-store']);
     }
 }

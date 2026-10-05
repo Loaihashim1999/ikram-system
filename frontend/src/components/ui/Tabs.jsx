@@ -28,8 +28,8 @@ export default function Tabs({
               onClick={() => onChange(tab.id)}
               className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${
                 isActive
-                  ? 'border-[#3F6B3A] text-[#3F6B3A]'
-                  : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+                  ? 'border-[var(--color-brand-green)] text-[var(--color-brand-green)]'
+                  : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border)]'
               }`}
             >
               {Icon && <Icon className="w-4 h-4 shrink-0" />}
@@ -38,8 +38,8 @@ export default function Tabs({
                 <span
                   className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                     isActive
-                      ? 'bg-[#EBF4EA] text-[#3F6B3A]'
-                      : 'bg-gray-100 text-gray-600'
+                      ? 'bg-[#EBF4EA] text-[var(--color-brand-green)]'
+                      : 'bg-[var(--color-bg-soft)] text-[var(--color-text-muted)]'
                   }`}
                 >
                   {tab.count}
@@ -56,8 +56,8 @@ export default function Tabs({
             onClick={() => onChange(tab.id)}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-150 ${
               isActive
-                ? 'bg-[#3F6B3A] text-white shadow-xs'
-                : 'bg-white border border-[#E5E2D9] text-gray-700 hover:bg-[#FAF8F5] hover:text-gray-900'
+                ? 'bg-[var(--color-brand-green)] text-white shadow-xs'
+                : 'bg-white border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-soft)] hover:text-[var(--color-text-primary)]'
             }`}
           >
             {Icon && <Icon className="w-4 h-4 shrink-0" />}
@@ -67,7 +67,7 @@ export default function Tabs({
                 className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                   isActive
                     ? 'bg-white/20 text-white'
-                    : 'bg-[#FAF8F5] text-gray-600 border border-[#E5E2D9]'
+                    : 'bg-[var(--color-bg-soft)] text-[var(--color-text-muted)] border border-[var(--color-border)]'
                 }`}
               >
                 {tab.count}

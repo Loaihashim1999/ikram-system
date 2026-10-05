@@ -19,6 +19,16 @@ class CategoryController extends Controller
         ]);
     }
 
+    public function show($id)
+    {
+        $category = Category::withCount('beneficiaries')->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'data' => $category,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

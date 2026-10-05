@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\Beneficiary;
 use App\Models\Category;
 use App\Models\DailyBeneficiary;
 use App\Models\DailyBeneficiaryDocument;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class DailyBeneficiaryController extends Controller
@@ -30,6 +31,20 @@ class DailyBeneficiaryController extends Controller
         // تصفية حسب الحي
         if ($request->filled('district') && $request->district !== 'all') {
             $query->where('district', $request->district);
+        }
+
+        if (in_array($request->input('beneficiary_type'), ['citizen', 'resident'], true)) {
+            $query->where('beneficiary_type', $request->input('beneficiary_type'));
+        }
+
+        if ($request->filled('nationality')) {
+            $query->whereRaw('TRIM(nationality) = ?', [trim((string) $request->input('nationality'))]);
+        }
+
+        if ((string) $request->input('nationality_missing') === '1') {
+            $query->where(function ($inner) {
+                $inner->whereNull('nationality')->orWhereRaw("TRIM(nationality) = ''");
+            });
         }
 
         // تصفية حسب الفئة
@@ -103,6 +118,13 @@ class DailyBeneficiaryController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $request->validate(['reviewed_confirmation' => 'required|accepted']);
+        $classification = Beneficiary::classificationFromNationality(
+            $request->input('nationality'),
+            $request->input('beneficiary_type'),
+            $request->input('type'),
+        );
+
         $validated = $request->validate([
             'full_name' => 'required|string|max:150',
             'national_id' => [
@@ -122,6 +144,7 @@ class DailyBeneficiaryController extends Controller
             'category_id' => 'nullable|uuid|exists:categories,id',
             'status' => 'nullable|in:active,inactive',
             'notes' => 'nullable|string',
+            'nationality' => 'required|string|max:100',
         ], [
             'full_name.required' => 'اسم المستفيد الرباعي مطلوب.',
             'national_id.required' => 'رقم الهوية الوطنية أو الإقامة مطلوب.',
@@ -131,19 +154,20 @@ class DailyBeneficiaryController extends Controller
             'phone.required' => 'رقم الجوال مطلوب.',
             'phone.regex' => 'رقم الجوال غير صحيح (يجب أن يبدأ بـ 05 ويتكون من 10 أرقام).',
             'district.required' => 'اسم الحي مطلوب.',
+            'nationality.required' => 'الجنسية مطلوبة.',
         ]);
 
-        // تطبيع رقم الجوال إذا بدأ بـ 5
         if (str_starts_with($validated['phone'], '5')) {
-            $validated['phone'] = '0' . $validated['phone'];
+            $validated['phone'] = '0'.$validated['phone'];
         }
 
-        // جلب اسم الفئة إن وجدت
-        if (!empty($validated['category_id'])) {
+        if (! empty($validated['category_id'])) {
             $cat = Category::find($validated['category_id']);
             $validated['category_name'] = $cat?->name;
         }
 
+        $validated['nationality'] = $classification['nationality'];
+        $validated['beneficiary_type'] = $classification['beneficiary_type'];
         $validated['created_by'] = $request->user()?->id;
         $validated['status'] = $validated['status'] ?? 'active';
 
@@ -190,6 +214,14 @@ class DailyBeneficiaryController extends Controller
     public function update(Request $request, string $id): JsonResponse
     {
         $beneficiary = DailyBeneficiary::findOrFail($id);
+        $classification = Beneficiary::classificationFromNationality(
+            $request->input('nationality'),
+            $request->input('beneficiary_type'),
+            $request->input('type'),
+        );
+        if ($classification['nationality'] !== trim((string) $beneficiary->nationality)) {
+            $request->validate(['reviewed_confirmation' => 'required|accepted']);
+        }
 
         $validated = $request->validate([
             'full_name' => 'required|string|max:150',
@@ -210,6 +242,7 @@ class DailyBeneficiaryController extends Controller
             'category_id' => 'nullable|uuid|exists:categories,id',
             'status' => 'required|in:active,inactive',
             'notes' => 'nullable|string',
+            'nationality' => 'required|string|max:100',
         ], [
             'full_name.required' => 'اسم المستفيد الرباعي مطلوب.',
             'national_id.required' => 'رقم الهوية الوطنية أو الإقامة مطلوب.',
@@ -219,18 +252,22 @@ class DailyBeneficiaryController extends Controller
             'phone.required' => 'رقم الجوال مطلوب.',
             'phone.regex' => 'رقم الجوال غير صحيح (يجب أن يبدأ بـ 05 ويتكون من 10 أرقام).',
             'district.required' => 'اسم الحي مطلوب.',
+            'nationality.required' => 'الجنسية مطلوبة.',
         ]);
 
         if (str_starts_with($validated['phone'], '5')) {
-            $validated['phone'] = '0' . $validated['phone'];
+            $validated['phone'] = '0'.$validated['phone'];
         }
 
-        if (!empty($validated['category_id'])) {
+        if (! empty($validated['category_id'])) {
             $cat = Category::find($validated['category_id']);
             $validated['category_name'] = $cat?->name;
         } else {
             $validated['category_name'] = null;
         }
+
+        $validated['nationality'] = $classification['nationality'];
+        $validated['beneficiary_type'] = $classification['beneficiary_type'];
 
         $beneficiary->update($validated);
 
@@ -238,10 +275,17 @@ class DailyBeneficiaryController extends Controller
             AuditLog::create([
                 'user_id' => $request->user()?->id,
                 'action' => 'UPDATE_DAILY_BENEFICIARY',
-                'details' => "تم تحديث بيانات المستفيد اليومي: {$beneficiary->full_name} ({$beneficiary->national_id})",
+                'target_table' => 'daily_beneficiaries',
+                'target_id' => $beneficiary->id,
+                'details' => ['updated_fields' => array_keys($validated)],
             ]);
         } catch (\Exception $e) {
-            // non-blocking
+            Log::warning('Daily beneficiary update audit persistence failed.', [
+                'target_table' => 'daily_beneficiaries',
+                'target_id' => $beneficiary->id,
+                'actor_id' => $request->user()?->id,
+                'exception_class' => get_class($e),
+            ]);
         }
 
         return response()->json([
@@ -304,7 +348,6 @@ class DailyBeneficiaryController extends Controller
             'document_type' => $request->document_type,
             'file_name' => $fileName,
             'file_path' => $storedPath,
-            'file_url' => Storage::url($storedPath),
             'file_type' => $file->getClientMimeType(),
             'file_size' => $file->getSize(),
             'uploaded_by' => $request->user()?->id,

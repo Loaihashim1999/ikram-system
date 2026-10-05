@@ -376,12 +376,12 @@ export default function DailyInventoryPage({ embedded = false }) {
         </div>
 
         {/* Action & Tab Bar */}
-        <div className="bg-white border border-[#E5E2D9] rounded-xl p-2 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="ikram-panel p-2 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setActiveTab("items")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-colors ${
-                activeTab === "items" ? "bg-[#3F6B3A] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
+                activeTab === "items" ? "bg-[var(--color-brand-green)] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
               }`}
             >
               <Package className="w-4 h-4" />
@@ -391,7 +391,7 @@ export default function DailyInventoryPage({ embedded = false }) {
             <button
               onClick={() => setActiveTab("movements")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition-colors ${
-                activeTab === "movements" ? "bg-[#3F6B3A] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
+                activeTab === "movements" ? "bg-[var(--color-brand-green)] text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
               }`}
             >
               <History className="w-4 h-4" />
@@ -402,7 +402,7 @@ export default function DailyInventoryPage({ embedded = false }) {
           {activeTab === "items" && (
             <button
               onClick={handleOpenAddModal}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#3F6B3A] hover:bg-[#345830] text-white rounded-lg text-xs font-bold transition-colors w-full sm:w-auto justify-center"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-brand-green)] hover:bg-[#345830] text-white rounded-lg text-xs font-bold transition-colors w-full sm:w-auto justify-center"
             >
               <Plus className="w-4 h-4" />
               إضافة صنف / سلة جديدة
@@ -414,7 +414,7 @@ export default function DailyInventoryPage({ embedded = false }) {
         {activeTab === "items" && (
           <div className="space-y-4">
             {/* Search and Filters */}
-            <div className="bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center gap-3">
+            <div className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center gap-3">
               <div className="relative flex-1 w-full">
                 <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -423,7 +423,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && fetchItems()}
                   placeholder="ابحث باسم الصنف، المورد، رقم التشغيلة..."
-                  className="w-full pl-3 pr-10 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full pl-3 pr-10 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -431,7 +431,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 >
                   <option value="all">جميع التصنيفات</option>
                   {categories.map((c) => (
@@ -442,7 +442,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 >
                   <option value="all">جميع الحالات</option>
                   <option value="available">متوفر بالمستودع</option>
@@ -452,7 +452,7 @@ export default function DailyInventoryPage({ embedded = false }) {
 
                 <button
                   onClick={fetchItems}
-                  className="px-4 py-2 bg-[#3F6B3A] text-white text-xs font-semibold rounded-lg hover:bg-[#345830] transition-colors"
+                  className="px-4 py-2 bg-[var(--color-brand-green)] text-white text-xs font-semibold rounded-lg hover:bg-[#345830] transition-colors"
                 >
                   تطبيق
                 </button>
@@ -460,11 +460,11 @@ export default function DailyInventoryPage({ embedded = false }) {
             </div>
 
             {/* Table */}
-            <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-right border-collapse text-xs">
+            <div className="ikram-panel overflow-hidden">
+              <div className="ikram-table-wrap">
+                <table className="ikram-table text-xs">
                   <thead>
-                    <tr className="bg-[#FAF8F5] text-slate-700 font-bold border-b border-[#E5E2D9]">
+                    <tr className="bg-[var(--color-bg-soft)] text-slate-700 font-bold border-b border-[var(--color-border)]">
                       <th className="py-3 px-4">اسم الصنف / السلة</th>
                       <th className="py-3 px-4">التصنيف</th>
                       <th className="py-3 px-4 text-center">الرصيد المتاح</th>
@@ -509,7 +509,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                             <span
                               className={`px-2.5 py-1 rounded font-bold text-xs ${
                                 item.is_low_stock
-                                  ? "bg-amber-100 text-amber-800"
+                                  ? "bg-amber-100 text-[var(--color-text-secondary)]"
                                   : "bg-emerald-50 text-emerald-700"
                               }`}
                             >
@@ -551,7 +551,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                                 item.is_expired
                                   ? "bg-red-100 text-red-700"
                                   : item.is_low_stock
-                                  ? "bg-amber-100 text-amber-800"
+                                  ? "bg-amber-100 text-[var(--color-text-secondary)]"
                                   : "bg-emerald-100 text-emerald-800"
                               }`}
                             >
@@ -568,7 +568,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                               <button
                                 onClick={() => handleOpenAdjustModal(item)}
                                 title="حركة مخزنية (توريد / صرف / تسوية)"
-                                className="p-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded transition-colors"
+                                className="p-1.5 bg-[var(--color-bg-soft)] text-amber-700 hover:bg-amber-100 rounded transition-colors"
                               >
                                 <ArrowUpDown className="w-3.5 h-3.5" />
                               </button>
@@ -604,11 +604,11 @@ export default function DailyInventoryPage({ embedded = false }) {
 
         {/* TAB 2: Movements Log Table */}
         {activeTab === "movements" && (
-          <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-right border-collapse text-xs">
+          <div className="ikram-panel overflow-hidden">
+            <div className="ikram-table-wrap">
+              <table className="ikram-table text-xs">
                 <thead>
-                  <tr className="bg-[#FAF8F5] text-slate-700 font-bold border-b border-[#E5E2D9]">
+                  <tr className="bg-[var(--color-bg-soft)] text-slate-700 font-bold border-b border-[var(--color-border)]">
                     <th className="py-3 px-4">الصنف</th>
                     <th className="py-3 px-4 text-center">نوع الحركة</th>
                     <th className="py-3 px-4 text-center">الكمية</th>
@@ -640,7 +640,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                               m.type === "in"
                                 ? "bg-emerald-50 text-emerald-700"
                                 : m.type === "out"
-                                ? "bg-amber-50 text-amber-700"
+                                ? "bg-[var(--color-bg-soft)] text-amber-700"
                                 : "bg-blue-50 text-blue-700"
                             }`}
                           >
@@ -664,7 +664,7 @@ export default function DailyInventoryPage({ embedded = false }) {
 
             {/* Pagination for movements */}
             {paginationMovements.last_page > 1 && (
-              <div className="p-3 border-t border-[#E5E2D9] flex items-center justify-between text-xs">
+              <div className="p-3 border-t border-[var(--color-border)] flex items-center justify-between text-xs">
                 <span>
                   الصفحة {paginationMovements.current_page} من {paginationMovements.last_page}
                 </span>
@@ -705,7 +705,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   value={itemForm.name}
                   onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
                   placeholder="مثال: سلة الوجبات الساخنة اليومية"
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -717,7 +717,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                     min="0"
                     value={itemForm.quantity}
                     onChange={(e) => setItemForm({ ...itemForm, quantity: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                    className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                   />
                 </div>
               )}
@@ -729,7 +729,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   value={itemForm.unit}
                   onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })}
                   placeholder="سلة، طرد، وجبة، كرتون..."
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -740,7 +740,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   min="1"
                   value={itemForm.min_threshold}
                   onChange={(e) => setItemForm({ ...itemForm, min_threshold: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -751,7 +751,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   value={itemForm.category}
                   onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })}
                   placeholder="وجبات طازجة، تموين جاف..."
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -761,7 +761,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   type="date"
                   value={itemForm.expiry_date}
                   onChange={(e) => setItemForm({ ...itemForm, expiry_date: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -772,7 +772,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   value={itemForm.supplier}
                   onChange={(e) => setItemForm({ ...itemForm, supplier: e.target.value })}
                   placeholder="مثال: مطابخ الإحسان"
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -783,7 +783,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   value={itemForm.batch_number}
                   onChange={(e) => setItemForm({ ...itemForm, batch_number: e.target.value })}
                   placeholder="BATCH-001"
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -794,7 +794,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   value={itemForm.description}
                   onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
                   placeholder="تفاصيل محتويات السلة أو الصنف..."
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
             </div>
@@ -810,7 +810,7 @@ export default function DailyInventoryPage({ embedded = false }) {
               <button
                 type="submit"
                 disabled={savingItem}
-                className="px-5 py-2 bg-[#3F6B3A] text-white rounded-lg text-xs font-bold disabled:opacity-50"
+                className="px-5 py-2 bg-[var(--color-brand-green)] text-white rounded-lg text-xs font-bold disabled:opacity-50"
               >
                 {savingItem ? "جاري الحفظ..." : editingItem ? "حفظ التعديلات" : "إضافة الصنف"}
               </button>
@@ -839,7 +839,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                 <select
                   value={adjustForm.type}
                   onChange={(e) => setAdjustForm({ ...adjustForm, type: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 >
                   <option value="in">توريد إضافي (+) - استلام كميات جديدة للمستودع</option>
                   <option value="out">صرف / استبعاد (-) - إتلاف أو صرف استثنائي</option>
@@ -856,7 +856,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   min="1"
                   value={adjustForm.quantity}
                   onChange={(e) => setAdjustForm({ ...adjustForm, quantity: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -867,7 +867,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   value={adjustForm.reason}
                   onChange={(e) => setAdjustForm({ ...adjustForm, reason: e.target.value })}
                   placeholder="مثال: توريد دفعة جديدة من المتبرع، تسوية جرد ربع سنوي..."
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -877,7 +877,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                   rows="2"
                   value={adjustForm.notes}
                   onChange={(e) => setAdjustForm({ ...adjustForm, notes: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
+                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
                 />
               </div>
 
@@ -892,7 +892,7 @@ export default function DailyInventoryPage({ embedded = false }) {
                 <button
                   type="submit"
                   disabled={submittingAdjust}
-                  className="px-5 py-2 bg-[#3F6B3A] text-white rounded-lg text-xs font-bold disabled:opacity-50"
+                  className="px-5 py-2 bg-[var(--color-brand-green)] text-white rounded-lg text-xs font-bold disabled:opacity-50"
                 >
                   {submittingAdjust ? "جاري التسوية..." : "تأكيد حركة الرصيد"}
                 </button>

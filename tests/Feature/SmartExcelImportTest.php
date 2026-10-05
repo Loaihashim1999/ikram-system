@@ -32,11 +32,11 @@ class SmartExcelImportTest extends TestCase
         $user = $this->user();
         Sanctum::actingAs($user);
 
-        $beneficiary = $this->csv("الجوال,اسم المستفيد,الحي,رقم الهوية\n0501111111,TEST SMART BENEFICIARY,العزيزية,1999999999\n", 'beneficiaries.csv');
-        $preview = $this->post('/api/smart-import/beneficiaries/preview', ['file' => $beneficiary]);
+        $beneficiary = $this->csv("الجوال,اسم المستفيد,الحي,رقم الهوية,الجنسية\n0501111111,TEST SMART BENEFICIARY,العزيزية,1999999999,سعودي\n", 'beneficiaries.csv');
+        $preview = $this->post('/api/smart-import/beneficiaries/preview', ['target' => 'permanent', 'file' => $beneficiary]);
         $preview->assertOk()->assertJsonPath('sheets.0.suggested_mapping.اسم المستفيد', 'full_name');
-        $mapping = ['الجوال' => 'phone', 'اسم المستفيد' => 'full_name', 'الحي' => 'district', 'رقم الهوية' => 'national_id'];
-        $this->post('/api/smart-import/beneficiaries', ['file' => $this->csv("الجوال,اسم المستفيد,الحي,رقم الهوية\n0501111111,TEST SMART BENEFICIARY,العزيزية,1999999999\n", 'beneficiaries.csv'), 'mapping' => json_encode($mapping)])->assertOk()->assertJsonPath('created', 1);
+        $mapping = ['الجوال' => 'phone', 'اسم المستفيد' => 'full_name', 'الحي' => 'district', 'رقم الهوية' => 'national_id', 'الجنسية' => 'nationality'];
+        $this->post('/api/smart-import/beneficiaries', ['target' => 'permanent', 'reviewed_confirmation' => true, 'file' => $this->csv("الجوال,اسم المستفيد,الحي,رقم الهوية,الجنسية\n0501111111,TEST SMART BENEFICIARY,العزيزية,1999999999,سعودي\n", 'beneficiaries.csv'), 'mapping' => json_encode($mapping)])->assertOk()->assertJsonPath('created', 1);
 
         $staffMapping = ['تاريخ التعيين' => 'hire_date', 'الوظيفة' => 'job_title', 'الهاتف' => 'phone', 'الهوية' => 'national_id', 'الاسم' => 'name'];
         $this->post('/api/smart-import/staff', ['file' => $this->csv("تاريخ التعيين,الوظيفة,الهاتف,الهوية,الاسم\n2026-01-10,باحث,0502222222,2888888888,TEST SMART STAFF\n", 'staff.csv'), 'mapping' => json_encode($staffMapping)])->assertOk()->assertJsonPath('created', 1);
@@ -68,19 +68,19 @@ class SmartExcelImportTest extends TestCase
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->fromArray([
-            ['ملاحظة إضافية', 'رقم الهوية', 'الحي', 'اسم المستفيد', 'الجوال'],
-            ['يجب تجاهلها', '1777777777', 'النسيم', 'TEST XLSX BENEFICIARY', '0507777777'],
+            ['ملاحظة إضافية', 'رقم الهوية', 'الحي', 'اسم المستفيد', 'الجوال', 'الجنسية'],
+            ['يجب تجاهلها', '1777777777', 'النسيم', 'TEST XLSX BENEFICIARY', '0507777777', 'سعودي'],
         ]);
         $path = tempnam(sys_get_temp_dir(), 'ikram-xlsx-').'.xlsx';
         (new Xlsx($spreadsheet))->save($path);
 
         try {
             $upload = fn () => new UploadedFile($path, 'beneficiaries.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
-            $this->post('/api/smart-import/beneficiaries/preview', ['file' => $upload()])
+            $this->post('/api/smart-import/beneficiaries/preview', ['target' => 'permanent', 'file' => $upload()])
                 ->assertOk()
                 ->assertJsonPath('sheets.0.suggested_mapping.اسم المستفيد', 'full_name');
-            $mapping = ['رقم الهوية' => 'national_id', 'الحي' => 'district', 'اسم المستفيد' => 'full_name', 'الجوال' => 'phone'];
-            $this->post('/api/smart-import/beneficiaries', ['file' => $upload(), 'mapping' => json_encode($mapping)])
+            $mapping = ['رقم الهوية' => 'national_id', 'الحي' => 'district', 'اسم المستفيد' => 'full_name', 'الجوال' => 'phone', 'الجنسية' => 'nationality'];
+            $this->post('/api/smart-import/beneficiaries', ['target' => 'permanent', 'reviewed_confirmation' => true, 'file' => $upload(), 'mapping' => json_encode($mapping)])
                 ->assertOk()
                 ->assertJsonPath('created', 1);
             $this->assertDatabaseHas('beneficiaries', ['national_id' => '1777777777', 'full_name' => 'TEST XLSX BENEFICIARY']);
@@ -96,21 +96,21 @@ class SmartExcelImportTest extends TestCase
         $spreadsheet->getActiveSheet()->setTitle('تعليمات')->fromArray([['تعليمات فقط']]);
         $data = $spreadsheet->createSheet()->setTitle('بيانات');
         $data->fromArray([
-            ['mobile', 'السجل المدني', 'اسم المستفيد', 'اسم الحي', 'الراتب'],
-            ['0508888888', '1888888888', 'TEST MULTISHEET VALID', 'العوالي', '2200'],
-            ['0509999999', '', 'TEST MULTISHEET INVALID', 'العوالي', 'bad'],
-            ['0508888888', '1888888888', 'TEST MULTISHEET DUPLICATE', 'العوالي', '2200'],
+            ['mobile', 'السجل المدني', 'اسم المستفيد', 'اسم الحي', 'الراتب', 'الجنسية'],
+            ['0508888888', '1888888888', 'TEST MULTISHEET VALID', 'العوالي', '2200', 'سعودي'],
+            ['0509999999', '', 'TEST MULTISHEET INVALID', 'العوالي', 'bad', 'سعودي'],
+            ['0508888888', '1888888888', 'TEST MULTISHEET DUPLICATE', 'العوالي', '2200', 'سعودي'],
         ]);
         $path = tempnam(sys_get_temp_dir(), 'ikram-multi-').'.xlsx';
         (new Xlsx($spreadsheet))->save($path);
         try {
             $upload = fn () => new UploadedFile($path, 'multi.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
-            $preview = $this->post('/api/smart-import/beneficiaries/preview', ['file' => $upload()])->assertOk();
+            $preview = $this->post('/api/smart-import/beneficiaries/preview', ['target' => 'permanent', 'file' => $upload()])->assertOk();
             $preview->assertJsonPath('sheets.0.name', 'بيانات')
                 ->assertJsonPath('sheets.0.suggested_mapping.mobile', 'phone')
                 ->assertJsonPath('sheets.0.suggested_mapping.السجل المدني', 'national_id');
-            $mapping = ['mobile' => 'phone', 'السجل المدني' => 'national_id', 'اسم المستفيد' => 'full_name', 'اسم الحي' => 'district', 'الراتب' => 'monthly_salary'];
-            $result = $this->post('/api/smart-import/beneficiaries', ['file' => $upload(), 'sheet' => 'بيانات', 'mapping' => json_encode($mapping)])->assertOk();
+            $mapping = ['mobile' => 'phone', 'السجل المدني' => 'national_id', 'اسم المستفيد' => 'full_name', 'اسم الحي' => 'district', 'الراتب' => 'monthly_salary', 'الجنسية' => 'nationality'];
+            $result = $this->post('/api/smart-import/beneficiaries', ['target' => 'permanent', 'reviewed_confirmation' => true, 'file' => $upload(), 'sheet' => 'بيانات', 'mapping' => json_encode($mapping)])->assertOk();
             $result->assertJsonPath('created', 1)->assertJsonPath('skipped', 1)->assertJsonPath('failed', 1)
                 ->assertJsonPath('errors.0', fn ($value) => str_contains($value, 'الصف 3'));
             $this->assertDatabaseHas('beneficiaries', ['national_id' => '1888888888', 'full_name' => 'TEST MULTISHEET VALID']);

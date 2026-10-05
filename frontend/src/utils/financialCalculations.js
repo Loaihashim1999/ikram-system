@@ -91,19 +91,27 @@ export function calculateIncomeAndClassification({
 
   let category = 'second_class';
   let categoryLabel = 'الدرجة الثانية';
+  let needLevel = null;
+  let needLevelLabel = null;
   let subCategory = null;
   let reason = '';
 
   if (beneficiaryType === 'resident') {
+    // المقيم دائماً وبشكل قاطع درجة ثانية (Approved Architecture Decision #8)
     category = 'second_class';
+    categoryLabel = 'الدرجة الثانية';
+
+    // احتساب مستوى الاحتياج بشكل منفصل تماماً عن الدرجة (Approved Architecture Decision #9)
     if (eligibleIncome <= residentLimit) {
+      needLevel = 'severe_need';
+      needLevelLabel = 'احتياج شديد';
       subCategory = 'second_class_a';
-      categoryLabel = 'الدرجة الثانية (أ) - المقيم الأشد حاجة';
-      reason = `مقيم مع دخل محتسب (${eligibleIncome} ريال) أقل أو يساوي حد الفئة أ (${residentLimit} ريال)`;
+      reason = `مقيم - الدرجة الثانية (احتياج شديد): الدخل المحتسب (${eligibleIncome} ريال) أقل أو يساوي حد الاحتياج (${residentLimit} ريال)`;
     } else {
+      needLevel = 'normal_need';
+      needLevelLabel = 'احتياج عادي';
       subCategory = 'second_class_b';
-      categoryLabel = 'الدرجة الثانية (ب) - المقيم دخل متوسط';
-      reason = `مقيم مع دخل محتسب (${eligibleIncome} ريال) أعلى من حد الفئة أ (${residentLimit} ريال)`;
+      reason = `مقيم - الدرجة الثانية (احتياج عادي): الدخل المحتسب (${eligibleIncome} ريال) أعلى من حد الاحتياج (${residentLimit} ريال)`;
     }
   } else {
     // Citizen
@@ -136,16 +144,22 @@ export function calculateIncomeAndClassification({
   return {
     totalGrossIncome,
     totalIncome: totalGrossIncome,
+    grossIncome: totalGrossIncome,
     monthlyRent,
     eligibleIncome,
+    netIncome: eligibleIncome,
     netAvailableIncome: eligibleIncome,
     category,
-    subCategory,
     categoryLabel,
+    needLevel,
+    needLevelLabel,
+    subCategory,
     priority,
-    age,
     reason,
     formulaText,
+    age,
+    isElderly: age !== null && age >= elderlyAge,
+    hasSpecialNeeds,
   };
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { displayLabel } from '../../utils/displayVocabulary';
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
@@ -17,6 +18,8 @@ const FAILED_ATTEMPTS_KEY = 'ikram_failed_login_attempts';
 
 // System Modules Definition for Permissions Matrix
 export const SYSTEM_MODULES = [
+  { key: "support", name: "محرك الدعم الموحد", desc: "صلاحيات الدعم والحجز والصرف" },
+  { key: "beneficiary_policy", name: "سياسة المستفيدين (محرك السياسات)", desc: "إدارة إصدارات سياسة الصرف: إنشاء مسودة واعتماد ونشر وأرشفة" },
   { key: "beneficiaries", name: "المستفيدون (مواطنون ومقيمون)", desc: "عرض وإضافة وتعديل وحذف ملفات المستفيدين" },
   { key: "daily_beneficiaries", name: "المستفيدون اليوميون والمستودع اليومي", desc: "إدارة المستفيدين اليوميين وسندات الاستلام ومستودع اليوميين" },
   { key: "warehouse", name: "المستودع والمخزون والتنبيهات", desc: "متابعة أرصدة السلال والمواد وتنبيهات انتهاء الصلاحية" },
@@ -30,12 +33,20 @@ export const SYSTEM_MODULES = [
 ];
 
 const DEFAULT_FULL_PERMISSIONS = SYSTEM_MODULES.reduce((acc, m) => {
-  acc[m.key] = { view: true, create: true, edit: true, delete: true, notifications: true };
+  acc[m.key] = m.key === "support"
+    ? { view: false, create: false, edit: false, approve: false, reserve: false, fulfill: false, cancel: false, notifications: false }
+    : m.key === "beneficiary_policy"
+      ? { view: false, edit_draft: false, approve: false, publish: false, retire: false, evaluate: false, view_documents: false, verify_documents: false, social_assessment: false, review: false, decide: false, simulate: false, apply_scope: false, execute_reevaluation: false, view_application_runs: false }
+      : m.key === "governance"
+        ? { view: true, export_excel: true, export_pdf: true }
+        : { view: true, create: true, edit: true, delete: true, notifications: true };
   return acc;
 }, {});
 
 const DEFAULT_READONLY_PERMISSIONS = SYSTEM_MODULES.reduce((acc, m) => {
-  acc[m.key] = { view: true, create: false, edit: false, delete: false, notifications: false };
+  acc[m.key] = m.key === "governance"
+    ? { view: true, export_excel: false, export_pdf: false }
+    : { view: true, create: false, edit: false, delete: false, notifications: false };
   return acc;
 }, {});
 
@@ -147,11 +158,13 @@ export default function UsersPage() {
     const mergedPerms = {};
     SYSTEM_MODULES.forEach((m) => {
       mergedPerms[m.key] = {
-        view: existingPerms[m.key]?.view ?? true,
+        view: existingPerms[m.key]?.view ?? m.key !== "beneficiary_policy",
         create: existingPerms[m.key]?.create ?? true,
         edit: existingPerms[m.key]?.edit ?? true,
         delete: existingPerms[m.key]?.delete ?? false,
-        notifications: existingPerms[m.key]?.notifications ?? true,
+        notifications: existingPerms[m.key]?.notifications ?? (m.key !== "support"),
+        ...(m.key === "support" ? Object.fromEntries(["view", "create", "edit", "approve", "reserve", "fulfill", "cancel", "notifications"].map((key) => [key, existingPerms.support?.[key] ?? false])) : {}),
+        ...(m.key === "beneficiary_policy" ? Object.fromEntries(["view", "edit_draft", "approve", "publish", "retire", "evaluate", "view_documents", "verify_documents", "social_assessment", "review", "decide", "simulate", "apply_scope", "execute_reevaluation", "view_application_runs"].map((key) => [key, existingPerms.beneficiary_policy?.[key] ?? false])) : {}),
       };
     });
 
@@ -181,7 +194,7 @@ export default function UsersPage() {
       "الاسم الكامل": u.full_name || u.name,
       "البريد الإلكتروني": u.email || "—",
       "رقم الجوال": u.phone || "—",
-      "الدور الوظيفي": u.role === "admin" ? "المدير العام" : u.role === "assistant_admin" ? "مساعد المدير" : "سائق ميداني",
+      "الدور الوظيفي": displayLabel('role', u.role),
       "الحالة": u.is_active !== false ? "نشط" : "موقوف",
       "تاريخ الإنشاء": u.created_at ? u.created_at.slice(0, 10) : "—",
     }));
@@ -356,27 +369,27 @@ export default function UsersPage() {
         {/* Roles Guide Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {Object.entries(ROLE_PERMISSIONS_PRESETS).map(([key, info]) => (
-            <div key={key} className="bg-white p-4 rounded-2xl border border-[#E5E2D9] shadow-xs">
+            <div key={key} className="bg-white p-4 rounded-2xl border border-[var(--color-border)] shadow-xs">
               <span className={`px-3 py-1 rounded-full text-xs font-bold border ${info.badge}`}>
                 {info.title}
               </span>
-              <p className="text-xs text-[#4B5563] mt-2 leading-relaxed">{info.desc}</p>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-2 leading-relaxed">{info.desc}</p>
             </div>
           ))}
         </div>
 
         {/* Registered Users Table */}
-        <div className="bg-white rounded-2xl border border-[#E5E2D9] p-5 shadow-xs">
-          <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#E5E2D9]">
-            <h2 className="text-sm font-extrabold text-[#111827]">👥 قائمة مستخدمي النظام ومصفوفة الصلاحيات المخصصة</h2>
-            <span className="text-xs bg-[#FAF8F5] text-[#C9A24A] px-3 py-1 rounded-full font-bold border border-[#E5E2D9]">
+        <div className="ikram-panel p-5">
+          <div className="flex justify-between items-center mb-4 pb-3 border-b border-[var(--color-border)]">
+            <h2 className="text-sm font-extrabold text-[var(--color-text-primary)]">👥 قائمة مستخدمي النظام ومصفوفة الصلاحيات المخصصة</h2>
+            <span className="text-xs bg-[var(--color-bg-soft)] text-[var(--color-brand-gold)] px-3 py-1 rounded-full font-bold border border-[var(--color-border)]">
               إجمالي الحسابات: {users.length}
             </span>
           </div>
 
           <div className="overflow-x-auto w-full">
-            <table className="w-full text-xs text-right">
-              <thead className="bg-[#FAF8F5] text-[#111827] font-extrabold border-b border-[#E5E2D9]">
+            <table className="ikram-table">
+              <thead className="bg-[var(--color-bg-soft)] text-[var(--color-text-primary)] font-extrabold border-b border-[var(--color-border)]">
                 <tr>
                   <th className="p-3">#</th>
                   <th className="p-3">اسم المستخدم</th>
@@ -388,10 +401,10 @@ export default function UsersPage() {
                   <th className="p-3 text-center">الإجراءات</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E5E2D9]">
+              <tbody className="divide-y divide-[var(--color-border)]">
                 {loading && (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-gray-400">جاري تحميل قائمة الحسابات...</td>
+                    <td colSpan={8} className="p-8 text-center text-[var(--color-text-muted)]">جاري تحميل قائمة الحسابات...</td>
                   </tr>
                 )}
                 {!loading && users.map((u, idx) => {
@@ -400,10 +413,10 @@ export default function UsersPage() {
                   const allowedPagesCount = Object.values(userPerms).filter((p) => p && p.view).length;
 
                   return (
-                    <tr key={u.id || idx} className="hover:bg-[#FAF8F5] transition-colors">
-                      <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
-                      <td className="p-3 font-bold text-[#C9A24A] font-mono">{u.username}</td>
-                      <td className="p-3 font-bold text-[#111827]">{u.full_name || u.name}</td>
+                    <tr key={u.id || idx} className="hover:bg-[var(--color-bg-soft)] transition-colors">
+                      <td className="p-3 text-[var(--color-text-muted)] font-mono">{idx + 1}</td>
+                      <td className="p-3 font-bold text-[var(--color-brand-gold)] font-mono">{u.username}</td>
+                      <td className="p-3 font-bold text-[var(--color-text-primary)]">{u.full_name || u.name}</td>
                       <td className="p-3">
                         {u.role === "admin" && (
                           <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-lg text-[11px] font-bold inline-flex items-center gap-1">
@@ -424,12 +437,12 @@ export default function UsersPage() {
                           </span>
                         )}
                         {!["admin", "assistant_admin", "delivery_driver"].includes(u.role) && (
-                          <span className="bg-gray-100 text-gray-800 border border-gray-300 px-2 py-0.5 rounded-lg text-[11px] font-bold">
-                            {u.role}
+                          <span className="bg-[var(--color-bg-soft)] text-[var(--color-text-primary)] border border-[var(--color-border)] px-2 py-0.5 rounded-lg text-[11px] font-bold">
+                            {displayLabel('role', u.role)}
                           </span>
                         )}
                       </td>
-                      <td className="p-3 font-mono text-gray-600">{u.phone || "—"}</td>
+                      <td className="p-3 font-mono text-[var(--color-text-muted)]">{u.phone || "—"}</td>
                       <td className="p-3">
                         {isLocked ? (
                           <StatusBadge status="locked" label="مقفل (3 محاولات)" />
@@ -440,8 +453,8 @@ export default function UsersPage() {
                         )}
                       </td>
                       <td className="p-3 text-center">
-                        <span className="bg-[#FAF8F5] text-[#111827] border border-[#E5E2D9] px-2.5 py-1 rounded-xl text-[11px] font-bold inline-flex items-center gap-1">
-                          <Globe size={13} className="text-[#C9A24A]" />
+                        <span className="bg-[var(--color-bg-soft)] text-[var(--color-text-primary)] border border-[var(--color-border)] px-2.5 py-1 rounded-xl text-[11px] font-bold inline-flex items-center gap-1">
+                          <Globe size={13} className="text-[var(--color-brand-gold)]" />
                           <span>{allowedPagesCount > 0 ? `${allowedPagesCount} صفحات مصرحة` : "جميع الصفحات"}</span>
                         </span>
                       </td>
@@ -460,7 +473,7 @@ export default function UsersPage() {
 
                           <button
                             onClick={() => openEditUserModal(u)}
-                            className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-[#C9A24A] rounded-xl border border-amber-200 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
+                            className="px-2.5 py-1 bg-[var(--color-bg-soft)] hover:bg-amber-100 text-[var(--color-brand-gold)] rounded-xl border border-[var(--color-border)] font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
                             title="تعديل الحساب وتخصيص الصلاحيات"
                           >
                             <Edit3 size={13} />
@@ -499,14 +512,14 @@ export default function UsersPage() {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-200"
+                className="px-4 py-2 bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] font-bold rounded-xl text-xs hover:bg-[var(--color-bg-soft)]"
               >
                 إلغاء
               </button>
               <button
                 type="button"
                 onClick={handleSaveUser}
-                className="px-5 py-2 bg-[#D97706] hover:bg-[#B45309] text-white font-extrabold rounded-xl text-xs shadow-xs"
+                className="px-5 py-2 bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-extrabold rounded-xl text-xs shadow-xs"
               >
                 {editingUser ? "حفظ التعديلات والتصاريح" : "إنشاء الحساب وتفعيل الصلاحيات"}
               </button>
@@ -516,58 +529,58 @@ export default function UsersPage() {
           <form className="space-y-4" dir="rtl">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-[#111827] mb-1">اسم المستخدم (Username) *</label>
+                <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-1">اسم المستخدم (Username) *</label>
                 <input
                   type="text"
                   value={form.username}
                   onChange={(e) => setForm({ ...form, username: e.target.value })}
                   required
                   disabled={!!editingUser}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs font-mono disabled:bg-gray-100"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] text-xs font-mono disabled:bg-[var(--color-bg-soft)]"
                   placeholder="مثال: assistant_omar"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#111827] mb-1">الاسم الكامل للموظف *</label>
+                <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-1">الاسم الكامل للموظف *</label>
                 <input
                   type="text"
                   value={form.full_name}
                   onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                   required
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] text-xs"
                   placeholder="مثال: عمر بن خالد السلمي"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#111827] mb-1">رقم الجوال *</label>
+                <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-1">رقم الجوال *</label>
                 <input
                   type="text"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs font-mono"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] text-xs font-mono"
                   placeholder="05XXXXXXXX"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#111827] mb-1">البريد الإلكتروني (Email)</label>
+                <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-1">البريد الإلكتروني (Email)</label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs font-mono"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] text-xs font-mono"
                   placeholder="name@example.com"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#111827] mb-1">حالة الحساب *</label>
+                <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-1">حالة الحساب *</label>
                 <select
                   value={form.is_active ? "active" : "inactive"}
                   onChange={(e) => setForm({ ...form, is_active: e.target.value === "active" })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs font-bold"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] text-xs font-bold"
                 >
                   <option value="active">حساب نشط ومفعّل</option>
                   <option value="inactive">حساب موقوف مؤقتاً</option>
@@ -575,29 +588,29 @@ export default function UsersPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-[#111827] mb-1">الدور الأساسي (System Role) *</label>
+                <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-1">الدور الأساسي (System Role) *</label>
                 <select
                   value={form.role}
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E5E2D9] text-xs font-bold"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] text-xs font-bold"
                 >
                   <option value="assistant_admin">مساعد / نائب المدير (Assistant Supervisor)</option>
-                  <option value="delivery_driver">سائق ميداني (Delivery Driver)</option>
+                  {editingUser && ["driver", "delivery_driver"].includes(form.role) && <option value={form.role}>سائق تاريخي — إدارة التوصيل من كيان السائق</option>}
                   <option value="admin">المدير العام (Supervisor)</option>
                 </select>
               </div>
             </div>
 
             {/* Password section with generator & warning */}
-            <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#E5E2D9] space-y-3">
+            <div className="p-4 bg-[var(--color-bg-soft)] rounded-2xl border border-[var(--color-border)] space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-[#111827]">
+                <label className="block text-xs font-bold text-[var(--color-text-primary)]">
                   {editingUser ? "تغيير كلمة المرور (اتركه فارغاً للإبقاء على الحالية)" : "كلمة المرور الافتراضية *"}
                 </label>
                 <button
                   type="button"
                   onClick={generateDefaultPassword}
-                  className="text-xs text-[#D97706] hover:underline font-bold flex items-center gap-1"
+                  className="text-xs text-[var(--color-brand-green)] hover:underline font-bold flex items-center gap-1"
                 >
                   <RefreshCw size={13} />
                   <span>توليد كلمة مرور قوية</span>
@@ -610,14 +623,14 @@ export default function UsersPage() {
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   required={!editingUser}
-                  className="w-full pr-3.5 pl-20 py-2.5 rounded-xl border border-[#E5E2D9] text-xs font-mono bg-white"
+                  className="w-full pr-3.5 pl-20 py-2.5 rounded-xl border border-[var(--color-border)] text-xs font-mono bg-white"
                   placeholder="••••••••"
                 />
                 <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="p-1 text-gray-400 hover:text-gray-600"
+                    className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-muted)]"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -629,7 +642,7 @@ export default function UsersPage() {
                         navigator.clipboard.writeText(form.password);
                         triggerToast("تم نسخ كلمة المرور إلى الحافظة", "info");
                       }}
-                      className="p-1 text-[#C9A24A] hover:text-[#B45309]"
+                      className="p-1 text-[var(--color-brand-gold)] hover:text-[var(--color-brand-gold)]"
                       title="نسخ كلمة المرور"
                     >
                       <Copy size={15} />
@@ -644,14 +657,14 @@ export default function UsersPage() {
                   id="must_change_password"
                   checked={form.must_change_password}
                   onChange={(e) => setForm({ ...form, must_change_password: e.target.checked })}
-                  className="w-4 h-4 accent-[#D97706] rounded"
+                  className="w-4 h-4 accent-[var(--color-brand-green)] rounded"
                 />
-                <label htmlFor="must_change_password" className="text-xs text-[#111827] font-bold cursor-pointer">
+                <label htmlFor="must_change_password" className="text-xs text-[var(--color-text-primary)] font-bold cursor-pointer">
                   إلزام المستخدم بتغيير كلمة المرور فور تسجيل دخوله الأول للنظام (موصى به أمنياً)
                 </label>
               </div>
 
-              <div className="p-2 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-center gap-2">
+              <div className="p-2 bg-[var(--color-bg-soft)] rounded-xl border border-[var(--color-border)] text-[11px] text-amber-900 flex items-center gap-2">
                 <AlertTriangle size={14} className="flex-shrink-0 text-amber-700" />
                 <span>تحذير أمني: لا تشارك كلمات المرور عبر قنوات غير مشفرة. كلمة المرور الافتراضية مخفية تلقائياً.</span>
               </div>
@@ -664,7 +677,7 @@ export default function UsersPage() {
               </div>
             ) : <div className="pt-2">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-extrabold text-xs text-[#111827]">مصفوفة الصلاحيات المخصصة للمستخدم:</h4>
+                <h4 className="font-extrabold text-xs text-[var(--color-text-primary)]">مصفوفة الصلاحيات المخصصة للمستخدم:</h4>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
@@ -690,9 +703,9 @@ export default function UsersPage() {
                 </div>
               </div>
 
-              <div className="border border-[#E5E2D9] rounded-xl overflow-hidden">
-                <table className="w-full text-xs text-right">
-                  <thead className="bg-[#FAF8F5] font-bold border-b border-[#E5E2D9]">
+              <div className="border border-[var(--color-border)] rounded-xl overflow-hidden">
+                <table className="ikram-table">
+                  <thead className="bg-[var(--color-bg-soft)] font-bold border-b border-[var(--color-border)]">
                     <tr>
                       <th className="p-2.5">القسم</th>
                       <th className="p-2.5 text-center">عرض</th>
@@ -701,18 +714,18 @@ export default function UsersPage() {
                       <th className="p-2.5 text-center">حذف</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5E2D9]">
-                    {SYSTEM_MODULES.map((mod) => {
+                  <tbody className="divide-y divide-[var(--color-border)]">
+                    {SYSTEM_MODULES.filter((mod) => !["support", "beneficiary_policy", "governance"].includes(mod.key)).map((mod) => {
                       const mPerms = form.permissions[mod.key] || { view: false, create: false, edit: false, delete: false };
                       return (
-                        <tr key={mod.key} className="hover:bg-[#FAF8F5]">
-                          <td className="p-2.5 font-bold text-[#111827]">{mod.name}</td>
+                        <tr key={mod.key} className="hover:bg-[var(--color-bg-soft)]">
+                          <td className="p-2.5 font-bold text-[var(--color-text-primary)]">{mod.name}</td>
                           <td className="p-2.5 text-center">
                             <input
                               type="checkbox"
                               checked={!!mPerms.view}
                               onChange={() => handlePermissionToggle(mod.key, "view")}
-                              className="accent-[#3F6B3A]"
+                              className="accent-[var(--color-brand-green)]"
                             />
                           </td>
                           <td className="p-2.5 text-center">
@@ -720,7 +733,7 @@ export default function UsersPage() {
                               type="checkbox"
                               checked={!!mPerms.create}
                               onChange={() => handlePermissionToggle(mod.key, "create")}
-                              className="accent-[#D97706]"
+                              className="accent-[var(--color-brand-green)]"
                             />
                           </td>
                           <td className="p-2.5 text-center">
@@ -728,7 +741,7 @@ export default function UsersPage() {
                               type="checkbox"
                               checked={!!mPerms.edit}
                               onChange={() => handlePermissionToggle(mod.key, "edit")}
-                              className="accent-[#C9A24A]"
+                              className="accent-[var(--color-brand-gold)]"
                             />
                           </td>
                           <td className="p-2.5 text-center">
@@ -744,6 +757,42 @@ export default function UsersPage() {
                     })}
                   </tbody>
                 </table>
+                <fieldset className="p-4 border-t" dir="rtl">
+                  <legend className="font-bold">محرك الدعم الموحد</legend>
+                  <div className="flex flex-wrap gap-4">
+                    {Object.entries({ view: "عرض", create: "إنشاء", edit: "تعديل", approve: "اعتماد", reserve: "حجز", fulfill: "صرف وتسليم", cancel: "إلغاء", notifications: "إشعارات" }).map(([action, label]) => (
+                      <label key={action} className="flex gap-2 items-center">
+                        <input type="checkbox" checked={form.permissions.support?.[action] === true}
+                          onChange={() => setForm((prev) => ({ ...prev, permissions: { ...prev.permissions, support: { ...prev.permissions.support, [action]: !prev.permissions.support?.[action] } } }))} />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <fieldset className="p-4 border-t" dir="rtl">
+                  <legend className="font-bold">الحوكمة والتقارير</legend>
+                  <div className="flex flex-wrap gap-4">
+                    {Object.entries({ view: "عرض", export_excel: "تصدير Excel", export_pdf: "تصدير PDF" }).map(([action, label]) => (
+                      <label key={action} className="flex gap-2 items-center">
+                        <input type="checkbox" checked={form.permissions.governance?.[action] === true}
+                          onChange={() => setForm((prev) => ({ ...prev, permissions: { ...prev.permissions, governance: { ...prev.permissions.governance, [action]: !prev.permissions.governance?.[action] } } }))} />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <fieldset className="p-4 border-t" dir="rtl">
+                  <legend className="font-bold">سياسة المستفيدين (محرك السياسات)</legend>
+                  <div className="flex flex-wrap gap-4">
+                    {Object.entries({ view: "عرض", edit_draft: "تحرير مسودة", approve: "اعتماد", publish: "نشر", retire: "أرشفة", evaluate: "تقييم مالي", view_documents: "عرض الوثائق", verify_documents: "توثيق الوثائق", social_assessment: "التقييم الاجتماعي", review: "مراجعة التقييم", decide: "القرار النهائي", simulate: "محاكاة نطاق التطبيق", apply_scope: "إنشاء/إلغاء تشغيل النطاق", execute_reevaluation: "تنفيذ إعادة التقييم", view_application_runs: "عرض تشغيلات النطاق" }).map(([action, label]) => (
+                      <label key={action} className="flex gap-2 items-center">
+                        <input type="checkbox" checked={form.permissions.beneficiary_policy?.[action] === true}
+                          onChange={() => setForm((prev) => ({ ...prev, permissions: { ...prev.permissions, beneficiary_policy: { ...prev.permissions.beneficiary_policy, [action]: !prev.permissions.beneficiary_policy?.[action] } } }))} />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
               </div>
             </div>}
           </form>
@@ -763,14 +812,14 @@ export default function UsersPage() {
                 <button
                   type="button"
                   onClick={() => setReactivatingUser(null)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-200"
+                  className="px-4 py-2 bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] font-bold rounded-xl text-xs hover:bg-[var(--color-bg-soft)]"
                 >
                   إلغاء
                 </button>
                 <button
                   type="button"
                   onClick={confirmReactivation}
-                  className="px-5 py-2 bg-[#3F6B3A] hover:bg-[#31542D] text-white font-extrabold rounded-xl text-xs shadow-xs"
+                  className="px-5 py-2 bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-extrabold rounded-xl text-xs shadow-xs"
                 >
                   تأكيد تفعيل الحساب
                 </button>
@@ -778,28 +827,28 @@ export default function UsersPage() {
             }
           >
             <div className="space-y-4 text-xs text-right" dir="rtl">
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900">
+              <div className="p-3 bg-[var(--color-bg-soft)] rounded-xl border border-[var(--color-border)] text-amber-900">
                 <p className="font-bold">
                   سيتم رفع حظر تسجيل الدخول عن هذا الحساب، وإصدار كلمة المرور المؤقتة التالية الصالحة لمدة 24 ساعة:
                 </p>
               </div>
 
-              <div className="p-3 bg-white rounded-xl border-2 border-[#C9A24A] flex items-center justify-between font-mono text-sm">
-                <span className="font-bold text-[#111827]">{tempPasswordGenerated}</span>
+              <div className="p-3 bg-white rounded-xl border-2 border-[var(--color-brand-gold)] flex items-center justify-between font-mono text-sm">
+                <span className="font-bold text-[var(--color-text-primary)]">{tempPasswordGenerated}</span>
                 <button
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(tempPasswordGenerated);
                     triggerToast("تم نسخ كلمة المرور المؤقتة", "info");
                   }}
-                  className="p-1.5 bg-[#FAF8F5] rounded-lg text-[#C9A24A] hover:text-[#B45309]"
+                  className="p-1.5 bg-[var(--color-bg-soft)] rounded-lg text-[var(--color-brand-gold)] hover:text-[var(--color-brand-gold)]"
                   title="نسخ كلمة المرور"
                 >
                   <Copy size={16} />
                 </button>
               </div>
 
-              <p className="text-[11px] text-[#6B7280]">
+              <p className="text-[11px] text-[var(--color-text-muted)]">
                 ⚠️ سيلزم النظام المستخدم بتغيير هذه الكلمة المؤقتة إلى كلمة مرور شخصية جديدة فور دخوله الناجح.
               </p>
             </div>

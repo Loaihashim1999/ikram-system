@@ -2,16 +2,18 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import api from './api/axios';
+import PagePermissionGuard from './components/common/PagePermissionGuard';
+import { canViewSupport, canViewRepresentatives, hasModuleAction } from './utils/modulePermissions';
 
 import ErrorButton from './components/ErrorButton';
 
+const ChangePasswordPage = lazy(() => import('./pages/auth/ChangePasswordPage'));
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const FirstAdminSetupPage = lazy(() => import('./pages/auth/FirstAdminSetupPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
-const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AddBeneficiaryPage = lazy(() => import('./pages/beneficiaries/AddBeneficiaryPage'));
-const BeneficiaryList = lazy(() => import('./pages/beneficiaries/BeneficiaryList'));
+const UnifiedBeneficiaryPage = lazy(() => import('./pages/beneficiaries/UnifiedBeneficiaryPage'));
 const BeneficiaryDetails = lazy(() => import('./pages/beneficiaries/BeneficiaryDetails'));
 const EditBeneficiaryPage = lazy(() => import('./pages/beneficiaries/EditBeneficiaryPage'));
 const BeneficiaryImportPage = lazy(() => import('./pages/beneficiaries/BeneficiaryImportPage'));
@@ -24,25 +26,37 @@ const AddStaffPage = lazy(() => import('./pages/staff/AddStaffPage'));
 const EditStaffPage = lazy(() => import('./pages/staff/EditStaffPage'));
 const StaffImportPage = lazy(() => import('./pages/staff/StaffImportPage'));
 const Warehouse = lazy(() => import('./pages/warehouse/Warehouse'));
-const DeliveryPage = lazy(() => import('./pages/delivery/DeliveryPage'));
-const DriverDashboard = lazy(() => import('./pages/delivery/DriverDashboard'));
+const SupportDeliveryPage = lazy(() => import('./pages/delivery/SupportDeliveryPage'));
+const DirectHandoverPage = lazy(() => import('./pages/delivery/DirectHandoverPage'));
+const HomeDeliveryPage = lazy(() => import('./pages/delivery/HomeDeliveryPage'));
+const SupportRequestPage = lazy(() => import('./pages/beneficiaries/SupportRequestPage'));
 const NeighborhoodRepsPage = lazy(() => import('./pages/representatives/NeighborhoodRepsPage'));
-const ReceiverPage = lazy(() => import('./pages/receiver/ReceiverPage'));
 const GovernancePage = lazy(() => import('./pages/governance/GovernancePage'));
 const AuditPage = lazy(() => import('./pages/audit/AuditPage'));
 const SystemSettingsPage = lazy(() => import('./pages/admin/SystemSettingsPage'));
+const PolicyDReviewPage = lazy(() => import('./pages/admin/PolicyDReviewPage'));
+const PolicyApplicationRunsPage = lazy(() => import('./pages/admin/PolicyApplicationRunsPage'));
 const UsersPage = lazy(() => import('./pages/admin/Users'));
+const DriversDirectoryPage = lazy(() => import('./pages/admin/DriversDirectoryPage'));
 const AssistantAdminDashboard = lazy(() => import('./pages/admin/AssistantAdminDashboard'));
 
 function RouteFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F7F5F0]" role="status" aria-label="جارٍ تحميل الصفحة">
-      <div className="w-12 h-12 border-4 border-[#C9A24A] border-t-transparent rounded-full animate-spin" />
+    <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-page)]" role="status" aria-label="جارٍ تحميل الصفحة">
+      <div className="w-12 h-12 border-4 border-[var(--color-brand-gold)] border-t-transparent rounded-full animate-spin" />
     </div>
   );
 }
 
-function Guard({ element, allowedRoles = [] }) {
+function canViewGovernance(user) {
+  return hasModuleAction(user, 'governance', 'view');
+}
+
+function canImportBeneficiaries(user) {
+  return hasModuleAction(user, 'beneficiaries', 'import');
+}
+
+function Guard({ element, allowedRoles = [], canAccess }) {
   const { user: authenticatedUser } = useAuth();
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
   const user = authenticatedUser || (storedUser.id ? storedUser : null);
@@ -51,7 +65,7 @@ function Guard({ element, allowedRoles = [] }) {
   if (allowedRoles.length > 0 && !allowedRoles.includes(role) && role !== 'admin') {
     return <Navigate to={role === 'delivery_driver' || role === 'driver' ? '/delivery' : '/dashboard'} replace />;
   }
-  return element;
+  return canAccess ? <PagePermissionGuard canAccess={canAccess}>{element}</PagePermissionGuard> : element;
 }
 
 function App() {
@@ -70,8 +84,8 @@ function App() {
 
   if (loading || setupRequired === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F5F0]">
-        <div className="w-12 h-12 border-4 border-[#C9A24A] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-page)]">
+        <div className="w-12 h-12 border-4 border-[var(--color-brand-gold)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -83,6 +97,8 @@ function App() {
     return '/dashboard';
   };
 
+  if (user?.must_change_password) return <Suspense fallback={<RouteFallback />}><ChangePasswordPage /></Suspense>;
+
   return (
     <>
     <Suspense fallback={<RouteFallback />}>
@@ -92,16 +108,19 @@ function App() {
       {/* Auth */}
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={getHomePath()} replace />} />
       <Route path="/forgot-password" element={!user ? <ForgotPasswordPage /> : <Navigate to={getHomePath()} replace />} />
-      <Route path="/reset-password/:token" element={!user ? <ResetPasswordPage /> : <Navigate to={getHomePath()} replace />} />
+      {/* Email reset-link routes retired: recovery uses the SMS OTP wizard at /forgot-password. Legacy links fall through to /login. */}
 
+      <Route path="/support-delivery" element={<Guard canAccess={canViewSupport} element={<SupportDeliveryPage />} />} />
+      <Route path="/support/request" element={<Guard canAccess={canViewSupport} element={<SupportRequestPage />} />} />
+      <Route path="/beneficiaries/:id/support" element={<Guard canAccess={canViewSupport} element={<SupportRequestPage />} />} />
       {/* Dashboard */}
       <Route path="/dashboard" element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly']} element={<Dashboard />} />} />
 
       {/* Beneficiaries */}
-      <Route path="/beneficiaries"              element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'readonly']} element={<BeneficiaryList />} />} />
+      <Route path="/beneficiaries"              element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'readonly']} element={<UnifiedBeneficiaryPage />} />} />
       <Route path="/beneficiaries/add-citizen"  element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff']} element={<AddBeneficiaryPage />} />} />
       <Route path="/beneficiaries/add-resident" element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff']} element={<AddBeneficiaryPage />} />} />
-      <Route path="/beneficiaries/import"       element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception']} element={<BeneficiaryImportPage />} />} />
+      <Route path="/beneficiaries/import"       element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff']} canAccess={canImportBeneficiaries} element={<BeneficiaryImportPage />} />} />
       <Route path="/beneficiaries/:id"          element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'readonly']} element={<BeneficiaryDetails />} />} />
       <Route path="/beneficiaries/:id/edit"     element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff']} element={<EditBeneficiaryPage />} />} />
 
@@ -114,14 +133,14 @@ function App() {
       <Route path="/daily-beneficiaries/:id/edit"         element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff']} element={<DailyBeneficiaryForm />} />} />
 
       {/* Support Submission Page - Redirect to Delivery */}
-      <Route path="/send-support"               element={<Navigate to="/delivery" replace />} />
+      <Route path="/send-support"               element={<Navigate to="/support/request" replace />} />
       <Route path="/distributions"              element={<Navigate to="/delivery" replace />} />
 
       {/* Neighborhood Representatives */}
-      <Route path="/representatives"            element={<Guard allowedRoles={['admin', 'assistant_admin', 'staff']} element={<NeighborhoodRepsPage />} />} />
+      <Route path="/representatives"            element={<Guard allowedRoles={['admin', 'assistant_admin', 'staff']} canAccess={canViewRepresentatives} element={<NeighborhoodRepsPage />} />} />
 
       {/* Receiver Page (Accessible to All Roles) */}
-      <Route path="/receiver"                   element={<Guard allowedRoles={['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly', 'delivery_driver', 'driver']} element={<ReceiverPage />} />} />
+      <Route path="/receiver"                   element={<Guard canAccess={canViewSupport} element={<DirectHandoverPage />} />} />
 
       {/* Staff */}
       <Route path="/staff"          element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<StaffListPage />} />} />
@@ -134,19 +153,22 @@ function App() {
       <Route path="/warehouse"    element={<Guard allowedRoles={['admin', 'assistant_admin', 'warehouse', 'staff', 'readonly']} element={<Warehouse />} />} />
 
       {/* Delivery */}
-      <Route path="/delivery"          element={<Guard allowedRoles={['admin', 'assistant_admin', 'staff', 'delivery_driver', 'driver']} element={<DeliveryPage />} />} />
-      <Route path="/driver/deliveries" element={<Guard allowedRoles={['admin', 'assistant_admin', 'staff', 'delivery_driver', 'driver']} element={<DriverDashboard />} />} />
+      <Route path="/delivery"          element={<Guard canAccess={canViewSupport} element={<HomeDeliveryPage />} />} />
+      <Route path="/driver/deliveries" element={<Guard allowedRoles={['admin', 'assistant_admin', 'staff', 'delivery_driver', 'driver']} element={<Navigate to="/driver-access" replace />} />} />
 
       {/* Governance (formerly Statistics) */}
-      <Route path="/governance"   element={<Guard allowedRoles={['admin', 'assistant_admin', 'readonly']} element={<GovernancePage />} />} />
+      <Route path="/governance"   element={<Guard canAccess={canViewGovernance} element={<GovernancePage />} />} />
       <Route path="/statistics"   element={<Guard allowedRoles={['admin', 'assistant_admin', 'readonly']} element={<GovernancePage />} />} />
 
       {/* Audit & Logs (Admin only) */}
       <Route path="/audit"            element={<Guard allowedRoles={['admin']} element={<AuditPage />} />} />
       <Route path="/admin/audit-logs" element={<Guard allowedRoles={['admin']} element={<AuditPage />} />} />
 
+      <Route path="/admin/beneficiary-policy/review/:evaluationId" element={<Guard element={<PolicyDReviewPage />} />} />
+      <Route path="/admin/beneficiary-policy/versions/:versionId/application-runs" element={<Guard element={<PolicyApplicationRunsPage />} />} />
       {/* Admin Pages (Supervisor Only) */}
       <Route path="/admin/users"            element={<Guard allowedRoles={['admin']} element={<UsersPage />} />} />
+      <Route path="/admin/drivers"          element={<Guard allowedRoles={['admin']} element={<DriversDirectoryPage />} />} />
       <Route path="/admin/settings"         element={<Guard allowedRoles={['admin']} element={<SystemSettingsPage />} />} />
       <Route path="/assistant-admin"        element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<AssistantAdminDashboard />} />} />
 

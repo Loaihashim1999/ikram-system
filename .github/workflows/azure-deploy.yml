@@ -1,0 +1,404 @@
+name: Azure production deployment (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_production_deploy:
+        description: Confirm deployment to the protected production environment
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ikram-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ inputs.confirm_production_deploy }}
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      APP_ENV: testing
+      APP_DEBUG: "false"
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      COMMUNICATION_PROVIDER: fake
+      VITE_API_URL: /api
+      VITE_API_BASE_URL: ""
+      VITE_SENTRY_DSN: ""
+      SENTRY_DSN: ""
+      SENTRY_LARAVEL_DSN: ""
+      NIGHTWATCH_ENABLED: "false"
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
+      AZURE_ACR_LOGIN_SERVER: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
+      AZURE_CONTAINER_APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+      AZURE_MIGRATION_JOB_NAME: ${{ vars.AZURE_MIGRATION_JOB_NAME }}
+      AZURE_APP_URL: ${{ vars.AZURE_APP_URL }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: bcmath, gd, intl, mbstring, pdo_pgsql, pdo_sqlite, zip
+          coverage: none
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Create disposable test application key
+        run: echo "APP_KEY=base64:$(openssl rand -base64 32 | tr -d '\n')" >> "$GITHUB_ENV"
+
+      - name: Validate production startup and migration guards
+        run: |
+          set -eu
+          bash -n docker/entrypoint.sh docker/migrate.sh
+
+          TEST_APP_KEY="base64:$(openssl rand -base64 32 | tr -d '\n')"
+          TEST_AZURE_CLIENT_ID="00000000-0000-0000-0000-000000000000"
+
+          # Valid production Managed Identity configuration must pass.
+          APP_ENV=production APP_DEBUG=false APP_KEY="$TEST_APP_KEY" \
+            DB_CONNECTION=pgsql CACHE_STORE=database SESSION_DRIVER=database QUEUE_CONNECTION=database \
+            FILESYSTEM_DISK=azure PUBLIC_FILESYSTEM_DRIVER=azure-storage-blob PUBLIC_FILESYSTEM_VISIBILITY=private \
+            AZURE_STORAGE_ACCOUNT_NAME=disposable \
+            AZURE_STORAGE_CONTAINER=disposable \
+            AZURE_CLIENT_ID="$TEST_AZURE_CLIENT_ID" \
+            bash docker/entrypoint.sh true
+
+          # APP_DEBUG=true must fail even with otherwise valid production configuration.
+          if APP_ENV=production APP_DEBUG=true APP_KEY="$TEST_APP_KEY" \
+            DB_CONNECTION=pgsql CACHE_STORE=database SESSION_DRIVER=database QUEUE_CONNECTION=database \
+            FILESYSTEM_DISK=azure PUBLIC_FILESYSTEM_DRIVER=azure-storage-blob PUBLIC_FILESYSTEM_VISIBILITY=private \
+            AZURE_STORAGE_ACCOUNT_NAME=disposable \
+            AZURE_STORAGE_CONTAINER=disposable \
+            AZURE_CLIENT_ID="$TEST_AZURE_CLIENT_ID" \
+            bash docker/entrypoint.sh true; then
+            echo "::error::Production startup accepted APP_DEBUG=true."
+            exit 1
+          fi
+
+          # Public Blob visibility must fail.
+          if APP_ENV=production APP_DEBUG=false APP_KEY="$TEST_APP_KEY" \
+            DB_CONNECTION=pgsql CACHE_STORE=database SESSION_DRIVER=database QUEUE_CONNECTION=database \
+            FILESYSTEM_DISK=azure PUBLIC_FILESYSTEM_DRIVER=azure-storage-blob PUBLIC_FILESYSTEM_VISIBILITY=public \
+            AZURE_STORAGE_ACCOUNT_NAME=disposable \
+            AZURE_STORAGE_CONTAINER=disposable \
+            AZURE_CLIENT_ID="$TEST_AZURE_CLIENT_ID" \
+            bash docker/entrypoint.sh true; then
+            echo "::error::Production startup accepted public Blob visibility."
+            exit 1
+          fi
+
+          # Missing Managed Identity Blob configuration must fail.
+          if env \
+            -u AZURE_STORAGE_CONNECTION_STRING \
+            -u AZURE_STORAGE_ACCOUNT_NAME \
+            -u AZURE_STORAGE_CONTAINER \
+            -u AZURE_CLIENT_ID \
+            APP_ENV=production APP_DEBUG=false APP_KEY="$TEST_APP_KEY" \
+            DB_CONNECTION=pgsql CACHE_STORE=database SESSION_DRIVER=database QUEUE_CONNECTION=database \
+            FILESYSTEM_DISK=azure PUBLIC_FILESYSTEM_DRIVER=azure-storage-blob PUBLIC_FILESYSTEM_VISIBILITY=private \
+            bash docker/entrypoint.sh true; then
+            echo "::error::Production startup accepted missing Blob Managed Identity configuration."
+            exit 1
+          fi
+
+          # Legacy connection-string authentication must be rejected.
+          if APP_ENV=production APP_DEBUG=false APP_KEY="$TEST_APP_KEY" \
+            DB_CONNECTION=pgsql CACHE_STORE=database SESSION_DRIVER=database QUEUE_CONNECTION=database \
+            FILESYSTEM_DISK=azure PUBLIC_FILESYSTEM_DRIVER=azure-storage-blob PUBLIC_FILESYSTEM_VISIBILITY=private \
+            AZURE_STORAGE_ACCOUNT_NAME=disposable \
+            AZURE_STORAGE_CONTAINER=disposable \
+            AZURE_CLIENT_ID="$TEST_AZURE_CLIENT_ID" \
+            AZURE_STORAGE_CONNECTION_STRING=forbidden \
+            bash docker/entrypoint.sh true; then
+            echo "::error::Production startup accepted AZURE_STORAGE_CONNECTION_STRING."
+            exit 1
+          fi
+
+          # Production migration job must never use SQLite.
+          if DB_CONNECTION=sqlite APP_KEY="$TEST_APP_KEY" bash docker/migrate.sh; then
+            echo "::error::Release migration accepted SQLite."
+            exit 1
+          fi
+
+      - name: Run backend regression suite
+        run: |
+          composer install --no-interaction --prefer-dist
+          vendor/bin/pint --test \
+            app/Http/Controllers/HealthController.php \
+            app/Http/Controllers/PrivateDocumentController.php \
+            bootstrap/app.php \
+            config/cors.php config/database.php config/filesystems.php config/logging.php config/session.php \
+            routes/console.php routes/web.php \
+            routes/api.php \
+            tests/Feature/DeploymentHealthTest.php \
+            tests/Feature/PrivateDocumentDownloadTest.php
+          php artisan test
+
+      - name: Run frontend tests, lint, and production build
+        working-directory: frontend
+        run: |
+          rm -f .env .env.*
+          npm ci
+          npm test
+          npm run lint
+          npm run build
+
+      - name: Build immutable container image
+        id: image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE="${AZURE_ACR_LOGIN_SERVER}/ikram-system:${IMAGE_TAG}"
+          docker build --pull --tag "$IMAGE" .
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Check production image contents
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          docker run --rm --entrypoint sh "$IMAGE" -ec '
+            test ! -e /var/www/html/.env
+            test ! -d /var/www/html/.git
+            test ! -d /var/www/html/tests
+            test ! -e /var/www/html/database/database.sqlite
+            ! find /var/www/html -type f \( -name "*.sqlite" -o -name "*.sqlite3" -o -name "*.db" \) -print -quit | grep -q .
+            if grep -RIEq "AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|https?://[^/@[:space:]]{20,}@" /var/www/html; then
+              echo "Known credential pattern detected in image contents." >&2
+              exit 1
+            fi
+          '
+
+      - name: Smoke-test local container without a database
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          set -eu
+          CONTAINER="ikram-smoke-${GITHUB_RUN_ID}"
+          APP_KEY="base64:$(openssl rand -base64 32 | tr -d '\n')"
+          trap 'docker rm -f "$CONTAINER" >/dev/null 2>&1 || true' EXIT
+          docker run --detach \
+            --name "$CONTAINER" \
+            --publish 127.0.0.1:18080:8080 \
+            --env APP_ENV=testing \
+            --env APP_DEBUG=false \
+            --env "APP_KEY=$APP_KEY" \
+            --env APP_URL=http://localhost \
+            --env DB_CONNECTION=pgsql \
+            --env DB_HOST=127.0.0.1 \
+            --env DB_PORT=1 \
+            --env DB_DATABASE=disposable \
+            --env DB_USERNAME=test \
+            --env DB_PASSWORD= \
+            --env CACHE_STORE=array \
+            --env SESSION_DRIVER=array \
+            --env QUEUE_CONNECTION=sync \
+            --env FILESYSTEM_DISK=local \
+            --env PUBLIC_FILESYSTEM_DRIVER=local \
+            --env COMMUNICATION_PROVIDER=fake \
+            --env SENTRY_DSN= \
+            --env SENTRY_LARAVEL_DSN= \
+            "$IMAGE"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:18080/health; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "::error::Local container liveness check failed."
+              exit 1
+            fi
+            sleep 2
+          done
+          HTML="$(curl --fail --silent http://127.0.0.1:18080/)"
+          ASSET_PATH="$(printf '%s' "$HTML" | grep -oE '(src|href)="/assets/[^"]+' | head -n 1 | cut -d '"' -f 2)"
+          if [ -z "$ASSET_PATH" ]; then
+            echo "::error::Built frontend asset was not referenced by the app."
+            exit 1
+          fi
+          curl --fail --silent --output /dev/null "http://127.0.0.1:18080${ASSET_PATH}"
+          docker exec "$CONTAINER" sh -ec '
+            for path in storage/logs storage/framework/cache storage/framework/sessions storage/framework/views storage/app/mpdf bootstrap/cache; do
+              test -w "$path"
+              touch "$path/.deployment-smoke-test"
+              rm "$path/.deployment-smoke-test"
+            done
+          '
+          if docker logs "$CONTAINER" 2>&1 | grep -q 'Running Laravel Migrations'; then
+            echo "::error::Container startup attempted a database migration."
+            exit 1
+          fi
+
+      - name: Validate deployment configuration
+        run: |
+          required_vars="AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP AZURE_ACR_NAME AZURE_ACR_LOGIN_SERVER AZURE_CONTAINER_APP_NAME AZURE_MIGRATION_JOB_NAME AZURE_APP_URL"
+          for variable in $required_vars; do
+            if [ -z "${!variable}" ]; then
+              echo "::error::Required production environment variable is missing: $variable"
+              exit 1
+            fi
+          done
+          case "$AZURE_APP_URL" in
+            https://*) ;;
+            *) echo "::error::AZURE_APP_URL must use HTTPS."; exit 1 ;;
+          esac
+
+      - name: Authenticate to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Push immutable commit image to ACR
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          az acr login --name "$AZURE_ACR_NAME"
+          if EXISTS="$(az acr repository show-tags \
+            --name "$AZURE_ACR_NAME" \
+            --repository ikram-system \
+            --query "contains(@, '${GITHUB_SHA}')" \
+            --output tsv 2>/dev/null)" && [ "$EXISTS" = "true" ]; then
+            docker pull "$IMAGE"
+          else
+            docker push "$IMAGE"
+            az acr repository update \
+              --name "$AZURE_ACR_NAME" \
+              --image "ikram-system:${GITHUB_SHA}" \
+              --write-enabled false \
+              --delete-enabled false \
+              --output none
+          fi
+
+      - name: Recheck exact registry image contents
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          docker run --rm --entrypoint sh "$IMAGE" -ec '
+            test ! -e /var/www/html/.env
+            test ! -d /var/www/html/.git
+            test ! -d /var/www/html/tests
+            test ! -e /var/www/html/database/database.sqlite
+            ! find /var/www/html -type f \( -name "*.sqlite" -o -name "*.sqlite3" -o -name "*.db" \) -print -quit | grep -q .
+            if grep -RIEq "AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|https?://[^/@[:space:]]{20,}@" /var/www/html; then
+              echo "Known credential pattern detected in image contents." >&2
+              exit 1
+            fi
+          '
+
+      - name: Capture current production image
+        id: previous
+        run: |
+          IMAGE="$(az containerapp show \
+            --name "$AZURE_CONTAINER_APP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --query 'properties.template.containers[0].image' \
+            --output tsv)"
+          if [ -z "$IMAGE" ] || [ "$IMAGE" = "None" ]; then
+            echo "::error::No current image found; bootstrap the app before using this rollback workflow."
+            exit 1
+          fi
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Run one-time release migration job
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          az containerapp job update \
+            --name "$AZURE_MIGRATION_JOB_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --image "$IMAGE" \
+            --output none
+          EXECUTION="$(az containerapp job start \
+            --name "$AZURE_MIGRATION_JOB_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --query name \
+            --output tsv)"
+          if [ -z "$EXECUTION" ] || [ "$EXECUTION" = "None" ]; then
+            echo "::error::Migration job did not return an execution identifier."
+            exit 1
+          fi
+          for attempt in $(seq 1 120); do
+            STATUS="$(az containerapp job execution show \
+              --name "$EXECUTION" \
+              --job-name "$AZURE_MIGRATION_JOB_NAME" \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --query properties.status \
+              --output tsv)"
+            case "$STATUS" in
+              Succeeded) exit 0 ;;
+              Failed|Stopped|Degraded)
+                echo "::error::Release migration execution ended with status: $STATUS"
+                exit 1
+                ;;
+            esac
+            sleep 5
+          done
+          echo "::error::Timed out waiting for the release migration job."
+          exit 1
+
+      - name: Deploy image to Azure Container App
+        id: deploy
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          az containerapp update \
+            --name "$AZURE_CONTAINER_APP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --image "$IMAGE" \
+            --output none
+
+      - name: Verify readiness
+        id: health
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --output /dev/null \
+              "${AZURE_APP_URL%/}/readiness"; then
+              echo "Azure readiness check passed."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Azure readiness check did not pass."
+          exit 1
+
+      - name: Roll back to previous immutable image
+        if: ${{ failure() && steps.deploy.outcome == 'success' && steps.previous.outputs.image != '' }}
+        env:
+          PREVIOUS_IMAGE: ${{ steps.previous.outputs.image }}
+        run: |
+          az containerapp update \
+            --name "$AZURE_CONTAINER_APP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --image "$PREVIOUS_IMAGE" \
+            --output none
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error --output /dev/null \
+              "${AZURE_APP_URL%/}/readiness"; then
+              echo "Previous immutable image is healthy again. Database changes were not reversed."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::The previous image was selected but did not pass readiness."
+          exit 1

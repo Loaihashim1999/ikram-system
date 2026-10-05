@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\InventoryExpiryPolicy;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,6 +26,7 @@ class DailyInventoryItem extends Model
         'batch_number',
         'supplier',
         'expiry_date',
+        'expiration_date',
         'description',
         'status',
     ];
@@ -42,7 +44,18 @@ class DailyInventoryItem extends Model
         'is_expired',
         'remaining_days',
         'expiry_status',
+        'expiration_date',
     ];
+
+    public function getExpirationDateAttribute(): ?string
+    {
+        return $this->expiry_date ? $this->expiry_date->format('Y-m-d') : null;
+    }
+
+    public function setExpirationDateAttribute($value): void
+    {
+        $this->attributes['expiry_date'] = $value ? substr((string) $value, 0, 10) : null;
+    }
 
     public function movements(): HasMany
     {
@@ -80,16 +93,6 @@ class DailyInventoryItem extends Model
 
     public function getExpiryStatusAttribute(): ?string
     {
-        if (! $this->expiry_date) {
-            return null;
-        }
-
-        if ($this->remaining_days <= 0) {
-            return 'expired';
-        }
-
-        $threshold = max(0, (int) \App\Models\Setting::get('warehouse_alert_threshold_days', 10));
-
-        return $this->remaining_days <= $threshold ? 'near_expiry' : 'valid';
+        return InventoryExpiryPolicy::status($this->remaining_days);
     }
 }

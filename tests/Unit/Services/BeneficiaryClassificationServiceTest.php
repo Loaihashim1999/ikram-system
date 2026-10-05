@@ -8,20 +8,27 @@ use App\Services\BeneficiaryClassificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * @deprecated This tests the legacy BeneficiaryClassificationService.
+ * Authoritative financial/classification tests are in Tests\Unit\Services\FinancialCalculationServiceTest.
+ */
 class BeneficiaryClassificationServiceTest extends TestCase
 {
     use RefreshDatabase;
 
     protected BeneficiaryClassificationService $service;
+
     protected Category $categoryDegree1;
+
     protected Category $categoryDegree2;
+
     protected Category $categorySpecialNeeds;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->service = new BeneficiaryClassificationService();
+        $this->service = new BeneficiaryClassificationService;
 
         $this->categoryDegree1 = Category::create([
             'name' => 'درجة أولى',

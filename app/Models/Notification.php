@@ -15,7 +15,7 @@ class Notification extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'id', 'category', 'title', 'read_at', 'event_key',
+        'id', 'category', 'title', 'read_at', 'event_key', 'event_type',
         'recipient_type',
         'recipient_id',
         'related_record_type',

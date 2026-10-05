@@ -10,16 +10,16 @@ export default {
         // Core Ikram Brand Colors
         brand: {
           green: {
-            DEFAULT: '#3F6B3A',
-            hover: '#31542D',
-            light: '#EBF4EA',
-            dark: '#223B1E',
+            DEFAULT: '#1F4D3A',
+            hover: '#14352C',
+            light: '#E7EFEA',
+            dark: '#0E241C',
           },
           gold: {
-            DEFAULT: '#C9A24A',
-            hover: '#B48528',
-            light: '#F5EDDA',
-            dark: '#8C6C26',
+            DEFAULT: '#A6843D',
+            hover: '#8A6E32',
+            light: '#F7F3EA',
+            dark: '#6E5728',
           },
           amber: {
             DEFAULT: '#D97706',
@@ -44,14 +44,14 @@ export default {
         },
         // Backwards compatibility mappings
         primary: {
-          DEFAULT: '#C9A24A',
-          hover: '#B48528',
-          green: '#3F6B3A',
+          DEFAULT: '#1F4D3A',
+          hover: '#14352C',
+          green: '#1F4D3A',
         },
         secondary: {
-          DEFAULT: '#3F6B3A',
-          dark: '#223B1E',
-          light: '#EBF4EA',
+          DEFAULT: '#14352C',
+          dark: '#0E241C',
+          light: '#E7EFEA',
         },
         // Semantic Status Colors
         status: {
@@ -93,7 +93,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Tajawal', 'Cairo', 'sans-serif'],
+        sans: ['"IBM Plex Sans Arabic"', 'Tahoma', '"Segoe UI"', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       boxShadow: {
@@ -105,8 +105,8 @@ export default {
       },
       borderRadius: {
         'xl': '0.75rem',
-        '2xl': '1rem',
-        '3xl': '1.5rem',
+        '2xl': '0.75rem',
+        '3xl': '0.75rem',
       },
     },
   },

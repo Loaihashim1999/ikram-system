@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\DailyInventoryItem;
 use App\Models\DailyInventoryMovement;
+use App\Services\InventoryExpiryPolicy;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,9 +24,9 @@ class DailyInventoryController extends Controller
             $term = trim($request->search);
             $query->where(function ($q) use ($term) {
                 $q->where('name', 'like', "%{$term}%")
-                  ->orWhere('batch_number', 'like', "%{$term}%")
-                  ->orWhere('supplier', 'like', "%{$term}%")
-                  ->orWhere('category', 'like', "%{$term}%");
+                    ->orWhere('batch_number', 'like', "%{$term}%")
+                    ->orWhere('supplier', 'like', "%{$term}%")
+                    ->orWhere('category', 'like', "%{$term}%");
             });
         }
 
@@ -37,11 +38,11 @@ class DailyInventoryController extends Controller
             if ($request->status === 'low_stock') {
                 $query->whereColumn('current_quantity', '<=', 'min_threshold');
             } elseif ($request->status === 'expired') {
-                $query->whereNotNull('expiry_date')->whereDate('expiry_date', '<=', Carbon::today());
+                $query->whereNotNull('expiry_date')->whereDate('expiry_date', '<', Carbon::today());
             } elseif ($request->status === 'near_expiry') {
-                $threshold = max(0, (int) \App\Models\Setting::get('warehouse_alert_threshold_days', 10));
+                $threshold = InventoryExpiryPolicy::NEAR_EXPIRY_DAYS;
                 $query->whereNotNull('expiry_date')
-                    ->whereDate('expiry_date', '>', Carbon::today())
+                    ->whereDate('expiry_date', '>=', Carbon::today())
                     ->whereDate('expiry_date', '<=', Carbon::today()->addDays($threshold));
             } elseif ($request->status === 'available') {
                 $query->where('current_quantity', '>', 0);
@@ -56,7 +57,7 @@ class DailyInventoryController extends Controller
         $totalItems = DailyInventoryItem::count();
         $totalQuantity = DailyInventoryItem::sum('current_quantity');
         $lowStockCount = DailyInventoryItem::whereColumn('current_quantity', '<=', 'min_threshold')->count();
-        $expiredCount = DailyInventoryItem::whereNotNull('expiry_date')->whereDate('expiry_date', '<=', Carbon::today())->count();
+        $expiredCount = DailyInventoryItem::whereNotNull('expiry_date')->whereDate('expiry_date', '<', Carbon::today())->count();
         $categories = DailyInventoryItem::distinct()->whereNotNull('category')->pluck('category');
 
         return response()->json([

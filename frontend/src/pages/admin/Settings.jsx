@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import MainLayout from "../../components/layout/MainLayout";
 import api from "../../api/axios";
+import PageHeader from "../../components/ui/PageHeader";
+import Button from "../../components/ui/Button";
 
 /* ─── Default classification thresholds ─── */
 const DEFAULTS = {
@@ -50,38 +52,35 @@ export default function SettingsPage() {
 
   const Field = ({ label, name, help }) => (
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-semibold text-[var(--color-text-secondary)] mb-1">{label}</label>
       <div className="flex items-center gap-2">
         <input
           type="number"
           min="0"
           value={settings[name] ?? ""}
           onChange={(e) => setSettings((s) => ({ ...s, [name]: e.target.value }))}
-          className="w-48 rounded-xl border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 text-right font-bold text-amber-800"
+          className="ikram-control w-48 font-bold text-[var(--color-text-secondary)]"
         />
-        <span className="text-gray-500 text-sm">ريال / شهر</span>
+        <span className="text-[var(--color-text-muted)] text-sm">ريال / شهر</span>
       </div>
-      {help && <p className="text-xs text-gray-400 mt-1">{help}</p>}
+      {help && <p className="text-xs text-[var(--color-text-muted)] mt-1">{help}</p>}
     </div>
   );
 
   return (
     <MainLayout>
-      <div className="p-6 max-w-3xl mx-auto" dir="rtl">
+      <div className="mx-auto max-w-3xl space-y-6" dir="rtl">
 
-        <div className="mb-8">
-          <h1 className="text-2xl font-black text-gray-800 mb-1">⚙️ إعدادات النظام</h1>
-          <p className="text-sm text-gray-500">ضبط حدود التصنيف ومعايير الأهلية</p>
-        </div>
+        <PageHeader title="إعدادات النظام" subtitle="ضبط حدود التصنيف ومعايير الأهلية" breadcrumbs={[{ label: "الإدارة" }, { label: "الإعدادات" }]} />
 
         <form onSubmit={handleSave} className="space-y-6">
 
           {/* Classification thresholds */}
-          <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
-            <h2 className="font-bold text-amber-800 text-base mb-5 border-b border-amber-50 pb-3">
+          <div className="ikram-panel p-4 sm:p-6">
+            <h2 className="font-bold text-[var(--color-text-secondary)] text-base mb-5 border-b border-amber-50 pb-3">
               🏷️ حدود تصنيف المستفيدين (الدخل الشهري)
             </h2>
-            <p className="text-sm text-gray-600 mb-5 bg-amber-50 rounded-xl p-3 border border-amber-100">
+            <p className="text-sm text-[var(--color-text-muted)] mb-5 bg-[var(--color-bg-soft)] rounded-xl p-3 border border-[var(--color-border)]">
               يتم حساب الدخل من مجموع: <strong>الراتب + حساب المواطن + الضمان الاجتماعي + المعاش التقاعدي</strong>.
               يُصنَّف المستفيد تلقائياً بناءً على هذه الحدود.
             </p>
@@ -99,7 +98,7 @@ export default function SettingsPage() {
                   <div key={i} className="rounded-xl p-3 text-center border"
                     style={{ backgroundColor: c.bg, borderColor: c.color + "40" }}>
                     <p className="font-bold text-sm" style={{ color: c.color }}>{c.label}</p>
-                    <p className="text-xs text-gray-500 mt-1">{c.desc}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">{c.desc}</p>
                   </div>
                 ))}
               </div>
@@ -129,23 +128,23 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <div className="flex justify-end">
-            <button
+          <div className="ikram-actions justify-end">
+            <Button
               type="submit"
               disabled={loading}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-8 py-2.5 rounded-xl shadow disabled:opacity-50 transition-all"
+              loading={loading}
             >
-              {loading ? "⏳ جاري الحفظ..." : "💾 حفظ الإعدادات"}
-            </button>
+              حفظ الإعدادات
+            </Button>
           </div>
         </form>
 
         {/* Classification guide info box */}
-        <div className="mt-8 bg-white rounded-2xl shadow-md p-6 border border-gray-100">
-          <h2 className="font-bold text-amber-800 text-base mb-4 border-b border-amber-50 pb-3">
+        <div className="ikram-panel p-4 sm:p-6">
+          <h2 className="font-bold text-[var(--color-text-secondary)] text-base mb-4 border-b border-amber-50 pb-3">
             📘 كيفية تصنيف المستفيدين
           </h2>
-          <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700 leading-relaxed">
+          <ol className="list-decimal list-inside space-y-2 text-sm text-[var(--color-text-secondary)] leading-relaxed">
             <li>
               عند إضافة مستفيد، يُحسب <strong>إجمالي الدخل</strong> = (الراتب + حساب المواطن + الضمان الاجتماعي + المعاش التقاعدي + دعم الأسرة).
             </li>

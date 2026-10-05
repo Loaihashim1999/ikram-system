@@ -7,7 +7,7 @@ import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
-import QrWhatsAppCard from "../../components/common/QrWhatsAppCard";
+import HistoricalDistributionReferenceCard from "../../components/common/HistoricalDistributionReferenceCard";
 import { Eye, Edit3, Trash2, RefreshCw, X, FileText, Users, Send, Package, CheckCircle2, XCircle, FileSpreadsheet } from "lucide-react";
 import { exportArrayToExcel } from "../../utils/excelExport";
 
@@ -276,39 +276,6 @@ export default function DeliveryPage() {
   const selectedRepsList = representatives.filter((r) => selectedReps.has(r.id));
   const activeDispatchCount = recipientMode === "beneficiaries" ? selectedBens.size : selectedReps.size;
 
-  const sendSingleWhatsApp = (dist, recipient) => {
-    const rawPhone = (recipient?.phone || "").replace(/[^0-9]/g, "");
-    let phoneNum = rawPhone;
-    if (phoneNum.startsWith("0")) phoneNum = "966" + phoneNum.slice(1);
-    else if (!phoneNum.startsWith("966") && phoneNum.length === 9) phoneNum = "966" + phoneNum;
-    if (!phoneNum) phoneNum = "966574917155";
-
-    const name = recipient?.full_name || recipient?.name || "المستفيد";
-    const natId = recipient?.national_id || "—";
-    const date = scheduledAt || new Date().toISOString().split("T")[0];
-    const loc = pickupLocation || "توصيل للمنزل عبر السائق";
-    const code = dist.barcode_code || dist.qr_code || "IKRAM-SUPPORT";
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${code}`;
-
-    const driverName = selectedDriverObj?.full_name || selectedDriverObj?.name || "سائق الجمعية المعتمد";
-    const driverPhone = selectedDriverObj?.phone || "غير متوفر";
-    const basketName = selectedBasketObj?.name || "سلة دعم مخصصة";
-
-    const textMsg = `مرحباً ${name}،
-جمعية إكرام ترحب بكم وتفيدكم بتأكيد موعد وتفاصيل التوصيل:
-👤 *اسم المستفيد:* ${name}
-🪪 *رقم الهوية:* ${natId}
-📦 *سلة الدعم:* ${basketName}
-🚚 *اسم السائق:* ${driverName}
-📞 *رقم جوال السائق:* ${driverPhone}
-📅 *تاريخ التسليم:* ${date}
-📍 *موقع وتفاصيل العنوان:* ${loc}
-🔑 *كود الاستلام والـ QR:* ${code}
-📌 *رابط صورة الـ QR المباشرة:*
-${qrUrl}`;
-
-    window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(textMsg)}`, "_blank");
-  };
 
   const handleExportDeliveryExcel = () => {
     if (activeTab === "special_needs") {
@@ -383,12 +350,12 @@ ${qrUrl}`;
         />
 
         {/* Tab Buttons */}
-        <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-[#E5E2D9] gap-2">
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-[var(--color-border)] gap-2">
           <button
             onClick={() => setActiveTab("special_needs")}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === "special_needs"
-                ? "bg-[#3F6B3A] text-white shadow-xs"
+                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -398,7 +365,7 @@ ${qrUrl}`;
             onClick={() => setActiveTab("representatives")}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === "representatives"
-                ? "bg-[#3F6B3A] text-white shadow-xs"
+                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -412,25 +379,25 @@ ${qrUrl}`;
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="بحث عام بالاسم، رقم الهوية أو الإقامة، رقم الهاتف، الحي السكني..."
-            className="w-full max-w-lg rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 text-right bg-white shadow-sm font-bold"
+            className="w-full max-w-lg rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-gold)] text-right bg-white shadow-sm font-bold"
           />
         </div>
 
         {/* TAB 1: Beneficiary Home Delivery */}
         {activeTab === "special_needs" && (
-          <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
+          <div className="bg-white rounded-2xl shadow-md p-6 border border-[var(--color-border)]">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-base font-bold text-amber-900 flex items-center gap-2">
                 <span>♿</span> قائمة توصيل المنازل (كبار السن وذوو الاحتياجات الخاصة)
               </h2>
-              <span className="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-bold">
+              <span className="text-xs bg-amber-100 text-[var(--color-text-secondary)] px-3 py-1 rounded-full font-bold">
                 عدد الحالات: {filteredBeneficiaries.length}
               </span>
             </div>
 
-            <div className="overflow-x-auto border border-gray-200 rounded-2xl">
+            <div className="overflow-x-auto border border-[var(--color-border)] rounded-2xl">
               <table className="w-full text-xs text-right">
-                <thead className="bg-amber-50/80 text-amber-950 sticky top-0 border-b">
+                <thead className="bg-[var(--color-bg-soft)] text-[var(--color-text-primary)] sticky top-0 border-b">
                   <tr>
                     <th className="p-3">#</th>
                     <th className="p-3 font-bold">اسم المستفيد كامل</th>
@@ -492,7 +459,7 @@ ${qrUrl}`;
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={11} className="p-8 text-center text-gray-400">جاري التحميل...</td>
+                      <td colSpan={11} className="p-8 text-center text-[var(--color-text-muted)]">جاري التحميل...</td>
                     </tr>
                   )}
 
@@ -501,13 +468,13 @@ ${qrUrl}`;
                     const isSuspended = statusVal === "suspended";
 
                     return (
-                      <tr key={b.id || idx} className="border-b hover:bg-gray-50 transition-colors">
-                        <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
-                        <td className="p-3 font-extrabold text-gray-900">{b.full_name || b.name}</td>
-                        <td className="p-3 font-mono font-bold text-gray-700">{b.national_id || "—"}</td>
-                        <td className="p-3 font-mono text-gray-600" dir="ltr">{b.phone || "—"}</td>
-                        <td className="p-3 font-bold text-gray-700">{b.city || "مكة المكرمة"}</td>
-                        <td className="p-3 text-gray-700 font-bold">{b.district || "—"}</td>
+                      <tr key={b.id || idx} className="border-b hover:bg-[var(--color-bg-soft)] transition-colors">
+                        <td className="p-3 text-[var(--color-text-muted)] font-mono">{idx + 1}</td>
+                        <td className="p-3 font-extrabold text-[var(--color-text-primary)]">{b.full_name || b.name}</td>
+                        <td className="p-3 font-mono font-bold text-[var(--color-text-secondary)]">{b.national_id || "—"}</td>
+                        <td className="p-3 font-mono text-[var(--color-text-muted)]" dir="ltr">{b.phone || "—"}</td>
+                        <td className="p-3 font-bold text-[var(--color-text-secondary)]">{b.city || "مكة المكرمة"}</td>
+                        <td className="p-3 text-[var(--color-text-secondary)] font-bold">{b.district || "—"}</td>
                         <td className="p-3">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${(b.beneficiary_type || b.type) === "citizen" ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"}`}>
                             {(b.beneficiary_type || b.type) === "citizen" ? "مواطن" : "مقيم"}
@@ -520,7 +487,7 @@ ${qrUrl}`;
                               <span>ذوو احتياجات خاصة</span>
                             </span>
                           ) : (
-                            <span className="bg-amber-100/90 text-amber-900 border border-amber-200 px-2.5 py-1 rounded-xl text-xs font-bold inline-flex items-center gap-1.5" title="كبار السن">
+                            <span className="bg-amber-100/90 text-amber-900 border border-[var(--color-border)] px-2.5 py-1 rounded-xl text-xs font-bold inline-flex items-center gap-1.5" title="كبار السن">
                               <span>👵</span>
                               <span>كبار السن</span>
                             </span>
@@ -572,7 +539,7 @@ ${qrUrl}`;
                                       status: b.status || "active",
                                     });
                                   }}
-                                  className="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 cursor-pointer"
+                                  className="p-1.5 rounded-lg bg-[var(--color-bg-soft)] text-amber-700 hover:bg-amber-100 cursor-pointer"
                                   title="تعديل البيانات"
                                 >
                                   <Edit3 className="w-4 h-4" />
@@ -606,19 +573,19 @@ ${qrUrl}`;
 
         {/* TAB 2: Beneficiary Organizations */}
         {activeTab === "representatives" && (
-          <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
+          <div className="bg-white rounded-2xl shadow-md p-6 border border-[var(--color-border)]">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-base font-bold text-amber-900 flex items-center gap-2">
                 <span>🏢</span> توزيعات وقائمة الجهات المستفيدة والشريكة
               </h2>
-              <span className="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-bold">
+              <span className="text-xs bg-amber-100 text-[var(--color-text-secondary)] px-3 py-1 rounded-full font-bold">
                 عدد الجهات: {filteredRepresentatives.length}
               </span>
             </div>
 
-            <div className="overflow-x-auto border border-gray-200 rounded-2xl">
+            <div className="overflow-x-auto border border-[var(--color-border)] rounded-2xl">
               <table className="w-full text-xs text-right">
-                <thead className="bg-amber-50/80 text-amber-950 sticky top-0 border-b">
+                <thead className="bg-[var(--color-bg-soft)] text-[var(--color-text-primary)] sticky top-0 border-b">
                   <tr>
                     <th className="p-3">#</th>
                     <th className="p-3 font-bold">اسم الجهة المستفيدة</th>
@@ -661,7 +628,7 @@ ${qrUrl}`;
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={11} className="p-8 text-center text-gray-400">جاري التحميل...</td>
+                      <td colSpan={11} className="p-8 text-center text-[var(--color-text-muted)]">جاري التحميل...</td>
                     </tr>
                   )}
 
@@ -670,13 +637,13 @@ ${qrUrl}`;
                     const isSuspended = statusVal === "suspended";
 
                     return (
-                      <tr key={r.id || idx} className="border-b hover:bg-gray-50 transition-colors">
-                        <td className="p-3 text-gray-400 font-mono">{idx + 1}</td>
-                        <td className="p-3 font-extrabold text-gray-900">{r.organization_name || r.name || r.full_name}</td>
-                        <td className="p-3 font-mono font-bold text-gray-700">{r.license_number || r.commercial_registration || r.national_id || "—"}</td>
-                        <td className="p-3 font-mono text-gray-600" dir="ltr">{r.phone}</td>
-                        <td className="p-3 font-bold text-gray-700">{r.city || "مكة المكرمة"}</td>
-                        <td className="p-3 text-gray-700 font-bold">{r.district || r.district_name || "—"}</td>
+                      <tr key={r.id || idx} className="border-b hover:bg-[var(--color-bg-soft)] transition-colors">
+                        <td className="p-3 text-[var(--color-text-muted)] font-mono">{idx + 1}</td>
+                        <td className="p-3 font-extrabold text-[var(--color-text-primary)]">{r.organization_name || r.name || r.full_name}</td>
+                        <td className="p-3 font-mono font-bold text-[var(--color-text-secondary)]">{r.license_number || r.commercial_registration || r.national_id || "—"}</td>
+                        <td className="p-3 font-mono text-[var(--color-text-muted)]" dir="ltr">{r.phone}</td>
+                        <td className="p-3 font-bold text-[var(--color-text-secondary)]">{r.city || "مكة المكرمة"}</td>
+                        <td className="p-3 text-[var(--color-text-secondary)] font-bold">{r.district || r.district_name || "—"}</td>
                         <td className="p-3">
                           <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">{r.organization_type || "جهة شريكة"}</span>
                         </td>
@@ -725,7 +692,7 @@ ${qrUrl}`;
                                       status: r.status || "active",
                                     });
                                   }}
-                                  className="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 cursor-pointer"
+                                  className="p-1.5 rounded-lg bg-[var(--color-bg-soft)] text-amber-700 hover:bg-amber-100 cursor-pointer"
                                   title="تعديل بيانات الجهة"
                                 >
                                   <Edit3 className="w-4 h-4" />
@@ -770,33 +737,33 @@ ${qrUrl}`;
         {/* ─── Beneficiary Full Details & Documents Modal ─── */}
         {viewBeneficiary && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4" dir="rtl">
-            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-amber-100">
+            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-[var(--color-border)]">
               <div className="flex justify-between items-center border-b pb-3">
                 <h3 className="font-extrabold text-amber-900 text-base flex items-center gap-2">
                   <Eye className="w-5 h-5 text-amber-600" />
                   <span>البيانات الشاملة للمستفيد والوثائق المرفقة</span>
                 </h3>
-                <button onClick={() => setViewBeneficiary(null)} className="text-gray-500 hover:bg-gray-100 p-1 rounded-full cursor-pointer">
+                <button onClick={() => setViewBeneficiary(null)} className="text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)] p-1 rounded-full cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-xs">
-                <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
-                  <span className="text-gray-500 font-bold">اسم المستفيد الكامل:</span>
-                  <p className="font-extrabold text-gray-900 mt-1">{viewBeneficiary.full_name || viewBeneficiary.name}</p>
+                <div className="bg-[var(--color-bg-soft)]/60 p-3 rounded-xl border border-[var(--color-border)]">
+                  <span className="text-[var(--color-text-muted)] font-bold">اسم المستفيد الكامل:</span>
+                  <p className="font-extrabold text-[var(--color-text-primary)] mt-1">{viewBeneficiary.full_name || viewBeneficiary.name}</p>
                 </div>
-                <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
-                  <span className="text-gray-500 font-bold">رقم الهوية / الإقامة:</span>
-                  <p className="font-mono font-bold text-gray-800 mt-1">{viewBeneficiary.national_id || "—"}</p>
+                <div className="bg-[var(--color-bg-soft)]/60 p-3 rounded-xl border border-[var(--color-border)]">
+                  <span className="text-[var(--color-text-muted)] font-bold">رقم الهوية / الإقامة:</span>
+                  <p className="font-mono font-bold text-[var(--color-text-primary)] mt-1">{viewBeneficiary.national_id || "—"}</p>
                 </div>
-                <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
-                  <span className="text-gray-500 font-bold">رقم الجوال:</span>
-                  <p className="font-mono font-bold text-gray-800 mt-1">{viewBeneficiary.phone || "—"}</p>
+                <div className="bg-[var(--color-bg-soft)]/60 p-3 rounded-xl border border-[var(--color-border)]">
+                  <span className="text-[var(--color-text-muted)] font-bold">رقم الجوال:</span>
+                  <p className="font-mono font-bold text-[var(--color-text-primary)] mt-1">{viewBeneficiary.phone || "—"}</p>
                 </div>
-                <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
-                  <span className="text-gray-500 font-bold">العنوان:</span>
-                  <p className="font-bold text-gray-800 mt-1">{viewBeneficiary.city || "مكة"} - {viewBeneficiary.district || "—"}</p>
+                <div className="bg-[var(--color-bg-soft)]/60 p-3 rounded-xl border border-[var(--color-border)]">
+                  <span className="text-[var(--color-text-muted)] font-bold">العنوان:</span>
+                  <p className="font-bold text-[var(--color-text-primary)] mt-1">{viewBeneficiary.city || "مكة"} - {viewBeneficiary.district || "—"}</p>
                 </div>
               </div>
             </div>
@@ -806,25 +773,25 @@ ${qrUrl}`;
         {/* ─── Rep / Organization Full Details & Documents Modal ─── */}
         {viewRep && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4" dir="rtl">
-            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-amber-100">
+            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-[var(--color-border)]">
               <div className="flex justify-between items-center border-b pb-3">
                 <h3 className="font-extrabold text-amber-900 text-base flex items-center gap-2">
                   <Eye className="w-5 h-5 text-amber-600" />
                   <span>البيانات الشاملة للجهة المستفيدة والوثائق الرسمية</span>
                 </h3>
-                <button onClick={() => setViewRep(null)} className="text-gray-500 hover:bg-gray-100 p-1 rounded-full cursor-pointer">
+                <button onClick={() => setViewRep(null)} className="text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)] p-1 rounded-full cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-xs mb-4">
-                <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
-                  <span className="text-gray-500 font-bold">اسم الجهة المستفيدة:</span>
-                  <p className="font-extrabold text-gray-900 mt-1">{viewRep.organization_name || viewRep.name || viewRep.full_name}</p>
+                <div className="bg-[var(--color-bg-soft)]/60 p-3 rounded-xl border border-[var(--color-border)]">
+                  <span className="text-[var(--color-text-muted)] font-bold">اسم الجهة المستفيدة:</span>
+                  <p className="font-extrabold text-[var(--color-text-primary)] mt-1">{viewRep.organization_name || viewRep.name || viewRep.full_name}</p>
                 </div>
-                <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
-                  <span className="text-gray-500 font-bold">الحي والمدينة:</span>
-                  <p className="font-bold text-gray-800 mt-1">{viewRep.city || "مكة المكرمة"} - {viewRep.district || viewRep.district_name || "—"}</p>
+                <div className="bg-[var(--color-bg-soft)]/60 p-3 rounded-xl border border-[var(--color-border)]">
+                  <span className="text-[var(--color-text-muted)] font-bold">الحي والمدينة:</span>
+                  <p className="font-bold text-[var(--color-text-primary)] mt-1">{viewRep.city || "مكة المكرمة"} - {viewRep.district || viewRep.district_name || "—"}</p>
                 </div>
               </div>
 
@@ -833,33 +800,33 @@ ${qrUrl}`;
                 <h4 className="font-extrabold text-xs text-amber-900">الوثائق الرسمية المرفقة:</h4>
                 {!isDriver ? (
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
+                    <div className="p-3 bg-[var(--color-bg-soft)] rounded-xl border flex justify-between items-center">
                       <span>🪪 الترخيص / السجل التجاري</span>
-                      {viewRep.id_document_image_url || viewRep.license_document_url ? (
-                        <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.license_document_url || viewRep.id_document_image_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
-                      ) : <span className="text-gray-400">غير مرفق</span>}
+                      {viewRep.id_document_image_url ? (
+                        <a href={viewRep.id_document_image_url} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
+                      ) : <span className="text-[var(--color-text-muted)]">غير مرفق</span>}
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
+                    <div className="p-3 bg-[var(--color-bg-soft)] rounded-xl border flex justify-between items-center">
                       <span>📜 خطاب التفويض / الاعتماد</span>
                       {viewRep.support_letter_url ? (
-                        <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.support_letter_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
-                      ) : <span className="text-gray-400">غير مرفق</span>}
+                        <a href={viewRep.support_letter_url} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
+                      ) : <span className="text-[var(--color-text-muted)]">غير مرفق</span>}
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
+                    <div className="p-3 bg-[var(--color-bg-soft)] rounded-xl border flex justify-between items-center">
                       <span>📍 مستند العنوان الوطني</span>
                       {viewRep.national_address_doc_url ? (
-                        <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.national_address_doc_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
-                      ) : <span className="text-gray-400">غير مرفق</span>}
+                        <a href={viewRep.national_address_doc_url} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">عرض</a>
+                      ) : <span className="text-[var(--color-text-muted)]">غير مرفق</span>}
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-xl border flex justify-between items-center">
+                    <div className="p-3 bg-[var(--color-bg-soft)] rounded-xl border flex justify-between items-center">
                       <span>📦 قوائم المستفيدين التابعين</span>
                       {viewRep.dependents_ids_zip_url ? (
-                        <a href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/storage/${viewRep.dependents_ids_zip_url}`} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">تنزيل</a>
-                      ) : <span className="text-gray-400">غير مرفق</span>}
+                        <a href={viewRep.dependents_ids_zip_url} target="_blank" rel="noreferrer" className="text-amber-700 font-bold underline">تنزيل</a>
+                      ) : <span className="text-[var(--color-text-muted)]">غير مرفق</span>}
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3.5 bg-amber-50/80 rounded-xl border border-amber-200 text-center font-bold text-amber-900 text-xs">
+                  <div className="p-3.5 bg-[var(--color-bg-soft)] rounded-xl border border-[var(--color-border)] text-center font-bold text-amber-900 text-xs">
                     🔒 الوثائق الرسمية والمرفقات محمية ومتاحة فقط لإدارة الجمعية والمشرفين
                   </div>
                 )}
@@ -871,13 +838,13 @@ ${qrUrl}`;
         {/* ─── DEDICATED HOME DELIVERY SUPPORT DISPATCH MODAL (تقديم وتوجيه دعم التوصيل) ─── */}
         {showDispatchModal && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
-            <div className="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl overflow-hidden border border-amber-100 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl overflow-hidden border border-[var(--color-border)] max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center border-b pb-3 mb-4">
                 <h3 className="font-extrabold text-amber-900 text-lg flex items-center gap-2">
                   <Send className="w-5 h-5 text-amber-600" />
                   <span>🚀 تقديم وتوجيه دعم التوصيل المباشر لكبار السن وذوي الاحتياجات والجهات المستفيدة</span>
                 </h3>
-                <button onClick={() => setShowDispatchModal(false)} className="text-gray-500 hover:bg-gray-100 p-1 rounded-full cursor-pointer">
+                <button onClick={() => setShowDispatchModal(false)} className="text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)] p-1 rounded-full cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -890,16 +857,16 @@ ${qrUrl}`;
                       <div
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                           i === dispatchStep
-                            ? "bg-amber-600 text-white shadow-md"
+                            ? "bg-[var(--color-brand-green)] text-white shadow-md"
                             : i < dispatchStep
                             ? "bg-green-100 text-green-700 border border-green-200"
-                            : "bg-gray-100 text-gray-500"
+                            : "bg-[var(--color-bg-soft)] text-[var(--color-text-muted)]"
                         }`}
                       >
                         <span>{i < dispatchStep ? "✓" : i + 1}</span>
                         {s}
                       </div>
-                      {i < DISPATCH_STEPS.length - 1 && <div className="w-4 h-0.5 bg-gray-200 mx-1" />}
+                      {i < DISPATCH_STEPS.length - 1 && <div className="w-4 h-0.5 bg-[var(--color-bg-soft)] mx-1" />}
                     </div>
                   ))}
                 </div>
@@ -909,19 +876,19 @@ ${qrUrl}`;
               {dispatchStep === 0 && (
                 <div className="space-y-4 text-xs">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-gray-700">اختر قائمة المستفيدين أو الجهات المستفيدة لتوجيه التوصيل:</span>
-                    <div className="flex bg-gray-100 p-1 rounded-xl">
+                    <span className="font-bold text-[var(--color-text-secondary)]">اختر قائمة المستفيدين أو الجهات المستفيدة لتوجيه التوصيل:</span>
+                    <div className="flex bg-[var(--color-bg-soft)] p-1 rounded-xl">
                       <button
                         type="button"
                         onClick={() => setRecipientMode("beneficiaries")}
-                        className={`px-3 py-1 rounded-lg font-bold cursor-pointer ${recipientMode === "beneficiaries" ? "bg-amber-600 text-white" : "text-gray-600"}`}
+                        className={`px-3 py-1 rounded-lg font-bold cursor-pointer ${recipientMode === "beneficiaries" ? "bg-[var(--color-brand-green)] text-white" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"}`}
                       >
                         👵 كبار السن وذوو الاحتياجات ({beneficiaries.length})
                       </button>
                       <button
                         type="button"
                         onClick={() => setRecipientMode("representatives")}
-                        className={`px-3 py-1 rounded-lg font-bold cursor-pointer ${recipientMode === "representatives" ? "bg-amber-600 text-white" : "text-gray-600"}`}
+                        className={`px-3 py-1 rounded-lg font-bold cursor-pointer ${recipientMode === "representatives" ? "bg-[var(--color-brand-green)] text-white" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"}`}
                       >
                         🏢 الجهات المستفيدة ({representatives.length})
                       </button>
@@ -933,13 +900,13 @@ ${qrUrl}`;
                     value={dispatchSearchQ}
                     onChange={(e) => setDispatchSearchQ(e.target.value)}
                     placeholder="بحث سريع بالاسم، الهوية، أو رقم الجوال..."
-                    className="w-full rounded-xl border border-gray-300 p-2 text-xs font-bold"
+                    className="w-full rounded-xl border border-[var(--color-border)] p-2 text-xs font-bold"
                   />
 
                   {recipientMode === "beneficiaries" ? (
-                    <div className="overflow-x-auto max-h-60 overflow-y-auto border border-gray-200 rounded-xl">
+                    <div className="overflow-x-auto max-h-60 overflow-y-auto border border-[var(--color-border)] rounded-xl">
                       <table className="w-full text-xs text-right">
-                        <thead className="bg-amber-50 text-amber-900 border-b sticky top-0">
+                        <thead className="bg-[var(--color-bg-soft)] text-amber-900 border-b sticky top-0">
                           <tr>
                             <th className="p-2 w-8">#</th>
                             <th className="p-2">اسم المستفيد</th>
@@ -953,7 +920,7 @@ ${qrUrl}`;
                             <tr
                               key={b.id}
                               onClick={() => toggleSelectBenDispatch(b.id)}
-                              className={`border-b cursor-pointer ${selectedBens.has(b.id) ? "bg-amber-50 font-bold" : "hover:bg-gray-50"}`}
+                              className={`border-b cursor-pointer ${selectedBens.has(b.id) ? "bg-[var(--color-bg-soft)] font-bold" : "hover:bg-[var(--color-bg-soft)]"}`}
                             >
                               <td className="p-2">
                                 <input type="checkbox" checked={selectedBens.has(b.id)} readOnly className="rounded text-amber-600" />
@@ -968,9 +935,9 @@ ${qrUrl}`;
                       </table>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto max-h-60 overflow-y-auto border border-gray-200 rounded-xl">
+                    <div className="overflow-x-auto max-h-60 overflow-y-auto border border-[var(--color-border)] rounded-xl">
                       <table className="w-full text-xs text-right">
-                        <thead className="bg-amber-50 text-amber-900 border-b sticky top-0">
+                        <thead className="bg-[var(--color-bg-soft)] text-amber-900 border-b sticky top-0">
                           <tr>
                             <th className="p-2 w-8">#</th>
                             <th className="p-2">اسم الجهة المستفيدة</th>
@@ -984,7 +951,7 @@ ${qrUrl}`;
                             <tr
                               key={r.id}
                               onClick={() => toggleSelectRepDispatch(r.id)}
-                              className={`border-b cursor-pointer ${selectedReps.has(r.id) ? "bg-amber-50 font-bold" : "hover:bg-gray-50"}`}
+                              className={`border-b cursor-pointer ${selectedReps.has(r.id) ? "bg-[var(--color-bg-soft)] font-bold" : "hover:bg-[var(--color-bg-soft)]"}`}
                             >
                               <td className="p-2">
                                 <input type="checkbox" checked={selectedReps.has(r.id)} readOnly className="rounded text-amber-600" />
@@ -999,14 +966,14 @@ ${qrUrl}`;
                       </table>
                     </div>
                   )}
-                  <div className="text-xs text-gray-500 font-bold">تم تحديد {activeDispatchCount} عنصر للتوصيل</div>
+                  <div className="text-xs text-[var(--color-text-muted)] font-bold">تم تحديد {activeDispatchCount} عنصر للتوصيل</div>
                 </div>
               )}
 
               {/* STEP 1: Select Driver */}
               {dispatchStep === 1 && (
                 <div className="space-y-4 text-xs">
-                  <h4 className="font-bold text-gray-700">اختر السائق المعتمد لتوصيل هذه الشحنة:</h4>
+                  <h4 className="font-bold text-[var(--color-text-secondary)]">اختر السائق المعتمد لتوصيل هذه الشحنة:</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {drivers.map((d) => (
                       <button
@@ -1014,11 +981,11 @@ ${qrUrl}`;
                         type="button"
                         onClick={() => setSelectedDriverId(String(d.id))}
                         className={`p-4 rounded-2xl border-2 text-right transition-all cursor-pointer ${
-                          String(selectedDriverId) === String(d.id) ? "border-amber-500 bg-amber-50 shadow-md font-bold" : "border-gray-200 bg-white"
+                          String(selectedDriverId) === String(d.id) ? "border-amber-500 bg-[var(--color-bg-soft)] shadow-md font-bold" : "border-[var(--color-border)] bg-white"
                         }`}
                       >
-                        <div className="font-bold text-sm text-gray-800">{d.full_name || d.name}</div>
-                        <div className="text-gray-600 font-mono text-[11px] mt-1">📞 {d.phone || "—"}</div>
+                        <div className="font-bold text-sm text-[var(--color-text-primary)]">{d.full_name || d.name}</div>
+                        <div className="text-[var(--color-text-muted)] font-mono text-[11px] mt-1">📞 {d.phone || "—"}</div>
                         <div className="text-[10px] text-green-700 font-bold mt-2">🚚 سائق توصيل متاح</div>
                       </button>
                     ))}
@@ -1029,7 +996,7 @@ ${qrUrl}`;
               {/* STEP 2: Select Basket */}
               {dispatchStep === 2 && (
                 <div className="space-y-4 text-xs">
-                  <h4 className="font-bold text-gray-700">اختر سلة الدعم من المستودع:</h4>
+                  <h4 className="font-bold text-[var(--color-text-secondary)]">اختر سلة الدعم من المستودع:</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {baskets.map((b) => (
                       <button
@@ -1037,11 +1004,11 @@ ${qrUrl}`;
                         type="button"
                         onClick={() => setBasketId(String(b.id))}
                         className={`p-4 rounded-2xl border-2 text-right transition-all cursor-pointer ${
-                          String(basketId) === String(b.id) ? "border-amber-500 bg-amber-50 shadow-md font-bold" : "border-gray-200 bg-white"
+                          String(basketId) === String(b.id) ? "border-amber-500 bg-[var(--color-bg-soft)] shadow-md font-bold" : "border-[var(--color-border)] bg-white"
                         }`}
                       >
-                        <div className="font-bold text-sm text-gray-800">{b.name}</div>
-                        <div className="text-[11px] text-gray-500 mt-1">{b.description || "سلة دعم mخصصة للمنازل"}</div>
+                        <div className="font-bold text-sm text-[var(--color-text-primary)]">{b.name}</div>
+                        <div className="text-[11px] text-[var(--color-text-muted)] mt-1">{b.description || "سلة دعم mخصصة للمنازل"}</div>
                         <div className="text-[11px] font-bold text-green-700 mt-2">المتوفّر: {b.current_quantity ?? b.stock_quantity ?? 0} وحدة</div>
                       </button>
                     ))}
@@ -1052,7 +1019,7 @@ ${qrUrl}`;
               {/* STEP 3: Date & Location */}
               {dispatchStep === 3 && (
                 <div className="space-y-4 text-xs">
-                  <h4 className="font-bold text-gray-700">الخطوة 4: تحديد موعد التوصيل وملاحظات التسليم:</h4>
+                  <h4 className="font-bold text-[var(--color-text-secondary)]">الخطوة 4: تحديد موعد التوصيل وملاحظات التسليم:</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block font-bold mb-1">تاريخ التوصيل المجدول *</label>
@@ -1075,32 +1042,32 @@ ${qrUrl}`;
                   </h4>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-center">
-                    <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200">
+                    <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-2xl border border-[var(--color-border)]">
                       <div className="text-2xl font-extrabold text-amber-900">{activeDispatchCount}</div>
-                      <div className="text-[11px] text-gray-600 font-bold mt-1">عدد المستفيدين / الجهات المحددة</div>
+                      <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-1">عدد المستفيدين / الجهات المحددة</div>
                     </div>
 
-                    <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200">
-                      <div className="text-sm font-extrabold text-gray-800">{selectedDriverObj?.full_name || selectedDriverObj?.name || "سائق الجمعية المعتمد"}</div>
-                      <div className="text-[11px] text-gray-600 font-mono mt-0.5">📞 {selectedDriverObj?.phone || "—"}</div>
+                    <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-2xl border border-[var(--color-border)]">
+                      <div className="text-sm font-extrabold text-[var(--color-text-primary)]">{selectedDriverObj?.full_name || selectedDriverObj?.name || "سائق الجمعية المعتمد"}</div>
+                      <div className="text-[11px] text-[var(--color-text-muted)] font-mono mt-0.5">📞 {selectedDriverObj?.phone || "—"}</div>
                       <div className="text-[10px] text-amber-700 font-bold mt-1">🚚 السائق المكلف بالتوصيل</div>
                     </div>
 
-                    <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200">
+                    <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-2xl border border-[var(--color-border)]">
                       <div className="text-sm font-extrabold text-amber-900">{selectedBasketObj?.name || "سلة دعم مخصصة"}</div>
-                      <div className="text-[11px] text-gray-600 font-bold mt-0.5">📅 {scheduledAt}</div>
+                      <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-0.5">📅 {scheduledAt}</div>
                       <div className="text-[10px] text-amber-700 font-bold mt-1">📦 السلة وموعد التسليم</div>
                     </div>
                   </div>
 
                   {/* Beneficiaries/Reps Review List */}
-                  <div className="border border-amber-200 rounded-xl p-3 bg-gray-50/60 max-h-40 overflow-y-auto">
-                    <div className="font-bold text-gray-700 mb-2">قائمة المستهدفين بالشحنة:</div>
+                  <div className="border border-[var(--color-border)] rounded-xl p-3 bg-[var(--color-bg-soft)]/60 max-h-40 overflow-y-auto">
+                    <div className="font-bold text-[var(--color-text-secondary)] mb-2">قائمة المستهدفين بالشحنة:</div>
                     <ul className="space-y-1">
                       {(recipientMode === "beneficiaries" ? selectedBensList : selectedRepsList).map((item, idx) => (
                         <li key={item.id || idx} className="bg-white p-2 rounded-lg border flex justify-between items-center text-[11px]">
-                          <span className="font-bold text-gray-800">{idx + 1}. {item.organization_name || item.name || item.full_name}</span>
-                          <span className="font-mono text-gray-600">📱 {item.phone || "—"} | 📍 {item.city || "مكة المكرمة"} - {item.district || item.district_name || "—"}</span>
+                          <span className="font-bold text-[var(--color-text-primary)]">{idx + 1}. {item.organization_name || item.name || item.full_name}</span>
+                          <span className="font-mono text-[var(--color-text-muted)]">📱 {item.phone || "—"} | 📍 {item.city || "مكة المكرمة"} - {item.district || item.district_name || "—"}</span>
                         </li>
                       ))}
                     </ul>
@@ -1114,7 +1081,7 @@ ${qrUrl}`;
                   <button
                     disabled={dispatchStep === 0}
                     onClick={() => setDispatchStep((s) => s - 1)}
-                    className="px-5 py-2 rounded-xl bg-gray-200 text-gray-700 font-bold disabled:opacity-50 cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] font-bold disabled:opacity-50 cursor-pointer"
                   >
                     السابق
                   </button>
@@ -1122,7 +1089,7 @@ ${qrUrl}`;
                     <button
                       disabled={(dispatchStep === 0 && activeDispatchCount === 0) || (dispatchStep === 1 && !selectedDriverId) || (dispatchStep === 2 && !basketId)}
                       onClick={() => setDispatchStep((s) => s + 1)}
-                      className="px-6 py-2 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700 disabled:opacity-50 cursor-pointer"
+                      className="px-6 py-2 rounded-xl bg-[var(--color-brand-green)] text-white font-bold hover:bg-[var(--color-brand-green-hover)] disabled:opacity-50 cursor-pointer"
                     >
                       التالي
                     </button>
@@ -1130,7 +1097,7 @@ ${qrUrl}`;
                     <button
                       disabled={submittingDispatch}
                       onClick={handleSubmitHomeDeliveryDispatch}
-                      className="px-8 py-2.5 rounded-xl bg-green-600 text-white font-extrabold hover:bg-green-700 cursor-pointer shadow-md text-sm"
+                      className="px-8 py-2.5 rounded-xl bg-[var(--color-brand-green)] text-white font-extrabold hover:bg-[var(--color-brand-green-hover)] cursor-pointer shadow-md text-sm"
                     >
                       {submittingDispatch ? "جاري الإرسال وتوليد الـ QR..." : "🚀 تأكيد وإرسال التوصيل وتوليد الـ QR"}
                     </button>
@@ -1138,12 +1105,12 @@ ${qrUrl}`;
                 </div>
               )}
 
-              {/* STEP 5 (Index 5): Result Step with WhatsApp & QR after Submit */}
+              {/* STEP 5 (Index 5): Result step with historical QR reference after submit */}
               {dispatchStep === 5 && dispatchResult && (
                 <div className="space-y-4 text-xs">
                   <div className="text-center py-4 bg-green-50 rounded-2xl border border-green-200">
                     <div className="text-green-600 font-extrabold text-base">تم إرسال وتوجيه التوصيل بنجاح 🚀</div>
-                    <p className="text-gray-600 text-xs mt-1">تمت الإحالة لحساب السائق ({selectedDriverObj?.full_name || selectedDriverObj?.name}) وتوليد أكواد الـ QR</p>
+                    <p className="text-[var(--color-text-muted)] text-xs mt-1">تمت الإحالة لحساب السائق ({selectedDriverObj?.full_name || selectedDriverObj?.name}) وتوليد أكواد الـ QR</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-72 overflow-y-auto">
@@ -1174,7 +1141,7 @@ ${qrUrl}`;
 🔑 *رمز الاستلام والـ QR:* ${code}`;
 
                       return (
-                        <QrWhatsAppCard
+                        <HistoricalDistributionReferenceCard
                           key={dist.id || idx}
                           text={code}
                           recipientName={name}

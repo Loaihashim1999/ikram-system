@@ -17,9 +17,9 @@ export default function KpiCard({
   onClick,
 }) {
   const iconColorStyles = {
-    amber: 'bg-[#FEF3C7] text-[#D97706]',
-    green: 'bg-[#EBF4EA] text-[#3F6B3A]',
-    gold: 'bg-[#F5EDDA] text-[#C9A24A]',
+    amber: 'bg-[#FEF3C7] text-[var(--color-brand-green)]',
+    green: 'bg-[#EBF4EA] text-[var(--color-brand-green)]',
+    gold: 'bg-[var(--color-bg-soft)] text-[var(--color-brand-gold)]',
     blue: 'bg-sky-50 text-sky-600',
     red: 'bg-red-50 text-red-600',
     purple: 'bg-purple-50 text-purple-600',
@@ -28,17 +28,17 @@ export default function KpiCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl p-5 border border-[#E5E2D9] shadow-xs hover:shadow-card-hover transition-all duration-200 ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`ikram-panel p-4 ${onClick ? 'cursor-pointer' : ''} ${className}`}
       dir="rtl"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <span className="text-xs font-bold text-gray-500 block">{title}</span>
-          <div className="text-2xl lg:text-3xl font-black text-gray-900 font-mono tracking-tight">
+          <span className="text-xs font-bold text-[var(--color-text-muted)] block">{title}</span>
+          <div className="text-2xl font-black text-[var(--color-text-primary)] ikram-numeric">
             {value}
           </div>
           {subtitle && (
-            <p className="text-xs text-gray-500 pt-0.5">{subtitle}</p>
+            <p className="text-xs text-[var(--color-text-muted)] pt-0.5">{subtitle}</p>
           )}
           {trend && (
             <div className="flex items-center gap-1 text-xs font-semibold pt-1">
@@ -48,7 +48,7 @@ export default function KpiCard({
                     ? 'text-emerald-600'
                     : trendType === 'down'
                     ? 'text-red-600'
-                    : 'text-gray-500'
+                    : 'text-[var(--color-text-muted)]'
                 }
               >
                 {trend}

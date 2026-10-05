@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DailyReceivingController extends Controller
 {
@@ -25,11 +26,11 @@ class DailyReceivingController extends Controller
             $term = trim($request->search);
             $query->where(function ($q) use ($term) {
                 $q->where('document_number', 'like', "%{$term}%")
-                  ->orWhereHas('beneficiary', function ($bq) use ($term) {
-                      $bq->where('full_name', 'like', "%{$term}%")
-                         ->orWhere('national_id', 'like', "%{$term}%")
-                         ->orWhere('phone', 'like', "%{$term}%");
-                  });
+                    ->orWhereHas('beneficiary', function ($bq) use ($term) {
+                        $bq->where('full_name', 'like', "%{$term}%")
+                            ->orWhere('national_id', 'like', "%{$term}%")
+                            ->orWhere('phone', 'like', "%{$term}%");
+                    });
             });
         }
 
@@ -92,7 +93,7 @@ class DailyReceivingController extends Controller
         ]);
 
         $quantity = $validated['quantity'] ?? 1;
-        $receivingDate = !empty($validated['receiving_date']) ? Carbon::parse($validated['receiving_date']) : Carbon::now();
+        $receivingDate = ! empty($validated['receiving_date']) ? Carbon::parse($validated['receiving_date']) : Carbon::now();
 
         return DB::transaction(function () use ($validated, $quantity, $receivingDate, $request) {
             // 1. قفل صنف المستودع والتحقق من توفر الكمية الكافية
@@ -155,13 +156,27 @@ class DailyReceivingController extends Controller
 
             // 8. تسجيل في سجل التدقيق
             try {
-                AuditLog::create([
-                    'user_id' => $request->user()?->id,
-                    'action' => 'DAILY_RECEIVING_CONFIRMED',
-                    'details' => "تسليم مساعدة يومية ({$documentNumber}) للمستفيد {$beneficiary->full_name} - {$quantity} {$item->unit} من {$item->name}",
-                ]);
+                // A savepoint keeps best-effort audit failures from aborting the receiving transaction.
+                DB::transaction(function () use ($request, $transaction, $beneficiary, $item, $quantity) {
+                    AuditLog::create([
+                        'user_id' => $request->user()?->id,
+                        'action' => 'DAILY_RECEIVING_CONFIRMED',
+                        'target_table' => 'daily_receiving_transactions',
+                        'target_id' => $transaction->id,
+                        'details' => [
+                            'daily_beneficiary_id' => $beneficiary->id,
+                            'daily_inventory_item_id' => $item->id,
+                            'quantity' => $quantity,
+                        ],
+                    ]);
+                });
             } catch (\Exception $e) {
-                // non-blocking
+                Log::warning('Daily receiving confirmation audit persistence failed.', [
+                    'target_table' => 'daily_receiving_transactions',
+                    'target_id' => $transaction->id,
+                    'actor_id' => $request->user()?->id,
+                    'exception_class' => get_class($e),
+                ]);
             }
 
             return response()->json([

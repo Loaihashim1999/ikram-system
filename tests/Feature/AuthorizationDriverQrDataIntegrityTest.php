@@ -30,17 +30,23 @@ class AuthorizationDriverQrDataIntegrityTest extends TestCase
             'username' => 'TEST_DRIVER_FIXED', 'full_name' => 'TEST DRIVER', 'password' => 'StrongDriver123!',
             'role' => 'delivery_driver',
             'permissions' => ['settings' => ['view' => true, 'delete' => true], 'beneficiaries' => ['view' => true]],
-        ])->assertCreated();
-        $driver = User::findOrFail($response->json('data.id'));
+        ])->assertUnprocessable()->assertJsonValidationErrors('role');
+        $this->assertDatabaseMissing('users', ['username' => 'TEST_DRIVER_FIXED']);
+        // Existing historical accounts retain attribution and their restricted grants.
+        $driver = $this->user('delivery_driver', User::DRIVER_PERMISSIONS);
+        $this->putJson('/api/users/'.$driver->id, ['role' => 'delivery_driver', 'permissions' => ['settings' => ['view' => true]]])->assertOk();
+        $driver->refresh();
         $this->assertSame(User::DRIVER_PERMISSIONS, $driver->permissions);
 
-        Sanctum::actingAs($driver);
+        // Simulate the required initial password change before exercising normal driver APIs.
+        $driver->forceFill(['must_change_password' => false, 'temporary_password_expires_at' => null])->save();
+        Sanctum::actingAs($driver->fresh());
         $this->getJson('/api/users')->assertForbidden();
         $this->getJson('/api/beneficiaries')->assertForbidden();
-        $this->getJson('/api/drivers')->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/drivers')->assertForbidden();
     }
 
-    public function test_driver_sees_only_assigned_tasks_and_qr_manual_code_share_secure_flow(): void
+    public function test_legacy_driver_and_qr_are_retired_without_deleting_history(): void
     {
         $admin = $this->user();
         $driver = $this->user('delivery_driver', User::DRIVER_PERMISSIONS);
@@ -50,14 +56,18 @@ class AuthorizationDriverQrDataIntegrityTest extends TestCase
         $assigned = Distribution::create(['beneficiary_id' => $beneficiary->id, 'basket_id' => $basket->id, 'assigned_by' => $admin->id, 'driver_id' => $driver->id, 'scheduled_at' => now(), 'barcode_code' => 'TEST-MANUAL-QR-ONE', 'status' => 'scheduled']);
         Distribution::create(['beneficiary_id' => $beneficiary->id, 'basket_id' => $basket->id, 'assigned_by' => $admin->id, 'driver_id' => $other->id, 'scheduled_at' => now(), 'barcode_code' => 'TEST-MANUAL-QR-TWO', 'status' => 'scheduled']);
 
-        Sanctum::actingAs($driver);
-        $this->getJson('/api/drivers/deliveries')->assertOk()
-            ->assertJsonCount(1, 'data.beneficiary_deliveries')
-            ->assertJsonPath('data.beneficiary_deliveries.0.id', $assigned->id);
-        $this->getJson('/api/receiver/scan/test-manual-qr-one')->assertOk()->assertJsonPath('data.id', $assigned->id);
-        $this->postJson('/api/receiver/confirm/test-manual-qr-one')->assertOk()->assertJsonPath('distribution.id', $assigned->id);
-        $this->postJson('/api/receiver/confirm/test-manual-qr-one')->assertConflict();
+        Sanctum::actingAs($driver->fresh());
+        $this->getJson('/api/drivers/deliveries')->assertForbidden();
+        $this->getJson('/api/receiver/scan/test-manual-qr-one')->assertForbidden();
+        $this->postJson('/api/receiver/confirm/test-manual-qr-one')->assertForbidden();
+        $this->postJson('/api/receiver/confirm/test-manual-qr-one')->assertForbidden();
         $this->postJson('/api/receiver/confirm/test-manual-qr-two')->assertForbidden();
+        $this->putJson('/api/distributions/'.Distribution::where('barcode_code', 'TEST-MANUAL-QR-TWO')->value('id').'/received')->assertForbidden();
+        $this->postJson('/api/distributions/'.Distribution::where('barcode_code', 'TEST-MANUAL-QR-TWO')->value('id').'/whatsapp')->assertForbidden();
+        Sanctum::actingAs($admin);
+        $this->getJson('/api/receiver/scan/test-manual-qr-one')->assertStatus(410);
+        $this->postJson('/api/receiver/confirm/test-manual-qr-one')->assertStatus(410);
+        $this->assertSame('scheduled', $assigned->fresh()->status);
         $pdf = $this->get('/api/documents/individual-receipt/'.$assigned->id.'/pdf')->assertOk();
         $this->assertStringStartsWith('%PDF', $pdf->getContent());
     }
