@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
-import { getApiBaseUrl } from "../../utils/documentUrl";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
@@ -28,7 +27,7 @@ export default function AuditPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const API_BASE = getApiBaseUrl();
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com');
 
   const handleExportExcel = async () => {
     setExporting(true);
@@ -124,7 +123,7 @@ export default function AuditPage() {
         <button
           onClick={() => setTab("distributions")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-            tab === "distributions" ? "bg-[var(--color-brand-green)] text-white shadow-sm" : "bg-white text-[var(--color-text-muted)] border hover:bg-[var(--color-bg-soft)]"
+            tab === "distributions" ? "bg-amber-600 text-white shadow-sm" : "bg-white text-gray-600 border hover:bg-amber-50"
           }`}
         >
           <Package className="w-4 h-4" />
@@ -134,7 +133,7 @@ export default function AuditPage() {
         <button
           onClick={() => setTab("representatives")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-            tab === "representatives" ? "bg-[var(--color-brand-green)] text-white shadow-sm" : "bg-white text-[var(--color-text-muted)] border hover:bg-[var(--color-bg-soft)]"
+            tab === "representatives" ? "bg-amber-600 text-white shadow-sm" : "bg-white text-gray-600 border hover:bg-amber-50"
           }`}
         >
           <MapPin className="w-4 h-4" />
@@ -145,7 +144,7 @@ export default function AuditPage() {
         <button
           onClick={() => setTab("movements")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-            tab === "movements" ? "bg-[var(--color-brand-green)] text-white shadow-sm" : "bg-white text-[var(--color-text-muted)] border hover:bg-[var(--color-bg-soft)]"
+            tab === "movements" ? "bg-amber-600 text-white shadow-sm" : "bg-white text-gray-600 border hover:bg-amber-50"
           }`}
         >
           <FileText className="w-4 h-4" />
@@ -155,7 +154,7 @@ export default function AuditPage() {
         <button
           onClick={() => setTab("drivers")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-            tab === "drivers" ? "bg-[var(--color-brand-green)] text-white shadow-sm" : "bg-white text-[var(--color-text-muted)] border hover:bg-[var(--color-bg-soft)]"
+            tab === "drivers" ? "bg-amber-600 text-white shadow-sm" : "bg-white text-gray-600 border hover:bg-amber-50"
           }`}
         >
           <Truck className="w-4 h-4" />
@@ -164,13 +163,13 @@ export default function AuditPage() {
       </div>
 
       {/* Main Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-[var(--color-border)] p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         
         {/* Tab 1: Distributions & Receipts */}
         {tab === "distributions" && (
-          <div className="overflow-x-auto border border-[var(--color-border)] rounded-xl text-xs">
+          <div className="overflow-x-auto border border-gray-200 rounded-xl text-xs">
             <table className="w-full text-right">
-              <thead className="bg-[var(--color-bg-soft)]/70 text-amber-900 border-b">
+              <thead className="bg-amber-50/70 text-amber-900 border-b">
                 <tr>
                   <th className="p-3">#</th>
                   <th className="p-3 font-bold">اسم المستفيد</th>
@@ -194,20 +193,20 @@ export default function AuditPage() {
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={8} className="p-8 text-center text-[var(--color-text-muted)]">جاري التحميل...</td></tr>
+                  <tr><td colSpan={8} className="p-8 text-center text-gray-400">جاري التحميل...</td></tr>
                 )}
                 {!loading && data.distributions
                   .filter((d) => statusFilter === "all" || (statusFilter === "delivered" ? d.status === "delivered" : d.status !== "delivered"))
                   .map((d, idx) => (
-                  <tr key={d.id || idx} className="border-b hover:bg-[var(--color-bg-soft)]">
-                    <td className="p-3 text-[var(--color-text-muted)]">{idx + 1}</td>
-                    <td className="p-3 font-bold text-[var(--color-text-primary)]">{d.beneficiaries?.full_name || d.beneficiary?.name || "مستفيد"}</td>
-                    <td className="p-3"><span className="bg-amber-100 text-[var(--color-text-secondary)] px-2 py-0.5 rounded-full font-bold text-[11px]">مستحق</span></td>
+                  <tr key={d.id || idx} className="border-b hover:bg-gray-50">
+                    <td className="p-3 text-gray-400">{idx + 1}</td>
+                    <td className="p-3 font-bold text-gray-800">{d.beneficiaries?.full_name || d.beneficiary?.name || "مستفيد"}</td>
+                    <td className="p-3"><span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold text-[11px]">مستحق</span></td>
                     <td className="p-3 font-bold">{d.basket?.name || "سلة دعم"}</td>
                     <td className="p-3 font-mono">{d.scheduled_at ? new Date(d.scheduled_at).toLocaleDateString('ar-SA') : "—"}</td>
                     <td className="p-3 font-mono font-bold text-amber-900">{d.barcode_code}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${d.status === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-[var(--color-text-secondary)]'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${d.status === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
                         {d.status === 'delivered' ? 'تم الاستلام ✓' : 'قيد الانتظار'}
                       </span>
                     </td>
@@ -216,7 +215,7 @@ export default function AuditPage() {
                         href={`${API_BASE}/api/documents/individual-receipt/${d.id}/pdf`}
                         target="_blank"
                         rel="noreferrer"
-                        className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-bold px-3 py-1 rounded-lg text-xs flex items-center gap-1 shadow-sm"
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1 rounded-lg text-xs flex items-center gap-1 shadow-sm"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>سند الاستلام الفردي</span>
@@ -226,7 +225,7 @@ export default function AuditPage() {
                         href={`${API_BASE}/api/documents/total-delivery/${d.beneficiary_id}/pdf`}
                         target="_blank"
                         rel="noreferrer"
-                        className="bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-soft)] font-bold px-3 py-1 rounded-lg text-xs flex items-center gap-1"
+                        className="bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold px-3 py-1 rounded-lg text-xs flex items-center gap-1"
                       >
                         <FileText className="w-3.5 h-3.5" />
                         <span>السند الشامل</span>
@@ -241,9 +240,9 @@ export default function AuditPage() {
 
         {/* Tab 2: Representatives Documents */}
         {tab === "representatives" && (
-          <div className="overflow-x-auto border border-[var(--color-border)] rounded-xl text-xs">
+          <div className="overflow-x-auto border border-gray-200 rounded-xl text-xs">
             <table className="w-full text-right">
-              <thead className="bg-[var(--color-bg-soft)]/70 text-amber-900 border-b">
+              <thead className="bg-amber-50/70 text-amber-900 border-b">
                 <tr>
                   <th className="p-3">#</th>
                   <th className="p-3 font-bold">اسم الجهة المستفيدة</th>
@@ -255,9 +254,9 @@ export default function AuditPage() {
               </thead>
               <tbody>
                 {data.representatives.map((r, idx) => (
-                  <tr key={r.id || idx} className="border-b hover:bg-[var(--color-bg-soft)]">
-                    <td className="p-3 text-[var(--color-text-muted)]">{idx + 1}</td>
-                    <td className="p-3 font-bold text-[var(--color-text-primary)]">{r.organization_name || r.name || r.full_name}</td>
+                  <tr key={r.id || idx} className="border-b hover:bg-gray-50">
+                    <td className="p-3 text-gray-400">{idx + 1}</td>
+                    <td className="p-3 font-bold text-gray-800">{r.organization_name || r.name || r.full_name}</td>
                     <td className="p-3 font-bold text-amber-900">{r.district || r.district_name || r.city || "—"}</td>
                     <td className="p-3 font-mono">{r.license_number || r.national_id || "—"}</td>
                     <td className="p-3 font-bold text-green-700">{r.beneficiaries_count || r.beneficiariesCount || 0} مستفيد</td>
@@ -266,7 +265,7 @@ export default function AuditPage() {
                         href={`${API_BASE}/api/documents/rep-receipt/${r.id}/pdf`}
                         target="_blank"
                         rel="noreferrer"
-                        className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-bold px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1.5 shadow-sm"
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1.5 shadow-sm"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>تصدير سند تسليم الجهة بالخط الهوائي (PDF)</span>
@@ -282,9 +281,9 @@ export default function AuditPage() {
 
         {/* Tab 3: Inventory Movements */}
         {tab === "movements" && (
-          <div className="overflow-x-auto border border-[var(--color-border)] rounded-xl text-xs">
+          <div className="overflow-x-auto border border-gray-200 rounded-xl text-xs">
             <table className="w-full text-right">
-              <thead className="bg-[var(--color-bg-soft)]/70 text-amber-900 border-b">
+              <thead className="bg-amber-50/70 text-amber-900 border-b">
                 <tr>
                   <th className="p-3">#</th>
                   <th className="p-3 font-bold">المادة / الصنف</th>
@@ -297,16 +296,16 @@ export default function AuditPage() {
               <tbody>
                 {data.inventory_movements.map((m, idx) => (
                   <tr key={m.id || idx} className="border-b">
-                    <td className="p-3 text-[var(--color-text-muted)]">{idx + 1}</td>
-                    <td className="p-3 font-bold text-[var(--color-text-primary)]">{m.inventory_item?.name || "سلة غذائية"}</td>
+                    <td className="p-3 text-gray-400">{idx + 1}</td>
+                    <td className="p-3 font-bold text-gray-800">{m.inventory_item?.name || "سلة غذائية"}</td>
                     <td className="p-3">
                       <span className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${m.type === 'in' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {m.type === 'in' ? 'إدخال مخزون +' : 'صرف توزيع -'}
                       </span>
                     </td>
                     <td className="p-3 font-mono font-bold">{m.quantity} وحدة</td>
-                    <td className="p-3 text-[var(--color-text-muted)]">{m.reason || "توجيه وسحب سلال"}</td>
-                    <td className="p-3 font-mono text-[var(--color-text-muted)]">{m.created_at ? new Date(m.created_at).toLocaleString('ar-SA') : "—"}</td>
+                    <td className="p-3 text-gray-600">{m.reason || "توجيه وسحب سلال"}</td>
+                    <td className="p-3 font-mono text-gray-500">{m.created_at ? new Date(m.created_at).toLocaleString('ar-SA') : "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -316,9 +315,9 @@ export default function AuditPage() {
 
         {/* Tab 4: Drivers Performance */}
         {tab === "drivers" && (
-          <div className="overflow-x-auto border border-[var(--color-border)] rounded-xl text-xs">
+          <div className="overflow-x-auto border border-gray-200 rounded-xl text-xs">
             <table className="w-full text-right">
-              <thead className="bg-[var(--color-bg-soft)]/70 text-amber-900 border-b">
+              <thead className="bg-amber-50/70 text-amber-900 border-b">
                 <tr>
                   <th className="p-3">#</th>
                   <th className="p-3 font-bold">اسم السائق</th>
@@ -330,8 +329,8 @@ export default function AuditPage() {
               <tbody>
                 {data.drivers.map((drv, idx) => (
                   <tr key={drv.id || idx} className="border-b">
-                    <td className="p-3 text-[var(--color-text-muted)]">{idx + 1}</td>
-                    <td className="p-3 font-bold text-[var(--color-text-primary)]">{drv.full_name || drv.username}</td>
+                    <td className="p-3 text-gray-400">{idx + 1}</td>
+                    <td className="p-3 font-bold text-gray-800">{drv.full_name || drv.username}</td>
                     <td className="p-3 font-mono">{drv.phone || "—"}</td>
                     <td className="p-3"><span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold text-[11px]">سائق التوصيل الميداني</span></td>
                     <td className="p-3 font-bold text-green-700">نشط في المنظومة ✓</td>

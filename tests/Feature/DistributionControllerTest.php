@@ -98,7 +98,7 @@ class DistributionControllerTest extends TestCase
         ]);
     }
 
-    public function test_legacy_confirmation_is_retired_and_preserves_history(): void
+    public function test_can_mark_distribution_as_received(): void
     {
         Sanctum::actingAs($this->user);
 
@@ -114,8 +114,12 @@ class DistributionControllerTest extends TestCase
 
         $response = $this->putJson("/api/distributions/{$distribution->id}/received");
 
-        $response->assertStatus(410);
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'تم تأكيد الاستلام.',
+            ]);
 
-        $this->assertEquals('scheduled', $distribution->refresh()->status);
+        $this->assertEquals('delivered', $distribution->refresh()->status);
     }
 }

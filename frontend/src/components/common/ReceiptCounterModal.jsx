@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
-import { getApiBaseUrl } from "../../utils/documentUrl";
 import { X, PackageCheck, Calendar, FileText } from "lucide-react";
 
 export default function ReceiptCounterModal({ isOpen, onClose, recipient, recipientType = 'beneficiary' }) {
@@ -44,7 +43,7 @@ export default function ReceiptCounterModal({ isOpen, onClose, recipient, recipi
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
-      <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden border border-[var(--color-border)] animate-in fade-in zoom-in duration-200">
+      <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden border border-amber-100 animate-in fade-in zoom-in duration-200">
         
         {/* Header */}
         <div className="bg-gradient-to-r from-amber-800 to-amber-900 text-white p-5 flex justify-between items-center">
@@ -68,28 +67,28 @@ export default function ReceiptCounterModal({ isOpen, onClose, recipient, recipi
         {/* Scrim Overlay Content */}
         <div className="p-6">
           {/* Summary Box */}
-          <div className="bg-[var(--color-bg-soft)]/70 border border-[var(--color-border)] rounded-2xl p-4 mb-5 flex justify-around text-center">
+          <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 mb-5 flex justify-around text-center">
             <div>
-              <div className="text-xs font-semibold text-[var(--color-text-muted)]">عدد مرات الاستلام الكلي</div>
+              <div className="text-xs font-semibold text-gray-500">عدد مرات الاستلام الكلي</div>
               <div className="text-3xl font-black text-amber-900 mt-1">{history.length} مرة</div>
             </div>
-            <div className="border-r border-[var(--color-border)]"></div>
+            <div className="border-r border-amber-200"></div>
             <div>
-              <div className="text-xs font-semibold text-[var(--color-text-muted)]">حالة الدفعة الأخيرة</div>
+              <div className="text-xs font-semibold text-gray-500">حالة الدفعة الأخيرة</div>
               <div className="text-base font-bold text-green-700 mt-2">
                 {history[0]?.status === 'delivered' ? '✓ تم تسليمها' : history[0] ? '⏳ قيد التوصيل' : 'لا يوجد استلام سابق'}
               </div>
             </div>
           </div>
 
-          <h4 className="font-bold text-[var(--color-text-primary)] text-xs mb-3 flex items-center gap-1.5">
+          <h4 className="font-bold text-gray-800 text-xs mb-3 flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-amber-600" />
             <span>تفاصيل السلال المستلمة سابقاً:</span>
           </h4>
 
-          <div className="max-h-64 overflow-y-auto border border-[var(--color-border)] rounded-xl">
+          <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-xl">
             <table className="w-full text-xs text-right">
-              <thead className="bg-[var(--color-bg-soft)] border-b">
+              <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="p-3">#</th>
                   <th className="p-3 font-bold">نوع السلة / المادة</th>
@@ -100,23 +99,23 @@ export default function ReceiptCounterModal({ isOpen, onClose, recipient, recipi
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={5} className="p-6 text-center text-[var(--color-text-muted)]">جاري التحميل...</td></tr>
+                  <tr><td colSpan={5} className="p-6 text-center text-gray-400">جاري التحميل...</td></tr>
                 )}
                 {!loading && history.map((d, idx) => (
-                  <tr key={d.id || idx} className="border-b hover:bg-[var(--color-bg-soft)]">
-                    <td className="p-3 text-[var(--color-text-muted)]">{idx + 1}</td>
-                    <td className="p-3 font-bold text-[var(--color-text-primary)]">{d.basket?.name || "سلة مساعدة"}</td>
-                    <td className="p-3 text-[var(--color-text-muted)]">{d.scheduled_at ? new Date(d.scheduled_at).toLocaleDateString("ar-SA") : "—"}</td>
-                    <td className="p-3 font-mono font-bold text-[var(--color-text-secondary)]">{d.barcode_code}</td>
+                  <tr key={d.id || idx} className="border-b hover:bg-gray-50">
+                    <td className="p-3 text-gray-400">{idx + 1}</td>
+                    <td className="p-3 font-bold text-gray-800">{d.basket?.name || "سلة مساعدة"}</td>
+                    <td className="p-3 text-gray-600">{d.scheduled_at ? new Date(d.scheduled_at).toLocaleDateString("ar-SA") : "—"}</td>
+                    <td className="p-3 font-mono font-bold text-amber-800">{d.barcode_code}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${d.status === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-[var(--color-text-secondary)]'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${d.status === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'}`}>
                         {d.status === 'delivered' ? 'تم الاستلام' : 'قيد التوزيع'}
                       </span>
                     </td>
                   </tr>
                 ))}
                 {!loading && history.length === 0 && (
-                  <tr><td colSpan={5} className="p-6 text-center text-[var(--color-text-muted)]">لم يسبق للمستفيد استلام سلال حتى الآن</td></tr>
+                  <tr><td colSpan={5} className="p-6 text-center text-gray-400">لم يسبق للمستفيد استلام سلال حتى الآن</td></tr>
                 )}
               </tbody>
             </table>
@@ -124,10 +123,10 @@ export default function ReceiptCounterModal({ isOpen, onClose, recipient, recipi
 
           <div className="mt-5 flex justify-between items-center">
             <a
-              href={`${getApiBaseUrl()}/api/documents/total-delivery/${recipient.id}/pdf`}
+              href={`${import.meta.env.VITE_API_BASE_URL || (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'https://ikram-system.onrender.com')}/api/documents/total-delivery/${recipient.id}/pdf`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm"
+              className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm"
             >
               <FileText className="w-4 h-4" />
               <span>تصدير سند الاستلام الشامل (PDF)</span>
@@ -135,7 +134,7 @@ export default function ReceiptCounterModal({ isOpen, onClose, recipient, recipi
 
             <button
               onClick={onClose}
-              className="px-5 py-2 rounded-xl bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] font-bold text-xs hover:bg-[var(--color-bg-soft)]"
+              className="px-5 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200"
             >
               إغلاق
             </button>

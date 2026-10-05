@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../../context/AuthContext";
-import { hasModuleAction } from "../../utils/modulePermissions";
-import { displayLabel } from '../../utils/displayVocabulary';
-import { useParams, Link, useSearchParams } from "react-router-dom";
-import { getApiBaseUrl } from "../../utils/documentUrl";
-import PolicyReviewLinks from "../../components/beneficiaries/PolicyReviewLinks";
-import api from "../../api/axios";
+import { useParams, Link } from "react-router-dom";
 import beneficiaryApi from "../../api/beneficiaries";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
@@ -23,30 +17,9 @@ import ReceiptHistoryTimeline from "../../components/common/ReceiptHistoryTimeli
 
 export default function BeneficiaryDetailsPage() {
   const { id } = useParams();
-  const { user } = useAuth();
-  const canEditBeneficiary = hasModuleAction(user, 'beneficiaries', 'edit');
   const [b, setB] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [actionError, setActionError] = useState("");
-  const [actionBusy, setActionBusy] = useState(false);
-  const canArchive = hasModuleAction(user, "beneficiaries", "delete");
-  const canSupport = user?.role === "admin" || (user?.permissions?.support?.view === true && user?.permissions?.support?.create === true);
-  const [supportHistory, setSupportHistory] = useState([]);
-  useEffect(() => {
-    if (!(user?.role === "admin" || user?.permissions?.support?.view === true)) return;
-    let active = true;
-    api.get(`/beneficiaries/${id}/support-history`).then(({ data }) => { if (active) setSupportHistory(data.data || []); }).catch(() => { if (active) setActionError("تعذر تحميل سجل الدعم."); });
-    return () => { active = false; };
-  }, [id, user]);
-  const archive = async () => {
-    if (!window.confirm(b.archived_at ? "استعادة المستفيد؟" : "أرشفة المستفيد مع الاحتفاظ بالوثائق والسجل؟")) return;
-    setActionBusy(true); setActionError("");
-    try { const r = b.archived_at ? await beneficiaryApi.restore(id) : await beneficiaryApi.remove(id); setB(r.data.data); }
-    catch (e) { setActionError(e.response?.data?.message || "تعذر تحديث حالة الأرشفة."); }
-    finally { setActionBusy(false); }
-  };
-  const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "documents" ? "documents" : "basic");
+  const [activeTab, setActiveTab] = useState("basic");
 
   useEffect(() => {
     setLoading(true);
@@ -62,7 +35,7 @@ export default function BeneficiaryDetailsPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div className="p-12 text-center text-[var(--color-text-muted)]" dir="rtl">
+        <div className="p-12 text-center text-gray-500" dir="rtl">
           <div className="inline-block w-8 h-8 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mb-2" />
           <p className="font-bold text-sm">جاري تحميل بيانات المستفيد...</p>
         </div>
@@ -87,11 +60,11 @@ export default function BeneficiaryDetailsPage() {
 
   const getDocUrl = (url) => {
     if (!url) return "";
-    const apiBase = getApiBaseUrl();
-    const target = new URL(url, `${apiBase}/`);
-    if (!/^\/api\/beneficiaries\/[^/]+\/documents\/[a-z_]+$/.test(target.pathname)) return "";
-
-    return `${apiBase}${target.pathname}${target.search}`;
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    const clean = url.startsWith("/") ? url.slice(1) : url;
+    const path = clean.startsWith("storage/") ? clean : `storage/${clean}`;
+    const apiBase = (import.meta.env.VITE_API_URL || "https://ikram-system.onrender.com").replace(/\/api\/?$/, "");
+    return `${apiBase}/${path}`;
   };
 
   const fullName = b.full_name || b.name || "مستفيد غير معنون";
@@ -101,16 +74,6 @@ export default function BeneficiaryDetailsPage() {
   const placeOfBirth = b.place_of_birth || b.birth_place || "—";
 
   const isCitizen = (b.beneficiary_type || b.type) === "citizen";
-  const nationality = String(b.nationality || "").trim();
-  const identityLabel = nationality === "سعودي"
-    ? "مواطن"
-    : nationality
-      ? `مقيم (${nationality})`
-      : isCitizen
-        ? "مواطن — الجنسية غير مسجلة"
-        : (b.beneficiary_type || b.type) === "resident"
-          ? "مقيم — الجنسية غير مسجلة"
-          : "الجنسية غير مسجلة";
 
   const documentsList = [
     { label: "صورة الهوية الوطنية / الإقامة", url: b.national_id_image_url || b.residence_id_image_url },
@@ -123,14 +86,11 @@ export default function BeneficiaryDetailsPage() {
 
   return (
     <MainLayout>
-      <div className="mx-auto max-w-5xl space-y-5 px-0 sm:px-2" dir="rtl">
-        {actionError && <p role="alert">{actionError}</p>}
-        {b.archived_at && <p className="ikram-panel p-4">هذا المستفيد مؤرشف؛ سجلاته ووثائقه محفوظة.</p>}
-        <PolicyReviewLinks beneficiaryId={id} archived={Boolean(b.archived_at)} />
+      <div className="p-6 max-w-4xl mx-auto" dir="rtl">
         {/* Page Top Action Header */}
         <PageHeader
           title={`بطاقة بيانات المستفيد: ${fullName}`}
-          subtitle={`${identityLabel} | رقم الهوية: ${nationalId}`}
+          subtitle={`${isCitizen ? "مواطن سعودي" : `مقيم (${b.nationality || 'غير محدد'})`} | رقم الهوية: ${nationalId}`}
           breadcrumbs={[
             { label: "الرئيسية", href: "/" },
             { label: "إدارة المستفيدين", href: "/beneficiaries" },
@@ -138,9 +98,7 @@ export default function BeneficiaryDetailsPage() {
           ]}
           action={
             <div className="flex items-center gap-2">
-              {canSupport && !b.archived_at && <Button as={Link} to={`/beneficiaries/${id}/support`}>إنشاء طلب دعم</Button>}
-              {canArchive && <Button variant="outline" disabled={actionBusy} onClick={archive}>{b.archived_at ? "استعادة المستفيد" : "أرشفة المستفيد"}</Button>}
-              {canEditBeneficiary && <Button
+              <Button
                 variant="gold"
                 size="sm"
                 icon={Edit}
@@ -148,7 +106,7 @@ export default function BeneficiaryDetailsPage() {
                 to={`/beneficiaries/${b.id}/edit`}
               >
                 تعديل البيانات
-              </Button>}
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -162,31 +120,28 @@ export default function BeneficiaryDetailsPage() {
         />
 
         {/* ─── Standardized Amber Card Container ─── */}
-        <div className="ikram-panel mx-auto max-w-4xl overflow-hidden">
+        <div className="bg-white rounded-3xl max-w-3xl mx-auto shadow-2xl border border-gray-100 overflow-hidden">
           {/* Amber Header Banner */}
-          <div className="flex flex-col justify-between gap-3 bg-[var(--color-brand-green)] p-5 text-white sm:flex-row sm:items-center">
+          <div className="p-5 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-t-3xl flex justify-between items-center">
             <div>
               <h3 className="font-bold text-xl">{fullName}</h3>
               <p className="text-xs text-amber-100 mt-0.5">
-                {identityLabel} | رقم الهوية: {nationalId}
+                {isCitizen ? "مواطن سعودي" : `مقيم (${b.nationality || 'غير محدد'})`} | رقم الهوية: {nationalId}
               </p>
             </div>
             <div className="bg-white/20 backdrop-blur-xs px-3 py-1 rounded-xl text-xs font-bold border border-white/30">
-              {displayLabel('priority', b.priority)}
+              {b.priority === "first_class" ? "درجة أولى" : b.priority === "second_class" ? "درجة ثانية" : "مستفيد"}
             </div>
           </div>
 
           {/* Navigation Tabs Bar */}
-          <div className="flex overflow-x-auto border-b border-[var(--color-border)] bg-[var(--color-bg-soft)] text-xs font-bold" role="tablist" aria-label="أقسام ملف المستفيد">
+          <div className="flex border-b border-gray-200 bg-amber-50/50 text-xs font-bold overflow-x-auto">
             <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "basic"}
               onClick={() => setActiveTab("basic")}
               className={`flex-1 py-3.5 px-3 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
                 activeTab === "basic"
                   ? "border-amber-600 text-amber-900 bg-white font-extrabold"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               <User className="w-4 h-4" />
@@ -194,14 +149,11 @@ export default function BeneficiaryDetailsPage() {
             </button>
 
             <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "family"}
               onClick={() => setActiveTab("family")}
               className={`flex-1 py-3.5 px-3 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
                 activeTab === "family"
                   ? "border-amber-600 text-amber-900 bg-white font-extrabold"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               <Users className="w-4 h-4" />
@@ -209,14 +161,11 @@ export default function BeneficiaryDetailsPage() {
             </button>
 
             <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "financial"}
               onClick={() => setActiveTab("financial")}
               className={`flex-1 py-3.5 px-3 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
                 activeTab === "financial"
                   ? "border-amber-600 text-amber-900 bg-white font-extrabold"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               <DollarSign className="w-4 h-4" />
@@ -224,14 +173,11 @@ export default function BeneficiaryDetailsPage() {
             </button>
 
             <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "documents"}
               onClick={() => setActiveTab("documents")}
               className={`flex-1 py-3.5 px-3 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
                 activeTab === "documents"
                   ? "border-amber-600 text-amber-900 bg-white font-extrabold"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               <FileText className="w-4 h-4" />
@@ -239,14 +185,11 @@ export default function BeneficiaryDetailsPage() {
             </button>
 
             <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "history"}
               onClick={() => setActiveTab("history")}
               className={`flex-1 py-3.5 px-3 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
                 activeTab === "history"
                   ? "border-amber-600 text-amber-900 bg-white font-extrabold"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               <Package className="w-4 h-4" />
@@ -281,27 +224,27 @@ export default function BeneficiaryDetailsPage() {
             {activeTab === "family" && (
               <div className="space-y-4 text-xs">
                 <div className="grid md:grid-cols-2 gap-4">
-                  <InfoBox label="الحالة الاجتماعية" value={displayLabel('family', b.family_status)} />
+                  <InfoBox label="الحالة الاجتماعية" value={b.family_status} />
                   <InfoBox label="إجمالي أفراد الأسرة" value={b.family_members_count} />
                   <InfoBox label="عدد العاملين بالأسرة" value={b.working_members_count || b.working_count} />
                   <InfoBox label="عدد الأبناء غير العاملين" value={b.non_working_children_count || b.non_working_children} />
                   <InfoBox label="ذوو الاحتياجات الخاصة (الإعاقة)" value={b.has_special_needs ? "نعم (مفعل)" : "لا"} />
-                  <InfoBox label="نوع السكن الحالي" value={displayLabel('housing', b.housing_type)} />
+                  <InfoBox label="نوع السكن الحالي" value={b.housing_type === "rent" ? "إيجار" : "ملك"} />
                   {b.housing_type === "rent" && (
                     <InfoBox label="مبلغ الإيجار السنوي" value={b.annual_rent_amount ? `${b.annual_rent_amount} ريال` : "—"} />
                   )}
                 </div>
 
                 <div className="pt-2">
-                  <h4 className="font-bold text-[var(--color-text-primary)] mb-2">جدول المعالين والتابعين المباشرين:</h4>
+                  <h4 className="font-bold text-gray-800 mb-2">جدول المعالين والتابعين المباشرين:</h4>
                   {(!b.dependents || b.dependents.length === 0) ? (
-                    <div className="p-6 text-center text-[var(--color-text-muted)] bg-[var(--color-bg-soft)] rounded-2xl border border-dashed border-[var(--color-border)]">
+                    <div className="p-6 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                       لا يوجد معالون مضافون بهذا الحساب.
                     </div>
                   ) : (
-                    <div className="overflow-x-auto border border-[var(--color-border)] rounded-2xl">
+                    <div className="overflow-x-auto border border-gray-200 rounded-2xl">
                       <table className="w-full text-xs text-right">
-                        <thead className="bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] font-bold">
+                        <thead className="bg-gray-100 text-gray-700 font-bold">
                           <tr>
                             <th className="p-3">#</th>
                             <th className="p-3">اسم التابع الكامل</th>
@@ -309,13 +252,13 @@ export default function BeneficiaryDetailsPage() {
                             <th className="p-3">تاريخ الميلاد</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[var(--color-border)]">
+                        <tbody className="divide-y divide-gray-100">
                           {b.dependents.map((dep, idx) => (
                             <tr key={dep.id || idx}>
-                              <td className="p-3 text-[var(--color-text-muted)]">{idx + 1}</td>
-                              <td className="p-3 font-bold text-[var(--color-text-primary)]">{dep.name}</td>
-                              <td className="p-3 text-[var(--color-text-secondary)]">{dep.relationship || "—"}</td>
-                              <td className="p-3 font-mono text-[var(--color-text-muted)]">{cleanDate(dep.date_of_birth)}</td>
+                              <td className="p-3 text-gray-400">{idx + 1}</td>
+                              <td className="p-3 font-bold text-gray-900">{dep.name}</td>
+                              <td className="p-3 text-gray-700">{dep.relationship || "—"}</td>
+                              <td className="p-3 font-mono text-gray-600">{cleanDate(dep.date_of_birth)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -330,7 +273,7 @@ export default function BeneficiaryDetailsPage() {
             {activeTab === "financial" && (
               <div className="space-y-4 text-xs">
                 <div>
-                  <h4 className="font-bold text-[var(--color-text-primary)] mb-2">مصادر الدخل المحددة:</h4>
+                  <h4 className="font-bold text-gray-800 mb-2">مصادر الدخل المحددة:</h4>
                   <div className="grid md:grid-cols-2 gap-4">
                     {[["salary", "monthly_salary", "الراتب الشهري"], ["social_security", "social_security_amount", "الضمان الاجتماعي"], ["citizen_account", "citizen_account_amount", "حساب المواطن"], ["retirement", "retirement_pension", "المعاش التقاعدي"], ["family_support", "family_support", "دعم الأسرة والأقارب"]]
                       .filter(([source]) => (b.income_sources || []).includes(source))
@@ -357,19 +300,34 @@ export default function BeneficiaryDetailsPage() {
             {activeTab === "documents" && (
               <div className="text-xs">
                 {documentsList.length === 0 ? (
-                  <div className="p-8 text-center text-[var(--color-text-muted)] bg-[var(--color-bg-soft)] rounded-2xl border border-dashed border-[var(--color-border)]">
+                  <div className="p-8 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                     لا توجد وثائق مرفقة مسجلة لهذا المستفيد حالياً
                   </div>
                 ) : (
                   <div className="grid md:grid-cols-2 gap-4">
                     {documentsList.map((doc, i) => (
-                      <div key={i} className="border border-[var(--color-border)] p-3.5 rounded-2xl bg-[var(--color-bg-soft)] flex flex-col justify-between">
+                      <div key={i} className="border border-gray-200 p-3.5 rounded-2xl bg-gray-50 flex flex-col justify-between">
                         <div>
-                          <span className="text-xs font-bold text-[var(--color-text-primary)] block mb-2">{doc.label}</span>
-                          <div className="w-full h-36 bg-[var(--color-bg-soft)] rounded-xl overflow-hidden mb-3 border flex items-center justify-center">
-                            <div className="text-center p-4">
-                              <FileText className="w-10 h-10 text-amber-600 mx-auto mb-1" />
-                              <span className="font-bold text-[var(--color-text-secondary)] text-xs">وثيقة خاصة - يلزم التحقق قبل التنزيل</span>
+                          <span className="text-xs font-bold text-gray-800 block mb-2">{doc.label}</span>
+                          <div className="w-full h-36 bg-gray-100 rounded-xl overflow-hidden mb-3 border flex items-center justify-center relative">
+                            {doc.url.toLowerCase().endsWith(".pdf") ? (
+                              <div className="text-center p-4">
+                                <FileText className="w-10 h-10 text-amber-600 mx-auto mb-1" />
+                                <span className="font-bold text-gray-700 text-xs">مستند بصيغة PDF</span>
+                              </div>
+                            ) : (
+                              <img
+                                src={getDocUrl(doc.url)}
+                                alt={doc.label}
+                                className="w-full h-full object-contain p-1"
+                                onError={(e) => {
+                                  e.target.style.display = "none";
+                                  if (e.target.nextSibling) e.target.nextSibling.style.display = "flex";
+                                }}
+                              />
+                            )}
+                            <div className="hidden absolute inset-0 items-center justify-center p-3 bg-amber-50/90 text-center">
+                              <span className="font-bold text-amber-900 text-[11px]">📁 يتعذر عرض المعاينة - انقر على الزر أدناه لفتح الوثيقة</span>
                             </div>
                           </div>
                         </div>
@@ -378,7 +336,7 @@ export default function BeneficiaryDetailsPage() {
                           href={getDocUrl(doc.url)}
                           target="_blank"
                           rel="noreferrer"
-                          className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white text-xs font-bold py-2 rounded-xl text-center flex items-center justify-center gap-1 transition-colors shadow-xs"
+                          className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold py-2 rounded-xl text-center flex items-center justify-center gap-1 transition-colors shadow-xs"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           <span>فتح وتنزيل المستند</span>
@@ -392,12 +350,12 @@ export default function BeneficiaryDetailsPage() {
 
             {/* TAB 5: History */}
             {activeTab === "history" && (
-              <><section className="ikram-panel p-4"><h3 className="font-bold">طلبات الدعم والاستلام</h3>{supportHistory.length ? supportHistory.map((row) => <div key={row.id} className="border-b py-3"><Link to={`/support-delivery?task=${row.id}`}>{row.fulfillment_method === "pickup" ? "استلام مباشر" : "توصيل منزلي"} — {({draft:"مسودة", approved:"معتمد",reserved:"محجوز",ready:"جاهز",in_delivery:"قيد التوصيل",completed:"مكتمل",cancelled:"ملغي"})[row.status]}</Link><p>{row.support_date || row.created_at?.slice(0,10)}</p></div>) : <p>لا توجد طلبات دعم.</p>}</section><ReceiptHistoryTimeline
+              <ReceiptHistoryTimeline
                 records={b.distributions || []}
                 recipientName={fullName}
                 recipientType="beneficiary"
                 title={`سجل استلامات المستفيد: ${fullName}`}
-              /></>
+              />
             )}
           </div>
         </div>
@@ -408,9 +366,9 @@ export default function BeneficiaryDetailsPage() {
 
 function InfoBox({ label, value, isMono = false }) {
   return (
-    <div className="bg-[var(--color-bg-soft)]/90 p-3.5 rounded-2xl border border-[var(--color-border)]">
-      <span className="text-[var(--color-text-muted)] block mb-0.5 font-medium text-[11px]">{label}</span>
-      <span className={`text-xs font-bold text-[var(--color-text-primary)] block ${isMono ? 'font-mono' : ''}`}>
+    <div className="bg-gray-50/90 p-3.5 rounded-2xl border border-gray-100">
+      <span className="text-gray-400 block mb-0.5 font-medium text-[11px]">{label}</span>
+      <span className={`text-xs font-bold text-gray-900 block ${isMono ? 'font-mono' : ''}`}>
         {value !== null && value !== undefined && value !== "" ? value : "—"}
       </span>
     </div>

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
-import StatusBadge from './StatusBadge';
 
 /**
  * Standardized PageHeader component for all pages:
@@ -17,31 +16,29 @@ export default function PageHeader({
   breadcrumbs = [],
   actions,
   action,
-  filters,
   className = '',
 }) {
   const actionContent = actions ?? action;
   const badgeText = typeof badge === 'object' ? badge.text : badge;
   return (
-    <header className={`space-y-3 ${className}`} dir="rtl">
-      <div className="ikram-masthead">
+    <div className={`flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-2 border-b border-[#E5E2D9] ${className}`} dir="rtl">
       {/* Right side: Breadcrumbs, Title, and Description */}
-      <div className="min-w-0 space-y-1">
+      <div className="space-y-1">
         {/* Breadcrumbs */}
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav aria-label="مسار الصفحة" className="flex items-center gap-1 text-xs text-[var(--color-text-muted)] mb-1">
-            <Link to="/dashboard" className="hover:text-[var(--color-brand-green)] transition-colors">
+          <nav className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+            <Link to="/dashboard" className="hover:text-[#3F6B3A] transition-colors">
               الرئيسية
             </Link>
             {breadcrumbs.map((crumb, idx) => (
               <React.Fragment key={idx}>
-                <ChevronLeft className="w-3.5 h-3.5 text-[var(--color-text-muted)] shrink-0" aria-hidden="true" />
+                <ChevronLeft className="w-3.5 h-3.5 text-gray-400 shrink-0 rotate-180 md:rotate-0" />
                 {crumb.to ? (
-                  <Link to={crumb.to} className="hover:text-[var(--color-brand-green)] transition-colors">
+                  <Link to={crumb.to} className="hover:text-[#3F6B3A] transition-colors">
                     {crumb.label}
                   </Link>
                 ) : (
-                  <span className="text-[var(--color-text-primary)] font-semibold">{crumb.label}</span>
+                  <span className="text-gray-800 font-semibold">{crumb.label}</span>
                 )}
               </React.Fragment>
             ))}
@@ -49,16 +46,20 @@ export default function PageHeader({
         )}
 
         {/* Title & Badge */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <h1 className="text-xl font-bold tracking-tight text-[var(--color-text-primary)]">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl lg:text-3xl font-black text-gray-900 tracking-tight">
             {title}
           </h1>
-          {badge && <StatusBadge status="active" label={badgeText} />}
+          {badge && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EBF4EA] text-[#3F6B3A] border border-[#A5D6A7]">
+              {badgeText}
+            </span>
+          )}
         </div>
 
         {/* Subtitle */}
         {subtitle && (
-          <p className="text-xs sm:text-sm text-[var(--color-text-muted)]">
+          <p className="text-xs sm:text-sm text-gray-600">
             {subtitle}
           </p>
         )}
@@ -66,12 +67,10 @@ export default function PageHeader({
 
       {/* Left side: Actions Slot */}
       {actionContent && (
-        <div className="ikram-actions w-full md:w-auto md:justify-end">
+        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
           {actionContent}
         </div>
       )}
-      </div>
-      {filters && <div className="w-full">{filters}</div>}
-    </header>
+    </div>
   );
 }

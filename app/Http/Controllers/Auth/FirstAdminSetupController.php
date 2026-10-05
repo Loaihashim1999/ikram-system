@@ -22,9 +22,6 @@ class FirstAdminSetupController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        // Production ownership is established by access to the operator console.
-        abort_if(app()->environment('production'), 403, 'Use the operator console for first administrator setup.');
-
         $validated = $request->validate([
             'full_name' => ['required', 'string', 'max:150'],
             'username' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:users,username'],

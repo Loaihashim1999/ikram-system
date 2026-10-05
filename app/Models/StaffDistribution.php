@@ -15,8 +15,6 @@ class StaffDistribution extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'id',
-        'staff_id',
         'staff_member_id',
         'basket_id',
         'scheduled_at',
@@ -35,7 +33,7 @@ class StaffDistribution extends Model
     // العلاقات
     public function staffMember(): BelongsTo
     {
-        return $this->belongsTo(Staff::class, 'staff_id');
+        return $this->belongsTo(StaffMember::class);
     }
 
     public function basket(): BelongsTo

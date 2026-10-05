@@ -31,6 +31,6 @@ class Staff extends Model
 
     public function distributions(): HasMany
     {
-        return $this->hasMany(StaffDistribution::class, 'staff_id');
+        return $this->hasMany(StaffDistribution::class, 'staff_member_id');
     }
 }

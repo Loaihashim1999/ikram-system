@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import beneficiaryApi from "../../api/beneficiaries";
 import api from "../../api/axios";
@@ -58,14 +58,8 @@ const STEPS = [
 
 /* ═══════════════════════ الحالة الابتدائية (خالية تماماً من البيانات البنكية) ═══════════════════════ */
 
-const classifyNationality = (value) => {
-  const trimmed = String(value || "").trim();
-  if (trimmed === "سعودي") return "citizen";
-  if (trimmed) return "resident";
-  return null;
-};
-
 const makeInitialForm = (type) => ({
+  beneficiary_type: type,
   full_name: "",
   national_id: "",
   phone: "",
@@ -102,19 +96,15 @@ const makeInitialForm = (type) => ({
 export default function AddBeneficiaryPage() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const routeType = location.pathname.includes("resident") ? "resident" : "citizen";
+  const type      = location.pathname.includes("resident") ? "resident" : "citizen";
 
-  const [form, setForm]             = useState(makeInitialForm(routeType));
+  const [form, setForm]             = useState(makeInitialForm(type));
   const [dependents, setDependents] = useState([]);
   const [files, setFiles]           = useState({});
   const [step, setStep]             = useState(1);
   const [errors, setErrors]         = useState({});
   const [saving, setSaving]         = useState(false);
   const [idStatus, setIdStatus]     = useState(null);
-  const submitLock = useRef(false);
-  const [reviewed, setReviewed] = useState(false);
-  const classification = classifyNationality(form.nationality);
-  useEffect(() => { setReviewed(false); }, [form, dependents, files, step]);
   const [toast, setToast]           = useState(null);
 
   // Dynamic thresholds loaded from settings
@@ -132,7 +122,7 @@ export default function AddBeneficiaryPage() {
           setThresholds({
             firstClassMaxIncome: parseFloat(res.data.data.first_class_max_income) || 3000,
             secondClassMaxIncome: parseFloat(res.data.data.second_class_max_income) || 6000,
-            residentDegreeThreshold: parseFloat(res.data.data.resident_need_threshold) || parseFloat(res.data.data.resident_degree_threshold) || 3000,
+            residentDegreeThreshold: parseFloat(res.data.data.resident_degree_threshold) || 3000,
             elderlyMinAge: parseFloat(res.data.data.elderly_min_age) || 60,
           });
         }
@@ -160,38 +150,6 @@ export default function AddBeneficiaryPage() {
         monthly_rent_amount: value,
         annual_rent_amount: annual,
       }));
-      return;
-    }
-    if (name === "nationality") {
-      const nextClass = classifyNationality(value);
-      const allowed = nextClass === "citizen"
-        ? CITIZEN_INCOME_OPTIONS.map((option) => option.value)
-        : nextClass === "resident"
-          ? RESIDENT_INCOME_OPTIONS.map((option) => option.value)
-          : [];
-      setForm((current) => {
-        const income_sources = current.income_sources.filter((source) => allowed.includes(source));
-        return {
-          ...current,
-          nationality: value,
-          income_sources,
-          manual_override: nextClass === "citizen" ? current.manual_override : false,
-          social_security_amount: income_sources.includes("social_security") ? current.social_security_amount : "",
-          retirement_pension: income_sources.includes("retirement") ? current.retirement_pension : "",
-          citizen_account_amount: income_sources.includes("citizen_account") ? current.citizen_account_amount : "",
-        };
-      });
-      setFiles((current) => {
-        const next = { ...current };
-        if (nextClass !== "citizen") {
-          delete next.national_id_image;
-          delete next.social_security_image;
-          delete next.citizen_account_image;
-          delete next.pension_certificate_image;
-        }
-        if (nextClass !== "resident") delete next.residence_id_image;
-        return next;
-      });
       return;
     }
     setForm((f) => ({ ...f, [name]: t === "checkbox" ? checked : value }));
@@ -238,9 +196,8 @@ export default function AddBeneficiaryPage() {
 
   // Live Financial Calculation & Classification using utility
   const calcResult = useMemo(() => {
-    if (!classification) return null;
     return calculateIncomeAndClassification({
-      beneficiaryType: classification,
+      beneficiaryType: type,
       monthlySalary: form.monthly_salary,
       socialSecurityAmount: form.social_security_amount,
       citizenAccountAmount: form.citizen_account_amount,
@@ -254,13 +211,13 @@ export default function AddBeneficiaryPage() {
       dateOfBirth: form.date_of_birth,
       thresholds,
     });
-  }, [form, classification, thresholds]);
+  }, [form, type, thresholds]);
 
   // Validation function for steps
   const validateCurrentStep = (targetStep) => {
     const newErrors = {};
 
-    if (targetStep === 1) {
+    if (step === 1) {
       if (!form.full_name.trim()) newErrors.full_name = ["الاسم الكامل لرب الأسرة مطلوب."];
       if (!form.national_id.trim()) newErrors.national_id = ["رقم الهوية الوطنية أو الإقامة مطلوب."];
       if (!form.phone.trim()) newErrors.phone = ["رقم الجوال الفعال مطلوب للتواصل."];
@@ -268,26 +225,23 @@ export default function AddBeneficiaryPage() {
       if (!form.city.trim()) newErrors.city = ["المدينة مطلوبة."];
       if (!form.district.trim()) newErrors.district = ["اسم الحي السكني مطلوب."];
       if (!form.street.trim()) newErrors.street = ["الشارع أو المعلم مطلوب."];
-      const nationality = form.nationality.trim();
-      if (!nationality) newErrors.nationality = ["الجنسية مطلوبة."];
-      else if (nationality.length > 100) newErrors.nationality = ["الجنسية يجب ألا تتجاوز 100 حرفاً."];
-    } else if (targetStep === 2) {
+      if (type === "resident" && !form.nationality.trim()) newErrors.nationality = ["الجنسية مطلوبة للمقيم."];
+    } else if (step === 2) {
       if (!form.family_status) newErrors.family_status = ["يرجى تحديد الحالة الاجتماعية للأسرة."];
       if (!form.family_members_count || form.family_members_count < 1) newErrors.family_members_count = ["عدد أفراد الأسرة يجب أن يكون 1 على الأقل."];
       if (!form.housing_type) newErrors.housing_type = ["يرجى تحديد نوع السكن."];
       if (form.housing_type === "rent" && !form.monthly_rent_amount && !form.annual_rent_amount) {
         newErrors.monthly_rent_amount = ["يرجى إدخال قيمة الإيجار الشهري أو السنوي لاحتساب خصم الإيجار."];
       }
-    } else if (targetStep === 4) {
-      if (!classification) newErrors.nationality = ["الجنسية مطلوبة."];
-      else if (classification === "citizen") {
+    } else if (step === 4) {
+      if (type === "citizen") {
         if (!files.national_id_image) newErrors.national_id_image = ["صورة الهوية الوطنية مطلوبة للمواطن."];
         if (!files.national_address_image) newErrors.national_address_image = ["صورة العنوان الوطني مطلوبة."];
-        if (form.housing_type === 'rent' && !files.rental_contract_image) newErrors.rental_contract_image = ["عقد الإيجار أو فاتورة الكهرباء مطلوبة."];
+        if (!files.rental_contract_image) newErrors.rental_contract_image = ["عقد الإيجار أو فاتورة الكهرباء مطلوبة."];
       } else {
         if (!files.residence_id_image) newErrors.residence_id_image = ["صورة هوية مقيم (الإقامة) مطلوبة."];
         if (!files.national_address_image) newErrors.national_address_image = ["صورة العنوان الوطني مطلوبة."];
-        if (form.housing_type === 'rent' && !files.rental_contract_image) newErrors.rental_contract_image = ["عقد الإيجار أو فاتورة الكهرباء مطلوبة."];
+        if (!files.rental_contract_image) newErrors.rental_contract_image = ["عقد الإيجار أو فاتورة الكهرباء مطلوبة."];
         // Salary certificate is OPTIONAL for residents as per prompt rule
       }
     }
@@ -304,20 +258,15 @@ export default function AddBeneficiaryPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (step !== STEPS.length || !reviewed || !classification || !calcResult || submitLock.current) return;
     if (idStatus === "taken") return alert("رقم الهوية/الإقامة مسجل مسبقاً في النظام.");
 
     // Final validation
-    for (let reviewStep = 1; reviewStep < STEPS.length; reviewStep += 1) {
-      if (!validateCurrentStep(reviewStep)) { setStep(reviewStep); setReviewed(false); return; }
-    }
+    if (!validateCurrentStep(step)) return;
 
-    submitLock.current = true;
     setSaving(true);
     setErrors({});
 
     const fd = new FormData();
-    fd.append("reviewed_confirmation", "1");
     const appendField = (key, value) => {
       if (value === null || value === undefined || value === "") return;
       if (Array.isArray(value)) {
@@ -332,7 +281,6 @@ export default function AddBeneficiaryPage() {
     // Calculate total and eligible income
     const finalPayload = {
       ...form,
-      nationality: form.nationality.trim(),
       total_income: calcResult.eligibleIncome, // Calculated income after rent deduction
       gross_income: calcResult.totalGrossIncome,
       monthly_rent: calcResult.monthlyRent,
@@ -341,17 +289,9 @@ export default function AddBeneficiaryPage() {
       category: calcResult.category,
     };
 
+    // Explicitly delete any banking info from payload to prevent sending
     delete finalPayload.bank_name;
     delete finalPayload.iban;
-    delete finalPayload.beneficiary_type;
-    delete finalPayload.type;
-    if (classification !== "citizen") {
-      finalPayload.income_sources = form.income_sources.filter((source) => source === "salary" || source === "family_support");
-      delete finalPayload.social_security_amount;
-      delete finalPayload.retirement_pension;
-      delete finalPayload.citizen_account_amount;
-      finalPayload.manual_override = false;
-    }
 
     Object.entries(finalPayload).forEach(([k, v]) => appendField(k, v));
 
@@ -368,7 +308,9 @@ export default function AddBeneficiaryPage() {
     try {
       await beneficiaryApi.create(fd);
       setToast("✅ تم حفظ وتصنيف المستفيد بنجاح!");
-      navigate("/beneficiaries");
+      setTimeout(() => {
+        navigate("/beneficiaries");
+      }, 1200);
     } catch (err) {
       if (err.response?.status === 422) {
         const validationErrors = err.response.data?.errors || {};
@@ -380,23 +322,22 @@ export default function AddBeneficiaryPage() {
         alert(err.response?.data?.message || "حدث خطأ أثناء حفظ المستفيد. يرجى المحاولة مرة أخرى.");
       }
     } finally {
-      submitLock.current = false;
       setSaving(false);
     }
   };
 
   const cls = {
-    input:   "ikram-control",
-    select:  "ikram-control font-bold",
-    label:   "ikram-label",
-    helper:  "text-[11px] text-[var(--color-text-muted)] mt-1 block",
-    section: "ikram-panel p-4 sm:p-5 mb-5",
-    h2:      "text-sm font-extrabold text-[var(--color-text-primary)] mb-4 border-b border-[var(--color-border)] pb-2.5 flex items-center gap-2",
+    input:   "w-full rounded-xl border border-[#E5E2D9] px-3.5 py-2.5 focus:outline-none focus:border-[#C9A24A] text-right text-xs bg-white",
+    select:  "w-full rounded-xl border border-[#E5E2D9] px-3.5 py-2.5 bg-white focus:outline-none focus:border-[#C9A24A] text-right text-xs font-bold",
+    label:   "block text-xs font-bold text-[#111827] mb-1",
+    helper:  "text-[11px] text-[#6B7280] mt-1 block",
+    section: "bg-white rounded-2xl border border-[#E5E2D9] p-5 mb-5 shadow-xs",
+    h2:      "text-sm font-extrabold text-[#111827] mb-4 border-b border-[#E5E2D9] pb-2.5 flex items-center gap-2",
   };
 
   const Err = ({ f }) => {
     const err = errors[f];
-    return err ? <p role="alert" className="text-[var(--color-danger)] text-xs mt-1 font-bold">{err[0]}</p> : null;
+    return err ? <p className="text-[#C24B3F] text-xs mt-1 font-bold">⚠️ {err[0]}</p> : null;
   };
 
   return (
@@ -404,7 +345,7 @@ export default function AddBeneficiaryPage() {
       <div className="p-4 lg:p-6 max-w-5xl mx-auto" dir="rtl">
         {/* Toast */}
         {toast && (
-          <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-[var(--color-brand-green)] text-white font-extrabold px-6 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-2 text-xs">
+          <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-[#3F6B3A] text-white font-extrabold px-6 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-2 text-xs">
             <CheckCircle2 className="w-5 h-5" />
             <span>{toast}</span>
           </div>
@@ -412,12 +353,12 @@ export default function AddBeneficiaryPage() {
 
         {/* Top Header */}
         <PageHeader
-          title={classification === "citizen" ? "تسجيل مستفيد مواطن جديد" : classification === "resident" ? "تسجيل مستفيد مقيم جديد" : "تسجيل مستفيد جديد"}
+          title={type === "citizen" ? "تسجيل مستفيد مواطن جديد" : "تسجيل مستفيد مقيم جديد"}
           subtitle="تعبئة البيانات، اقتطاع الإيجار، والتصنيف التلقائي (خالي تماماً من الحقول البنكية)"
           breadcrumbs={[
             { label: "الرئيسية", href: "/" },
             { label: "إدارة المستفيدين", href: "/beneficiaries" },
-            { label: classification === "citizen" ? "تسجيل مواطن" : classification === "resident" ? "تسجيل مقيم" : "تسجيل مستفيد" }
+            { label: type === "citizen" ? "تسجيل مواطن" : "تسجيل مقيم" }
           ]}
           action={
             <Button variant="outline" size="sm" onClick={() => navigate("/beneficiaries")}>
@@ -439,10 +380,10 @@ export default function AddBeneficiaryPage() {
               }}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 step === s.id
-                  ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                  ? "bg-[#D97706] text-white shadow-xs"
                   : s.id < step
-                  ? "bg-[var(--color-bg-soft)] text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/30"
-                  : "bg-[var(--color-bg-soft)] text-[var(--color-text-muted)]"
+                  ? "bg-[#FAF8F5] text-[#3F6B3A] border border-[#3F6B3A]/30"
+                  : "bg-gray-100 text-gray-500"
               }`}
             >
               {s.id}. {s.label}
@@ -478,18 +419,18 @@ export default function AddBeneficiaryPage() {
                 </div>
 
                 <div>
-                  <label className={cls.label}>رقم {classification === "citizen" ? "الهوية الوطنية" : classification === "resident" ? "الإقامة" : "الهوية أو الإقامة"} *</label>
+                  <label className={cls.label}>رقم {type === "citizen" ? "الهوية الوطنية" : "الإقامة"} *</label>
                   <input
                     name="national_id" value={form.national_id} onChange={handleChange}
                     onBlur={handleNationalIdBlur} maxLength={20} required
                     className={`${cls.input} font-mono ${
                       idStatus === "taken" ? "border-red-500" : idStatus === "ok" ? "border-green-500" : ""
                     }`}
-                    placeholder={classification === "citizen" ? "10XXXXXXXX" : classification === "resident" ? "20XXXXXXXX" : ""}
+                    placeholder={type === "citizen" ? "10XXXXXXXX" : "20XXXXXXXX"}
                   />
-                  {idStatus === "checking" && <p className="text-[var(--color-text-muted)] text-[11px] mt-1">⏳ جاري التحقق من الهوية...</p>}
+                  {idStatus === "checking" && <p className="text-gray-400 text-[11px] mt-1">⏳ جاري التحقق من الهوية...</p>}
                   {idStatus === "taken"    && <p className="text-[#C24B3F] text-[11px] mt-1 font-bold">❌ رقم الهوية مسجل مسبقاً في النظام</p>}
-                  {idStatus === "ok"       && <p className="text-[var(--color-brand-green)] text-[11px] mt-1 font-bold">✓ متاح للتسجيل</p>}
+                  {idStatus === "ok"       && <p className="text-[#3F6B3A] text-[11px] mt-1 font-bold">✓ متاح للتسجيل</p>}
                   <Err f="national_id" />
                 </div>
 
@@ -510,12 +451,13 @@ export default function AddBeneficiaryPage() {
                   <input name="place_of_birth" value={form.place_of_birth} onChange={handleChange} className={cls.input} placeholder="مثال: مكة المكرمة" />
                 </div>
 
-                <div>
-                  <label className={cls.label}>الجنسية *</label>
-                  <input name="nationality" value={form.nationality} onChange={handleChange} className={cls.input} placeholder="سعودي، أو جنسية أخرى" maxLength={100} required />
-                  <span className={cls.helper}>{classification === "citizen" ? "مواطن" : classification === "resident" ? "مقيم" : "الجنسية الفارغة ليست سعودياً."}</span>
-                  <Err f="nationality" />
-                </div>
+                {type === "resident" && (
+                  <div>
+                    <label className={cls.label}>الجنسية *</label>
+                    <input name="nationality" value={form.nationality} onChange={handleChange} className={cls.input} placeholder="مثال: يمني / مصري / سوداني" required />
+                    <Err f="nationality" />
+                  </div>
+                )}
 
                 <div>
                   <label className={cls.label}>المدينة *</label>
@@ -570,7 +512,7 @@ export default function AddBeneficiaryPage() {
                         name="has_special_needs"
                         checked={form.has_special_needs}
                         onChange={handleChange}
-                        className="w-4 h-4 rounded text-[var(--color-brand-green)] accent-[var(--color-brand-green)]"
+                        className="w-4 h-4 rounded text-[#D97706] accent-[#D97706]"
                       />
                       <label htmlFor="has_special_needs" className="text-xs font-bold text-purple-900 cursor-pointer">
                         تفعيل أولوية ذوي الاحتياجات الخاصة
@@ -618,7 +560,7 @@ export default function AddBeneficiaryPage() {
                         <span className={cls.helper}>إذا لم يتوفر إيجار شهري، يُقسم السنوي على 12.</span>
                       </div>
 
-                      <div className="col-span-full bg-[var(--color-bg-soft)] p-3 rounded-xl border border-[var(--color-border)] text-xs flex items-center justify-between font-bold text-amber-900">
+                      <div className="col-span-full bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs flex items-center justify-between font-bold text-amber-900">
                         <span>احتساب خصم السكن:</span>
                         <span className="font-mono">
                           الإيجار السنوي: {(parseFloat(form.annual_rent_amount) || (parseFloat(form.monthly_rent_amount) ? Math.round(parseFloat(form.monthly_rent_amount) * 12) : 0)).toLocaleString()} ريال ← الإيجار الشهري المحتسب: {(parseFloat(form.monthly_rent_amount) || (parseFloat(form.annual_rent_amount) ? Math.round((parseFloat(form.annual_rent_amount) / 12) * 100) / 100 : 0)).toLocaleString()} ريال
@@ -633,16 +575,16 @@ export default function AddBeneficiaryPage() {
               <div className={cls.section}>
                 <div className="flex items-center justify-between mb-3">
                   <h2 className={cls.h2 + " mb-0"}>👶 قائمة المعالين والتابعين للأسرة</h2>
-                  <button type="button" onClick={addDependent} className="bg-[var(--color-bg-soft)] text-[var(--color-brand-gold)] border border-[var(--color-border)] text-xs px-3 py-1.5 rounded-xl font-bold hover:bg-[var(--color-bg-soft)]">
+                  <button type="button" onClick={addDependent} className="bg-[#FAF8F5] text-[#C9A24A] border border-[#E5E2D9] text-xs px-3 py-1.5 rounded-xl font-bold hover:bg-amber-50">
                     + إضافة تابع
                   </button>
                 </div>
                 {dependents.length === 0 ? (
-                  <p className="text-[var(--color-text-muted)] text-xs text-center py-4">اضغط "+ إضافة تابع" لإضافة الأبناء أو التابعين بالمنزل.</p>
+                  <p className="text-[#6B7280] text-xs text-center py-4">اضغط "+ إضافة تابع" لإضافة الأبناء أو التابعين بالمنزل.</p>
                 ) : (
-                  <div className="overflow-x-auto border border-[var(--color-border)] rounded-xl">
+                  <div className="overflow-x-auto border border-[#E5E2D9] rounded-xl">
                     <table className="w-full text-xs text-right">
-                      <thead className="bg-[var(--color-bg-soft)]">
+                      <thead className="bg-[#FAF8F5]">
                         <tr>
                           <th className="p-2.5">#</th>
                           <th className="p-2.5">الاسم</th>
@@ -651,10 +593,10 @@ export default function AddBeneficiaryPage() {
                           <th className="p-2.5"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[var(--color-border)]">
+                      <tbody className="divide-y divide-[#E5E2D9]">
                         {dependents.map((dep, i) => (
                           <tr key={i}>
-                            <td className="p-2.5 text-[var(--color-text-muted)] font-mono">{i + 1}</td>
+                            <td className="p-2.5 text-gray-400 font-mono">{i + 1}</td>
                             <td className="p-2.5">
                               <input value={dep.name} onChange={(e) => updateDependent(i, "name", e.target.value)} className={cls.input + " py-1"} placeholder="اسم التابع" />
                             </td>
@@ -690,15 +632,15 @@ export default function AddBeneficiaryPage() {
               <div className="mb-5">
                 <label className={cls.label}>حدد مصادر الدخل المتوفرة للأسرة:</label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {(classification === "citizen" ? CITIZEN_INCOME_OPTIONS : classification === "resident" ? RESIDENT_INCOME_OPTIONS : []).map((opt) => (
+                  {(type === "citizen" ? CITIZEN_INCOME_OPTIONS : RESIDENT_INCOME_OPTIONS).map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
                       onClick={() => toggleIncome(opt.value)}
                       className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                         form.income_sources.includes(opt.value)
-                          ? "bg-[var(--color-brand-green)] text-white border-[var(--color-brand-green)] shadow-xs"
-                          : "bg-white text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-brand-gold)]"
+                          ? "bg-[#D97706] text-white border-[#D97706] shadow-xs"
+                          : "bg-white text-gray-700 border-[#E5E2D9] hover:border-[#C9A24A]"
                       }`}
                     >
                       {opt.label}
@@ -740,64 +682,56 @@ export default function AddBeneficiaryPage() {
                 )}
               </div>
 
-              {!calcResult && <p className="text-xs font-bold text-[var(--color-text-primary)]">أدخل الجنسية أولاً. القيمة الفارغة ليست سعودياً.</p>}
-              {calcResult && <div className="p-4 bg-[var(--color-bg-soft)] rounded-2xl border-2 border-[var(--color-brand-gold)] space-y-3">
-                <div className="flex items-center gap-2 font-extrabold text-sm text-[var(--color-text-primary)]">
-                  <Calculator className="w-5 h-5 text-[var(--color-brand-gold)]" />
+              {/* LIVE FORMULA & CLASSIFICATION CARD */}
+              <div className="p-4 bg-[#FAF8F5] rounded-2xl border-2 border-[#C9A24A] space-y-3">
+                <div className="flex items-center gap-2 font-extrabold text-sm text-[#111827]">
+                  <Calculator className="w-5 h-5 text-[#C9A24A]" />
                   <span>معادلة الاحتساب والتصنيف الآلي:</span>
                 </div>
 
-                <div className="bg-white p-3 rounded-xl border border-[var(--color-border)] font-mono text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                  <p className="font-bold text-[var(--color-brand-green)] mb-1">📐 المعادلة الحسابية:</p>
+                <div className="bg-white p-3 rounded-xl border border-[#E5E2D9] font-mono text-xs text-[#1F2937] leading-relaxed">
+                  <p className="font-bold text-[#D97706] mb-1">📐 المعادلة الحسابية:</p>
                   <p>{calcResult.formulaText}</p>
                 </div>
 
                 <div className="grid sm:grid-cols-3 gap-3 pt-1">
-                  <div className="bg-white p-3 rounded-xl border border-[var(--color-border)]">
-                    <span className="text-[11px] text-[var(--color-text-muted)] block font-bold">إجمالي الدخل الشهري</span>
-                    <strong className="text-sm font-mono text-[var(--color-text-primary)]">{calcResult.totalGrossIncome.toLocaleString()} ريال</strong>
+                  <div className="bg-white p-3 rounded-xl border border-[#E5E2D9]">
+                    <span className="text-[11px] text-[#6B7280] block font-bold">إجمالي الدخل الشهري</span>
+                    <strong className="text-sm font-mono text-[#111827]">{calcResult.totalGrossIncome.toLocaleString()} ريال</strong>
                   </div>
 
-                  <div className="bg-white p-3 rounded-xl border border-[var(--color-border)]">
-                    <span className="text-[11px] text-[var(--color-text-muted)] block font-bold">الإيجار الشهري</span>
+                  <div className="bg-white p-3 rounded-xl border border-[#E5E2D9]">
+                    <span className="text-[11px] text-[#6B7280] block font-bold">الإيجار الشهري</span>
                     <strong className="text-sm font-mono text-[#C24B3F]">{calcResult.monthlyRent.toLocaleString()} ريال</strong>
                   </div>
 
-                  <div className="bg-white p-3 rounded-xl border border-[var(--color-brand-green)]">
-                    <span className="text-[11px] text-[var(--color-brand-green)] font-bold block">صافي الدخل بعد الإيجار</span>
-                    <strong className="text-sm font-mono text-[var(--color-brand-green)]">{calcResult.eligibleIncome.toLocaleString()} ريال</strong>
+                  <div className="bg-white p-3 rounded-xl border border-[#3F6B3A]">
+                    <span className="text-[11px] text-[#3F6B3A] font-bold block">صافي الدخل بعد الإيجار</span>
+                    <strong className="text-sm font-mono text-[#3F6B3A]">{calcResult.eligibleIncome.toLocaleString()} ريال</strong>
                   </div>
                 </div>
 
-                <div className="p-3 bg-white rounded-xl border border-[var(--color-border)] flex flex-wrap items-center justify-between gap-2">
+                <div className="p-3 bg-white rounded-xl border border-[#E5E2D9] flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <span className="text-xs text-[var(--color-text-muted)] block">التصنيف المحسوب آلياً:</span>
-                    <span className="text-sm font-extrabold text-[var(--color-brand-green)]">{calcResult.categoryLabel}</span>
-                    <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{calcResult.reason}</p>
-                    {classification === "resident" && calcResult?.needLevelLabel && (
-                      <div className="mt-2 inline-flex items-center gap-1.5 bg-[var(--color-bg-soft)] border border-amber-300 text-amber-900 text-xs px-2.5 py-1 rounded-lg font-bold">
-                        <span>مستوى الاحتياج:</span>
-                        <span>{calcResult.needLevelLabel}</span>
-                      </div>
-                    )}
+                    <span className="text-xs text-[#6B7280] block">التصنيف المحسوب آلياً:</span>
+                    <span className="text-sm font-extrabold text-[#3F6B3A]">{calcResult.categoryLabel}</span>
+                    <p className="text-[11px] text-[#6B7280] mt-0.5">{calcResult.reason}</p>
                   </div>
 
-                  {/* Manual Override Control - Citizens Only */}
-                  {classification === "citizen" && (
-                    <div className="text-left">
-                      <button
-                        type="button"
-                        onClick={() => setForm((f) => ({ ...f, manual_override: !f.manual_override }))}
-                        className="text-xs text-[var(--color-brand-green)] font-bold hover:underline"
-                      >
-                        {form.manual_override ? "إلغاء التعديل اليدوي" : "⚙️ تعديل يدوي للتصنيف (صلاحية خاصة)"}
-                      </button>
-                    </div>
-                  )}
+                  {/* Manual Override Control */}
+                  <div className="text-left">
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, manual_override: !f.manual_override }))}
+                      className="text-xs text-[#D97706] font-bold hover:underline"
+                    >
+                      {form.manual_override ? "إلغاء التعديل اليدوي" : "⚙️ تعديل يدوي للتصنيف (صلاحية خاصة)"}
+                    </button>
+                  </div>
                 </div>
 
-                {classification === "citizen" && form.manual_override && (
-                  <div className="p-3 bg-[var(--color-bg-soft)] rounded-xl border border-[var(--color-border)] space-y-2">
+                {form.manual_override && (
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
                     <label className={cls.label}>اختر التصنيف اليدوي البديل:</label>
                     <select
                       name="priority"
@@ -821,7 +755,7 @@ export default function AddBeneficiaryPage() {
                     />
                   </div>
                 )}
-              </div>}
+              </div>
             </div>
           )}
 
@@ -829,47 +763,31 @@ export default function AddBeneficiaryPage() {
           {step === 4 && (
             <div className={cls.section}>
               <h2 className={cls.h2}>📂 رفع الوثائق والمستندات الرسمية المرفقة</h2>
-              <p className="text-xs text-[var(--color-text-muted)] mb-4 font-semibold">
-                {classification === "citizen"
+              <p className="text-xs text-[#6B7280] mb-4 font-semibold">
+                {type === "citizen"
                   ? "المستندات الإلزامية للمواطن: صورة الهوية الوطنية، العنوان الوطني، وعقد الإيجار/فاتورة الكهرباء."
-                  : classification === "resident"
-                    ? "المستندات الإلزامية للمقيم: صورة الإقامة، العنوان الوطني، وعقد الإيجار (مشهد الراتب اختياري للمقيمين)."
-                    : "أدخل الجنسية أولاً. القيمة الفارغة لا تُعامل كسعودي."}
+                  : "المستندات الإلزامية للمقيم: صورة الإقامة، العنوان الوطني، وعقد الإيجار (مشهد الراتب اختياري للمقيمين)."}
               </p>
 
               <div className="grid md:grid-cols-2 gap-4">
-                {classification === "citizen" ? (
+                {type === "citizen" ? (
                   <>
                     <FileUpload name="national_id_image" label="1. صورة الهوية الوطنية *" required onChange={handleFile} />
                     <FileUpload name="national_address_image" label="2. صورة العنوان الوطني *" required onChange={handleFile} />
-                    {form.housing_type === "rent" && (
-                      <FileUpload name="rental_contract_image" label="3. عقد الإيجار أو فاتورة الكهرباء *" required onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
-                    )}
-                    {form.income_sources.includes("salary") && (
-                      <FileUpload name="salary_certificate" label="4. مشهد إثبات الراتب" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
-                    )}
-                    {form.income_sources.includes("social_security") && (
-                      <FileUpload name="social_security_image" label="5. مشهد الضمان الاجتماعي" onChange={handleFile} />
-                    )}
-                    {form.income_sources.includes("citizen_account") && (
-                      <FileUpload name="citizen_account_image" label="6. إثبات حساب المواطن" onChange={handleFile} />
-                    )}
-                    {form.income_sources.includes("retirement") && (
-                      <FileUpload name="pension_certificate_image" label="7. شهادة المعاش التقاعدي" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
-                    )}
+                    <FileUpload name="rental_contract_image" label="3. عقد الإيجار أو فاتورة الكهرباء *" required onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
+                    <FileUpload name="salary_certificate" label="4. مشهد إثبات الراتب" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
+                    <FileUpload name="social_security_image" label="5. مشهد الضمان الاجتماعي" onChange={handleFile} />
+                    <FileUpload name="citizen_account_image" label="6. إثبات حساب المواطن" onChange={handleFile} />
+                    <FileUpload name="pension_certificate_image" label="7. شهادة المعاش التقاعدي" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
                   </>
-                ) : classification === "resident" ? (
+                ) : (
                   <>
                     <FileUpload name="residence_id_image" label="1. صورة هوية مقيم (الإقامة) *" required onChange={handleFile} />
                     <FileUpload name="national_address_image" label="2. صورة العنوان الوطني *" required onChange={handleFile} />
-                    {form.housing_type === "rent" && (
-                      <FileUpload name="rental_contract_image" label="3. عقد الإيجار أو فاتورة الكهرباء *" required onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
-                    )}
-                    {form.income_sources.includes("salary") && (
-                      <FileUpload name="salary_certificate" label="4. مشهد الراتب (اختياري للمقيم)" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
-                    )}
+                    <FileUpload name="rental_contract_image" label="3. عقد الإيجار أو فاتورة الكهرباء *" required onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
+                    <FileUpload name="salary_certificate" label="4. مشهد الراتب (اختياري للمقيم)" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
                   </>
-                ) : null}
+                )}
               </div>
             </div>
           )}
@@ -879,28 +797,29 @@ export default function AddBeneficiaryPage() {
             <div className={cls.section}>
               <h2 className={cls.h2}>🔎 مراجعة البيانات وتأكيد التوثيق والتصنيف النهائي</h2>
 
-              {calcResult && <div className="bg-[var(--color-bg-soft)] p-4 rounded-2xl border-2 border-[var(--color-brand-gold)] mb-5 flex flex-wrap items-center justify-between gap-3">
+              {/* Calculated Summary Card */}
+              <div className="bg-[#FAF8F5] p-4 rounded-2xl border-2 border-[#C9A24A] mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <span className="text-xs text-[var(--color-text-muted)] font-bold block mb-1">التصنيف النهائي للمستفيد:</span>
-                  <span className="px-4 py-1 rounded-full text-xs font-extrabold bg-[var(--color-brand-green)] text-white">
+                  <span className="text-xs text-[#6B7280] font-bold block mb-1">التصنيف النهائي للمستفيد:</span>
+                  <span className="px-4 py-1 rounded-full text-xs font-extrabold bg-[#3F6B3A] text-white">
                     {form.manual_override ? `تعديل يدوي: ${form.priority === 'first_class' ? 'درجة أولى' : 'درجة ثانية'}` : calcResult.categoryLabel}
                   </span>
-                  <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{calcResult.reason}</p>
+                  <p className="text-[11px] text-[#6B7280] mt-1">{calcResult.reason}</p>
                 </div>
                 <div className="text-left font-mono">
-                  <span className="text-xs text-[var(--color-text-muted)] font-bold block mb-0.5">الدخل الشهري المحتسب:</span>
-                  <span className="text-lg font-extrabold text-[var(--color-brand-green)]">
+                  <span className="text-xs text-[#6B7280] font-bold block mb-0.5">الدخل الشهري المحتسب:</span>
+                  <span className="text-lg font-extrabold text-[#D97706]">
                     {calcResult.eligibleIncome.toLocaleString()} ريال
                   </span>
-                  <span className="text-[10px] text-[var(--color-text-muted)] block">(بعد اقتطاع {calcResult.monthlyRent} ريال إيجار)</span>
+                  <span className="text-[10px] text-gray-400 block">(بعد اقتطاع {calcResult.monthlyRent} ريال إيجار)</span>
                 </div>
-              </div>}
+              </div>
 
               {/* Summary Lists */}
               <div className="space-y-4 text-xs">
-                <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-xl border border-[var(--color-border)]">
-                  <h3 className="font-bold text-[var(--color-text-primary)] mb-2 flex items-center gap-1.5">
-                    <UserCheck className="w-4 h-4 text-[var(--color-brand-gold)]" />
+                <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-200">
+                  <h3 className="font-bold text-[#111827] mb-2 flex items-center gap-1.5">
+                    <UserCheck className="w-4 h-4 text-[#C9A24A]" />
                     <span>البيانات الأساسية</span>
                   </h3>
                   <div className="grid md:grid-cols-3 gap-2">
@@ -913,17 +832,17 @@ export default function AddBeneficiaryPage() {
                   </div>
                 </div>
 
-                <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-xl border border-[var(--color-border)]">
-                  <h3 className="font-bold text-[var(--color-text-primary)] mb-2 flex items-center gap-1.5">
-                    <Users className="w-4 h-4 text-[var(--color-brand-green)]" />
+                <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-200">
+                  <h3 className="font-bold text-[#111827] mb-2 flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-[#3F6B3A]" />
                     <span>الأسرة والمعالون ({dependents.length} أفراد)</span>
                   </h3>
                   <p><strong>الحالة الاجتماعية:</strong> {form.family_status || '—'} | <strong>أفراد الأسرة:</strong> {form.family_members_count}</p>
                 </div>
 
-                <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-xl border border-[var(--color-border)]">
-                  <h3 className="font-bold text-[var(--color-text-primary)] mb-2 flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-[var(--color-brand-green)]" />
+                <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-200">
+                  <h3 className="font-bold text-[#111827] mb-2 flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-[#D97706]" />
                     <span>المستندات المرفقة ({Object.keys(files).length})</span>
                   </h3>
                   <ul className="list-disc list-inside space-y-0.5 text-green-700 font-bold">
@@ -936,9 +855,8 @@ export default function AddBeneficiaryPage() {
             </div>
           )}
 
-          {step === STEPS.length && <label className="flex items-center gap-3 p-4"><input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} />راجعت بيانات المستفيد والأسرة والمستندات وأؤكد حفظها</label>}
           {/* Navigation buttons */}
-          <div className="flex justify-between items-center mt-6 pt-4 border-t border-[var(--color-border)]">
+          <div className="flex justify-between items-center mt-6 pt-4 border-t border-[#E5E2D9]">
             <Button
               type="button"
               variant="outline"
@@ -963,7 +881,7 @@ export default function AddBeneficiaryPage() {
                 type="submit"
                 variant="secondary"
                 size="md"
-                disabled={idStatus === "taken" || !reviewed || saving}
+                disabled={idStatus === "taken"}
                 loading={saving}
                 icon={Save}
               >
@@ -989,8 +907,8 @@ function FileUpload({ name, label, onChange, accept = "image/*", required = fals
   };
 
   return (
-    <div className="border border-dashed border-[var(--color-border)] rounded-xl p-3.5 hover:border-[var(--color-brand-gold)] transition-colors bg-white">
-      <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-2">
+    <div className="border border-dashed border-[#E5E2D9] rounded-xl p-3.5 hover:border-[#C9A24A] transition-colors bg-white">
+      <label className="block text-xs font-bold text-[#111827] mb-2">
         {label} {required && <span className="text-[#C24B3F]">*</span>}
       </label>
       <input
@@ -998,9 +916,9 @@ function FileUpload({ name, label, onChange, accept = "image/*", required = fals
         name={name}
         accept={accept}
         onChange={handleChange}
-        className="block w-full text-xs text-[var(--color-text-muted)] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-[var(--color-bg-soft)] file:text-[var(--color-brand-gold)] file:font-bold cursor-pointer"
+        className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-[#FAF8F5] file:text-[#C9A24A] file:font-bold cursor-pointer"
       />
-      {fileName && <p className="text-[11px] text-[var(--color-brand-green)] font-bold mt-2">✓ تم اختيار: {fileName}</p>}
+      {fileName && <p className="text-[11px] text-[#3F6B3A] font-bold mt-2">✓ تم اختيار: {fileName}</p>}
     </div>
   );
 }

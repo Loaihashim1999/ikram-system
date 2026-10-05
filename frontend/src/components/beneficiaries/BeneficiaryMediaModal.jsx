@@ -21,7 +21,7 @@ export default function BeneficiaryMediaModal({ beneficiary, mode, onClose }) {
         onClick={(event) => event.stopPropagation()}
         dir="rtl"
       >
-        <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3 sm:px-6">
+        <div className="flex items-center justify-between border-b border-[#E5E2D9] px-4 py-3 sm:px-6">
           <div>
             <h2 className="text-lg font-bold text-[#546027]">{title}</h2>
             <p className="text-sm text-[#6B6B66]">{beneficiary.full_name}</p>
@@ -29,7 +29,7 @@ export default function BeneficiaryMediaModal({ beneficiary, mode, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-[#6B6B66] hover:bg-[var(--color-bg-page)]"
+            className="rounded-lg p-2 text-[#6B6B66] hover:bg-[#F7F5F0]"
             aria-label="إغلاق"
           >
             <X size={20} />
@@ -41,14 +41,14 @@ export default function BeneficiaryMediaModal({ beneficiary, mode, onClose }) {
             <div>
               {photoUrl ? (
                 isPdf(photoUrl) ? (
-                  <div className="flex flex-col items-center gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-page)] p-8">
-                    <FileText size={48} className="text-[var(--color-brand-gold)]" />
+                  <div className="flex flex-col items-center gap-4 rounded-xl border border-[#E5E2D9] bg-[#F7F5F0] p-8">
+                    <FileText size={48} className="text-[#C9A24A]" />
                     <p className="text-[#6B6B66]">الصورة محفوظة كملف PDF</p>
                     <a
                       href={photoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-brand-gold)] px-4 py-2 text-white hover:bg-[#8A6B24]"
+                      className="inline-flex items-center gap-2 rounded-lg bg-[#C9A24A] px-4 py-2 text-white hover:bg-[#8A6B24]"
                     >
                       <ExternalLink size={16} />
                       فتح الملف
@@ -58,11 +58,11 @@ export default function BeneficiaryMediaModal({ beneficiary, mode, onClose }) {
                   <img
                     src={photoUrl}
                     alt={beneficiary.full_name}
-                    className="mx-auto max-h-[70vh] w-full rounded-xl border border-[var(--color-border)] object-contain bg-[var(--color-bg-page)]"
+                    className="mx-auto max-h-[70vh] w-full rounded-xl border border-[#E5E2D9] object-contain bg-[#F7F5F0]"
                   />
                 )
               ) : (
-                <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-page)] p-10 text-center text-[#6B6B66]">
+                <div className="rounded-xl border border-dashed border-[#E5E2D9] bg-[#F7F5F0] p-10 text-center text-[#6B6B66]">
                   لا توجد صورة هوية أو إقامة مرفوعة
                 </div>
               )}
@@ -72,7 +72,7 @@ export default function BeneficiaryMediaModal({ beneficiary, mode, onClose }) {
           {mode === 'documents' && (
             <div>
               {documents.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-page)] p-10 text-center text-[#6B6B66]">
+                <div className="rounded-xl border border-dashed border-[#E5E2D9] bg-[#F7F5F0] p-10 text-center text-[#6B6B66]">
                   لا توجد وثائق مرفوعة لهذا المستفيد
                 </div>
               ) : (
@@ -80,20 +80,20 @@ export default function BeneficiaryMediaModal({ beneficiary, mode, onClose }) {
                   {documents.map((document) => (
                     <div
                       key={document.field}
-                      className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-page)]"
+                      className="overflow-hidden rounded-xl border border-[#E5E2D9] bg-[#F7F5F0]"
                     >
-                      <div className="border-b border-[var(--color-border)] bg-white px-3 py-2 text-sm font-bold text-[#546027]">
+                      <div className="border-b border-[#E5E2D9] bg-white px-3 py-2 text-sm font-bold text-[#546027]">
                         {document.label}
                       </div>
                       <div className="p-3">
                         {isPdf(document.url) ? (
                           <div className="flex flex-col items-center gap-3 py-6">
-                            <FileText size={40} className="text-[var(--color-brand-gold)]" />
+                            <FileText size={40} className="text-[#C9A24A]" />
                             <a
                               href={document.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 text-sm text-[var(--color-brand-gold)] hover:underline"
+                              className="inline-flex items-center gap-2 text-sm text-[#C9A24A] hover:underline"
                             >
                               <ExternalLink size={14} />
                               عرض PDF

@@ -28,8 +28,6 @@ class DailyBeneficiary extends Model
         'last_delivery_date',
         'notes',
         'created_by',
-        'nationality',
-        'beneficiary_type',
     ];
 
     protected $casts = [

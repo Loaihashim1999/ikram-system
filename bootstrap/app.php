@@ -6,7 +6,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Sentry\Laravel\Integration;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -17,21 +16,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $trustedProxies = array_values(array_filter(array_map(
-            'trim',
-            explode(',', (string) env('TRUSTED_PROXIES', ''))
-        )));
-
-        if ($trustedProxies !== []) {
-            $middleware->trustProxies(
-                at: $trustedProxies,
-                headers: Request::HEADER_X_FORWARDED_FOR
-                    | Request::HEADER_X_FORWARDED_HOST
-                    | Request::HEADER_X_FORWARDED_PORT
-                    | Request::HEADER_X_FORWARDED_PROTO
-            );
-        }
-
         $middleware->alias([
             'role' => RoleMiddleware::class,
         ]);
@@ -39,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         Integration::handles($exceptions);
 
-        $exceptions->render(function (ValidationException $e, Request $request) {
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) {
             if ($request->is('api/*') || $request->wantsJson()) {
                 return response()->json([
                     'message' => array_values($e->errors())[0][0] ?? 'بيانات المدخلات غير صحيحة',

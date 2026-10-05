@@ -3,15 +3,15 @@ import MainLayout from "../../components/layout/MainLayout";
 import beneficiaryApi from "../../api/beneficiaries";
 
 /* ─── Simple Bar Component ─── */
-function Bar({ label, value, max, color = "var(--color-brand-gold)" }) {
+function Bar({ label, value, max, color = "#C9A24A" }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
     <div className="mb-3">
       <div className="flex justify-between text-sm mb-1">
-        <span className="font-medium text-[var(--color-text-secondary)]">{label}</span>
+        <span className="font-medium text-gray-700">{label}</span>
         <span className="font-bold" style={{ color }}>{value}</span>
       </div>
-      <div className="w-full bg-[var(--color-bg-soft)] rounded-full h-3">
+      <div className="w-full bg-gray-100 rounded-full h-3">
         <div
           className="h-3 rounded-full transition-all duration-700"
           style={{ width: `${pct}%`, backgroundColor: color }}
@@ -24,7 +24,7 @@ function Bar({ label, value, max, color = "var(--color-brand-gold)" }) {
 /* ─── Stat Card ─── */
 function StatCard({ icon, label, value, sub, color }) {
   return (
-    <div className="bg-white rounded-2xl shadow-md p-5 flex items-center gap-4 border border-[var(--color-border)]">
+    <div className="bg-white rounded-2xl shadow-md p-5 flex items-center gap-4 border border-gray-100">
       <div
         className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
         style={{ backgroundColor: color + "22" }}
@@ -32,9 +32,9 @@ function StatCard({ icon, label, value, sub, color }) {
         {icon}
       </div>
       <div>
-        <p className="text-[var(--color-text-muted)] text-sm">{label}</p>
+        <p className="text-gray-500 text-sm">{label}</p>
         <p className="text-3xl font-black" style={{ color }}>{value ?? "..."}</p>
-        {sub && <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -111,8 +111,8 @@ export default function StatisticsPage() {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-black text-[var(--color-text-primary)] mb-1">📊 الإحصائيات والتحليلات</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">لمحة شاملة عن بيانات المستفيدين المسجلين في النظام</p>
+          <h1 className="text-2xl font-black text-gray-800 mb-1">📊 الإحصائيات والتحليلات</h1>
+          <p className="text-sm text-gray-500">لمحة شاملة عن بيانات المستفيدين المسجلين في النظام</p>
         </div>
 
         {loading ? (
@@ -123,7 +123,7 @@ export default function StatisticsPage() {
           <>
             {/* ─── Top stat cards ─── */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <StatCard icon="👥" label="إجمالي المستفيدين" value={total} color="var(--color-brand-gold)" />
+              <StatCard icon="👥" label="إجمالي المستفيدين" value={total} color="#C9A24A" />
               <StatCard icon="🟢" label="نشطون" value={active} sub={`${total ? Math.round(active / total * 100) : 0}%`} color="#16a34a" />
               <StatCard icon="♿" label="ذوو احتياجات خاصة" value={specialNeeds} color="#7c3aed" />
               <StatCard icon="💰" label="متوسط الدخل الشهري" value={`${avgIncome} ﷼`} color="#0369a1" />
@@ -133,14 +133,14 @@ export default function StatisticsPage() {
             <div className="grid md:grid-cols-2 gap-6 mb-6">
 
               {/* Citizen vs Resident */}
-              <div className="bg-white rounded-2xl shadow-md p-6 border border-[var(--color-border)]">
-                <h2 className="font-bold text-[var(--color-text-secondary)] text-base mb-4 border-b border-amber-50 pb-2">
+              <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
+                <h2 className="font-bold text-amber-800 text-base mb-4 border-b border-amber-50 pb-2">
                   🏠 المستفيدون حسب النوع
                 </h2>
-                <Bar label="مواطنون"  value={citizens}  max={total} color="var(--color-brand-gold)" />
+                <Bar label="مواطنون"  value={citizens}  max={total} color="#C9A24A" />
                 <Bar label="مقيمون"   value={residents} max={total} color="#3b82f6" />
                 <div className="mt-4 flex gap-4 text-sm">
-                  <span className="bg-[var(--color-bg-soft)] text-amber-700 px-3 py-1 rounded-full font-semibold">
+                  <span className="bg-amber-50 text-amber-700 px-3 py-1 rounded-full font-semibold">
                     مواطن: {total > 0 ? Math.round(citizens / total * 100) : 0}%
                   </span>
                   <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-semibold">
@@ -150,8 +150,8 @@ export default function StatisticsPage() {
               </div>
 
               {/* Status breakdown */}
-              <div className="bg-white rounded-2xl shadow-md p-6 border border-[var(--color-border)]">
-                <h2 className="font-bold text-[var(--color-text-secondary)] text-base mb-4 border-b border-amber-50 pb-2">
+              <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
+                <h2 className="font-bold text-amber-800 text-base mb-4 border-b border-amber-50 pb-2">
                   📋 الحالات
                 </h2>
                 <Bar label="نشط"          value={active}    max={total} color="#16a34a" />
@@ -160,31 +160,31 @@ export default function StatisticsPage() {
               </div>
 
               {/* Family status */}
-              <div className="bg-white rounded-2xl shadow-md p-6 border border-[var(--color-border)]">
-                <h2 className="font-bold text-[var(--color-text-secondary)] text-base mb-4 border-b border-amber-50 pb-2">
+              <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
+                <h2 className="font-bold text-amber-800 text-base mb-4 border-b border-amber-50 pb-2">
                   👨‍👩‍👧 الحالة الأسرية
                 </h2>
                 {familyStatusCounts.filter(f => f.value > 0).length === 0 ? (
-                  <p className="text-[var(--color-text-muted)] text-sm text-center py-4">لا توجد بيانات حالة أسرية بعد.</p>
+                  <p className="text-gray-400 text-sm text-center py-4">لا توجد بيانات حالة أسرية بعد.</p>
                 ) : (
                   familyStatusCounts.filter(f => f.value > 0).map((f, i) => (
                     <Bar key={i} label={f.label} value={f.value} max={total}
-                      color={["var(--color-brand-gold)","#16a34a","#7c3aed","#3b82f6","#dc2626","#d97706"][i % 6]} />
+                      color={["#C9A24A","#16a34a","#7c3aed","#3b82f6","#dc2626","#d97706"][i % 6]} />
                   ))
                 )}
               </div>
 
               {/* Top cities */}
-              <div className="bg-white rounded-2xl shadow-md p-6 border border-[var(--color-border)]">
-                <h2 className="font-bold text-[var(--color-text-secondary)] text-base mb-4 border-b border-amber-50 pb-2">
+              <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
+                <h2 className="font-bold text-amber-800 text-base mb-4 border-b border-amber-50 pb-2">
                   🏙️ أعلى المدن تسجيلاً
                 </h2>
                 {topCities.length === 0 ? (
-                  <p className="text-[var(--color-text-muted)] text-sm text-center py-4">لا توجد بيانات مدن بعد.</p>
+                  <p className="text-gray-400 text-sm text-center py-4">لا توجد بيانات مدن بعد.</p>
                 ) : (
                   topCities.map((c, i) => (
                     <Bar key={i} label={c.label} value={c.value} max={topCities[0].value}
-                      color="var(--color-brand-gold)" />
+                      color="#C9A24A" />
                   ))
                 )}
               </div>
@@ -192,24 +192,24 @@ export default function StatisticsPage() {
 
             {/* ─── Housing & financial summary ─── */}
             <div className="grid md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-white rounded-2xl shadow-md p-5 border border-[var(--color-border)]">
-                <p className="text-sm text-[var(--color-text-muted)] mb-1">🏘️ يسكنون بالإيجار</p>
+              <div className="bg-white rounded-2xl shadow-md p-5 border border-gray-100">
+                <p className="text-sm text-gray-500 mb-1">🏘️ يسكنون بالإيجار</p>
                 <p className="text-3xl font-black text-amber-700">{renters}</p>
               </div>
-              <div className="bg-white rounded-2xl shadow-md p-5 border border-[var(--color-border)]">
-                <p className="text-sm text-[var(--color-text-muted)] mb-1">🏠 يملكون مسكناً</p>
+              <div className="bg-white rounded-2xl shadow-md p-5 border border-gray-100">
+                <p className="text-sm text-gray-500 mb-1">🏠 يملكون مسكناً</p>
                 <p className="text-3xl font-black text-green-700">{owners}</p>
               </div>
-              <div className="bg-white rounded-2xl shadow-md p-5 border border-[var(--color-border)]">
-                <p className="text-sm text-[var(--color-text-muted)] mb-1">📊 إجمالي الدخل المُعلن</p>
+              <div className="bg-white rounded-2xl shadow-md p-5 border border-gray-100">
+                <p className="text-sm text-gray-500 mb-1">📊 إجمالي الدخل المُعلن</p>
                 <p className="text-2xl font-black text-blue-700">{totalIncome.toLocaleString("ar-SA")} ﷼</p>
               </div>
             </div>
 
             {/* ─── Summary table ─── */}
-            <div className="bg-white rounded-2xl shadow-md border border-[var(--color-border)] overflow-hidden">
-              <div className="p-5 border-b border-[var(--color-border)]">
-                <h2 className="font-bold text-[var(--color-text-secondary)] text-base">📋 ملخص إجمالي</h2>
+            <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+              <div className="p-5 border-b border-gray-100">
+                <h2 className="font-bold text-amber-800 text-base">📋 ملخص إجمالي</h2>
               </div>
               <table className="w-full text-sm text-right">
                 <tbody>
@@ -222,10 +222,10 @@ export default function StatisticsPage() {
                     ["موقوفون", suspended, ""],
                     ["قيد المراجعة", underRev, ""],
                   ].map(([label, val, pct], i) => (
-                    <tr key={i} className={i % 2 === 0 ? "bg-[var(--color-bg-soft)]" : "bg-white"}>
-                      <td className="px-5 py-3 text-[var(--color-text-secondary)]">{label}</td>
-                      <td className="px-5 py-3 font-bold text-[var(--color-text-secondary)]">{val}</td>
-                      <td className="px-5 py-3 text-[var(--color-text-muted)]">{pct}</td>
+                    <tr key={i} className={i % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                      <td className="px-5 py-3 text-gray-700">{label}</td>
+                      <td className="px-5 py-3 font-bold text-amber-800">{val}</td>
+                      <td className="px-5 py-3 text-gray-400">{pct}</td>
                     </tr>
                   ))}
                 </tbody>

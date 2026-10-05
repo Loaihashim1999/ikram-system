@@ -106,7 +106,7 @@ export default function EditStaffPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div className="p-8 text-center text-[var(--color-text-muted)] font-bold" dir="rtl">
+        <div className="p-8 text-center text-gray-500 font-bold" dir="rtl">
           جاري تحميل بيانات الموظف للتعديل...
         </div>
       </MainLayout>
@@ -132,16 +132,16 @@ export default function EditStaffPage() {
           }
         />
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl border border-[var(--color-border)] overflow-hidden">
+        <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
           {/* 4 Tabs Header */}
-          <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-soft)] text-xs font-bold">
+          <div className="flex border-b border-gray-200 bg-amber-50/50 text-xs font-bold">
             <button
               type="button"
               onClick={() => setActiveTab("info")}
               className={`flex-1 py-3.5 px-4 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 ${
                 activeTab === "info"
                   ? "border-amber-600 text-amber-900 bg-white"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               <Briefcase className="w-4 h-4" />
@@ -154,7 +154,7 @@ export default function EditStaffPage() {
               className={`flex-1 py-3.5 px-4 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 ${
                 activeTab === "family"
                   ? "border-amber-600 text-amber-900 bg-white"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               <Home className="w-4 h-4" />
@@ -167,7 +167,7 @@ export default function EditStaffPage() {
               className={`flex-1 py-3.5 px-4 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 ${
                 activeTab === "dependents"
                   ? "border-amber-600 text-amber-900 bg-white"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               <Users className="w-4 h-4" />
@@ -180,7 +180,7 @@ export default function EditStaffPage() {
               className={`flex-1 py-3.5 px-4 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 ${
                 activeTab === "docs"
                   ? "border-amber-600 text-amber-900 bg-white"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               <FileText className="w-4 h-4" />
@@ -192,111 +192,111 @@ export default function EditStaffPage() {
           {activeTab === "info" && (
             <div className="p-6 grid md:grid-cols-2 gap-4 text-xs">
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">اسم الموظف الكامل *</label>
+                <label className="block font-bold text-gray-700 mb-1">اسم الموظف الكامل *</label>
                 <input
                   name="name"
                   value={form.name}
                   onChange={handleChange}
                   required
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">رقم الهوية / الإقامة *</label>
+                <label className="block font-bold text-gray-700 mb-1">رقم الهوية / الإقامة *</label>
                 <input
                   name="national_id"
                   value={form.national_id}
                   onChange={handleChange}
                   maxLength={10}
                   required
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl font-mono focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl font-mono focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">رقم الهاتف *</label>
+                <label className="block font-bold text-gray-700 mb-1">رقم الهاتف *</label>
                 <input
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
                   required
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl font-mono focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl font-mono focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">البريد الإلكتروني</label>
+                <label className="block font-bold text-gray-700 mb-1">البريد الإلكتروني</label>
                 <input
                   name="email"
                   type="email"
                   value={form.email}
                   onChange={handleChange}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl font-mono focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl font-mono focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">المسمى الوظيفي *</label>
+                <label className="block font-bold text-gray-700 mb-1">المسمى الوظيفي *</label>
                 <input
                   name="job_title"
                   value={form.job_title}
                   onChange={handleChange}
                   required
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-brand-gold)] font-bold text-amber-900"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 font-bold text-amber-900"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">القسم / الإدارة</label>
+                <label className="block font-bold text-gray-700 mb-1">القسم / الإدارة</label>
                 <input
                   name="department"
                   value={form.department}
                   onChange={handleChange}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">تاريخ التعيين</label>
+                <label className="block font-bold text-gray-700 mb-1">تاريخ التعيين</label>
                 <input
                   name="hire_date"
                   type="date"
                   value={form.hire_date}
                   onChange={handleChange}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl font-mono focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl font-mono focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">تاريخ الميلاد</label>
+                <label className="block font-bold text-gray-700 mb-1">تاريخ الميلاد</label>
                 <input
                   name="birth_date"
                   type="date"
                   value={form.birth_date}
                   onChange={handleChange}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl font-mono focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl font-mono focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">الراتب الأساسي (ريال)</label>
+                <label className="block font-bold text-gray-700 mb-1">الراتب الأساسي (ريال)</label>
                 <input
                   name="salary"
                   type="number"
                   value={form.salary}
                   onChange={handleChange}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl font-mono focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl font-mono focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">الحالة الوظيفية</label>
+                <label className="block font-bold text-gray-700 mb-1">الحالة الوظيفية</label>
                 <select
                   name="status"
                   value={form.status}
                   onChange={handleChange}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl font-bold bg-white focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl font-bold bg-white focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="active">✅ نشط</option>
                   <option value="on_leave">🏖️ إجازة</option>
@@ -305,12 +305,12 @@ export default function EditStaffPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">العنوان الوطني</label>
+                <label className="block font-bold text-gray-700 mb-1">العنوان الوطني</label>
                 <input
                   name="national_address"
                   value={form.national_address}
                   onChange={handleChange}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500"
                 />
               </div>
             </div>
@@ -320,19 +320,19 @@ export default function EditStaffPage() {
           {activeTab === "family" && (
             <div className="p-6 grid md:grid-cols-2 gap-4 text-xs">
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">عدد أفراد الأسرة</label>
+                <label className="block font-bold text-gray-700 mb-1">عدد أفراد الأسرة</label>
                 <input
                   name="family_members_count"
                   type="number"
                   min="0"
                   value={form.family_members_count}
                   onChange={handleChange}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">عدد الزوجات</label>
+                <label className="block font-bold text-gray-700 mb-1">عدد الزوجات</label>
                 <input
                   name="wives_count"
                   type="number"
@@ -340,17 +340,17 @@ export default function EditStaffPage() {
                   max="4"
                   value={form.wives_count}
                   onChange={handleChange}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">حالة الأب</label>
+                <label className="block font-bold text-gray-700 mb-1">حالة الأب</label>
                 <select
                   name="father_status"
                   value={form.father_status}
                   onChange={handleChange}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl bg-white focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="alive">على قيد الحياة</option>
                   <option value="deceased">متوفى</option>
@@ -358,12 +358,12 @@ export default function EditStaffPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-[var(--color-text-secondary)] mb-1">حالة الأم</label>
+                <label className="block font-bold text-gray-700 mb-1">حالة الأم</label>
                 <select
                   name="mother_status"
                   value={form.mother_status}
                   onChange={handleChange}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-xl bg-white focus:ring-2 focus:ring-[var(--color-brand-gold)]"
+                  className="w-full p-2.5 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="alive">على قيد الحياة</option>
                   <option value="deceased">متوفاة</option>
@@ -377,9 +377,9 @@ export default function EditStaffPage() {
                   name="owns_house"
                   checked={form.owns_house}
                   onChange={handleChange}
-                  className="w-4 h-4 text-amber-600 rounded focus:ring-[var(--color-brand-gold)]"
+                  className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
                 />
-                <label htmlFor="owns_house" className="font-bold text-[var(--color-text-primary)] cursor-pointer">
+                <label htmlFor="owns_house" className="font-bold text-gray-800 cursor-pointer">
                   يمتلك السكن (ملك شخصي)
                 </label>
               </div>
@@ -390,11 +390,11 @@ export default function EditStaffPage() {
           {activeTab === "dependents" && (
             <div className="p-6 text-xs space-y-4">
               <div className="flex justify-between items-center">
-                <h4 className="font-bold text-[var(--color-text-primary)]">قائمة التابعين المعالين للموظف</h4>
+                <h4 className="font-bold text-gray-800">قائمة التابعين المعالين للموظف</h4>
                 <button
                   type="button"
                   onClick={addDependent}
-                  className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>إضافة تابع جديد</span>
@@ -406,24 +406,24 @@ export default function EditStaffPage() {
                   {dependents.map((dep, idx) => (
                     <div
                       key={idx}
-                      className="p-3 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-2xl grid md:grid-cols-3 gap-3 items-center"
+                      className="p-3 bg-gray-50 border border-gray-200 rounded-2xl grid md:grid-cols-3 gap-3 items-center"
                     >
                       <div>
-                        <label className="block text-[11px] font-bold text-[var(--color-text-muted)] mb-1">اسم التابع</label>
+                        <label className="block text-[11px] font-bold text-gray-600 mb-1">اسم التابع</label>
                         <input
                           value={dep.name || ""}
                           onChange={(e) => updateDependent(idx, "name", e.target.value)}
                           placeholder="اسم التابع"
-                          className="w-full p-2 border border-[var(--color-border)] rounded-xl bg-white"
+                          className="w-full p-2 border border-gray-300 rounded-xl bg-white"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-[var(--color-text-muted)] mb-1">صلة القرابة</label>
+                        <label className="block text-[11px] font-bold text-gray-600 mb-1">صلة القرابة</label>
                         <select
                           value={dep.relationship || "ابن"}
                           onChange={(e) => updateDependent(idx, "relationship", e.target.value)}
-                          className="w-full p-2 border border-[var(--color-border)] rounded-xl bg-white"
+                          className="w-full p-2 border border-gray-300 rounded-xl bg-white"
                         >
                           {RELATIONSHIP_OPTIONS.map((rel) => (
                             <option key={rel} value={rel}>
@@ -435,12 +435,12 @@ export default function EditStaffPage() {
 
                       <div className="flex items-center gap-2">
                         <div className="flex-1">
-                          <label className="block text-[11px] font-bold text-[var(--color-text-muted)] mb-1">تاريخ الميلاد</label>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">تاريخ الميلاد</label>
                           <input
                             type="date"
                             value={dep.date_of_birth || ""}
                             onChange={(e) => updateDependent(idx, "date_of_birth", e.target.value)}
-                            className="w-full p-2 border border-[var(--color-border)] rounded-xl bg-white font-mono"
+                            className="w-full p-2 border border-gray-300 rounded-xl bg-white font-mono"
                           />
                         </div>
                         <button
@@ -456,7 +456,7 @@ export default function EditStaffPage() {
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center text-[var(--color-text-muted)] bg-[var(--color-bg-soft)] rounded-2xl border border-dashed border-[var(--color-border)]">
+                <div className="p-8 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                   لا يوجد تابعون مضافون بعد. اضغط على "+ إضافة تابع جديد" للإضافة.
                 </div>
               )}
@@ -466,29 +466,29 @@ export default function EditStaffPage() {
           {/* Tab 4: الوثائق والمرفقات */}
           {activeTab === "docs" && (
             <div className="p-6 text-xs space-y-4">
-              <div className="p-4 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-2xl">
+              <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl">
                 <p className="font-bold text-amber-900 mb-2">📄 الوثائق المرفقة بالموظف:</p>
-                <p className="text-[var(--color-text-muted)] text-xs">
+                <p className="text-gray-600 text-xs">
                   يمكنك استبدال أو تحميل ملفات جديدة لصورة الهوية وعقد العمل الرسمي من خلال هذا التبويب.
                 </p>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="p-4 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-2xl">
-                  <label className="block font-bold text-[var(--color-text-primary)] mb-2">صورة الهوية الوطنية</label>
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+                  <label className="block font-bold text-gray-800 mb-2">صورة الهوية الوطنية</label>
                   <input
                     type="file"
                     accept="image/*,.pdf"
-                    className="w-full text-xs text-[var(--color-text-muted)]"
+                    className="w-full text-xs text-gray-500"
                   />
                 </div>
 
-                <div className="p-4 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-2xl">
-                  <label className="block font-bold text-[var(--color-text-primary)] mb-2">وثيقة عقد العمل</label>
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+                  <label className="block font-bold text-gray-800 mb-2">وثيقة عقد العمل</label>
                   <input
                     type="file"
                     accept="image/*,.pdf"
-                    className="w-full text-xs text-[var(--color-text-muted)]"
+                    className="w-full text-xs text-gray-500"
                   />
                 </div>
               </div>
@@ -496,7 +496,7 @@ export default function EditStaffPage() {
           )}
 
           {/* Form Actions Footer */}
-          <div className="p-4 bg-[var(--color-bg-soft)] border-t border-[var(--color-border)] flex justify-between items-center">
+          <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
             <Button
               type="button"
               variant="outline"

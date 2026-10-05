@@ -1,32 +1,49 @@
-const tones = {
-  success: 'ikram-badge-success',
-  warning: 'ikram-badge-warning',
-  danger: 'ikram-badge-danger',
-  info: 'ikram-badge-info',
-  neutral: 'ikram-badge-neutral',
-};
 
-const statusTone = {
-  valid: 'success', active: 'success', in_stock: 'success', delivered: 'success', approved: 'success',
-  near_expiry: 'warning', suspended: 'warning', low_stock: 'warning', pending: 'warning',
-  expired: 'danger', revoked: 'danger', locked: 'danger', out_of_stock: 'danger', rejected: 'danger',
-  distributed: 'info', under_review: 'info',
-  used: 'neutral',
-};
+/**
+ * Unified StatusBadge component conforming to Ikram Association design tokens.
+ * Supported status keys:
+ * - Items: 'valid', 'near_expiry', 'expired', 'distributed'
+ * - Codes / QR: 'active', 'used', 'expired', 'revoked'
+ * - Accounts / Beneficiaries: 'active', 'suspended', 'locked', 'under_review'
+ */
+export default function StatusBadge({ status, label, className = '' }) {
+  const configs = {
+    // Warehouse item statuses
+    valid: { bg: 'bg-[#E6F4EC]', text: 'text-[#2E7D32]', border: 'border-[#A5D6A7]', defaultLabel: 'صالح' },
+    near_expiry: { bg: 'bg-[#FEF3C7]', text: 'text-[#B45309]', border: 'border-[#FCD34D]', defaultLabel: 'قارب على الانتهاء' },
+    expired: { bg: 'bg-[#FEE2E2]', text: 'text-[#B91C1C]', border: 'border-[#FCA5A5]', defaultLabel: 'منتهي الصلاحية' },
+    distributed: { bg: 'bg-[#E0F2FE]', text: 'text-[#0369A1]', border: 'border-[#7DD3FC]', defaultLabel: 'تم توزيعه' },
 
-const defaultLabels = {
-  valid: 'صالح', near_expiry: 'قارب على الانتهاء', expired: 'منتهي الصلاحية', distributed: 'تم توزيعه',
-  active: 'نشط', used: 'مستخدم', revoked: 'ملغي', suspended: 'موقوف', locked: 'مقفل',
-  under_review: 'قيد المراجعة', in_stock: 'متوفر', low_stock: 'مخزون منخفض', out_of_stock: 'نافذ',
-};
+    // QR & Code states
+    active: { bg: 'bg-[#E6F4EC]', text: 'text-[#2E7D32]', border: 'border-[#A5D6A7]', defaultLabel: 'نشط' },
+    used: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', defaultLabel: 'مستخدم' },
+    revoked: { bg: 'bg-[#FEE2E2]', text: 'text-[#B91C1C]', border: 'border-[#FCA5A5]', defaultLabel: 'ملغي' },
 
-export default function StatusBadge({ status, label, tone, className = '' }) {
+    // Account states
+    suspended: { bg: 'bg-[#FEF3C7]', text: 'text-[#B45309]', border: 'border-[#FCD34D]', defaultLabel: 'موقوف' },
+    locked: { bg: 'bg-red-100', text: 'text-red-900', border: 'border-red-300', defaultLabel: 'مقفل (3 محاولات)' },
+    under_review: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', defaultLabel: 'قيد المراجعة' },
+
+    // Stock levels
+    in_stock: { bg: 'bg-[#E6F4EC]', text: 'text-[#2E7D32]', border: 'border-[#A5D6A7]', defaultLabel: 'متوفر' },
+    low_stock: { bg: 'bg-[#FEF3C7]', text: 'text-[#B45309]', border: 'border-[#FCD34D]', defaultLabel: 'مخزون منخفض' },
+    out_of_stock: { bg: 'bg-[#FEE2E2]', text: 'text-[#B91C1C]', border: 'border-[#FCA5A5]', defaultLabel: 'نافذ' },
+  };
+
   const key = String(status || '').toLowerCase().replace(/[-\s]/g, '_');
-  const resolved = tone || statusTone[key] || 'neutral';
+  const conf = configs[key] || {
+    bg: 'bg-gray-50',
+    text: 'text-gray-700',
+    border: 'border-gray-200',
+    defaultLabel: label || status || 'غير محدد',
+  };
 
   return (
-    <span className={`ikram-badge ${tones[resolved] || tones.neutral} ${className}`}>
-      {label || defaultLabels[key] || status || 'غير محدد'}
+    <span
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border transition-colors ${conf.bg} ${conf.text} ${conf.border} ${className}`}
+    >
+      <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 ml-1 inline-block" />
+      {label || conf.defaultLabel}
     </span>
   );
 }

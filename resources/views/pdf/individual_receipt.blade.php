@@ -30,7 +30,12 @@
             <th>تاريخ الاستلام والمعالجة</th>
             <td>{{ \Carbon\Carbon::parse($distribution->scheduled_at)->format('Y-m-d') }}</td>
         </tr>
-        <tr><th>حالة العملية</th><td colspan="3">{{ $distribution->status === 'delivered' ? 'تم الاستلام' : 'قيد المعالجة' }}</td></tr>
+        <tr>
+            <th>رمز الاستلام الرقمي (Barcode)</th>
+            <td colspan="3" style="font-family: monospace; font-size: 14px; font-weight: bold; color: #8C6C26;">
+                {{ $distribution->barcode_code }}
+            </td>
+        </tr>
     </table>
 
     @if($beneficiary->dependents && count($beneficiary->dependents) > 0)
@@ -58,7 +63,7 @@
     @endif
 
     <div style="margin-top: 20px; font-size: 11px; color: #5C5C5C; border: 1px border #C9A24B; padding: 10px; background-color: #F7F5F0;">
-        هذا السند إلكتروني صادر من {{ $associationName }} لتوثيق استلام المساعدات والسلال الغذائية.
+        ⚠️ هذا السند إلكتروني معتمد وصادر من جمعية إكرام الجود لخدمة ضيوف الرحمن لتوثيق استلام المساعدات والسلال الغذائية.
     </div>
 
     <table style="width: 100%; margin-top: 40px;">

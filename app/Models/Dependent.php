@@ -15,22 +15,11 @@ class Dependent extends Model
         'name',
         'relationship',
         'date_of_birth',
-        'is_active',
     ];
 
     protected $casts = [
         'date_of_birth' => 'date',
-        'is_active' => 'boolean',
     ];
-
-    /**
-     * Active registered household members only — the authoritative family-size
-     * derivation never counts inactive/removed members.
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
 
     public function beneficiary(): BelongsTo
     {

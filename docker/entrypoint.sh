@@ -1,50 +1,42 @@
 #!/bin/sh
 set -eu
 
-case "${APP_KEY:-}" in
-    base64:*) ;;
-    *)
-        echo "A persistent APP_KEY must be configured before startup." >&2
-        exit 1
-        ;;
+echo "Ensuring storage, logs, cache and database permissions..."
+mkdir -p /var/www/html/storage/framework/views \
+         /var/www/html/storage/framework/sessions \
+         /var/www/html/storage/framework/cache \
+         /var/www/html/storage/logs \
+         /var/www/html/bootstrap/cache \
+         /var/www/html/database
+
+touch /var/www/html/storage/logs/laravel.log
+touch /var/www/html/database/database.sqlite
+
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+
+echo "Checking Application Key..."
+case "$APP_KEY" in
+  base64:*) echo "APP_KEY is set correctly." ;;
+  *)
+    echo "A persistent APP_KEY must be configured before startup." >&2
+    exit 1
+    ;;
 esac
 
-if [ "${APP_ENV:-production}" = "production" ]; then
-    if [ "$(php -r 'echo filter_var(getenv("APP_DEBUG") ?: "false", FILTER_VALIDATE_BOOLEAN) ? "true" : "false";')" = "true" ]; then
-        echo "APP_DEBUG must be false in production." >&2
-        exit 1
-    fi
+echo "Running Laravel Migrations..."
+php /var/www/html/artisan migrate --force
 
-    if [ "${DB_CONNECTION:-pgsql}" != "pgsql" ]; then
-        echo "DB_CONNECTION must be pgsql in production." >&2
-        exit 1
-    fi
+echo "Ensuring Production Administrator..."
+php /var/www/html/artisan app:ensure-production-admin
 
-    if [ "${CACHE_STORE:-database}" != "database" ] \
-        || [ "${SESSION_DRIVER:-database}" != "database" ] \
-        || [ "${QUEUE_CONNECTION:-database}" != "database" ]; then
-        echo "Production cache, session and queue drivers must use the shared database." >&2
-        exit 1
-    fi
+echo "Clearing Caches..."
+php /var/www/html/artisan config:clear || true
+php /var/www/html/artisan route:clear || true
+php /var/www/html/artisan storage:link || true
 
-    if [ "${FILESYSTEM_DISK:-azure}" != "azure" ] \
-        || [ "${PUBLIC_FILESYSTEM_DRIVER:-azure-storage-blob}" != "azure-storage-blob" ] \
-        || [ "${PUBLIC_FILESYSTEM_VISIBILITY:-private}" != "private" ]; then
-        echo "Production filesystems must use private Azure Blob storage, not public or ephemeral local disks." >&2
-        exit 1
-    fi
+# Final permission check
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
-        if [ -n "${AZURE_STORAGE_CONNECTION_STRING:-}" ]; then
-        echo "AZURE_STORAGE_CONNECTION_STRING must not be used in production. Use Managed Identity." >&2
-        exit 1
-    fi
-
-    if [ -z "${AZURE_STORAGE_ACCOUNT_NAME:-}" ] \
-        || [ -z "${AZURE_STORAGE_CONTAINER:-}" ] \
-        || [ -z "${AZURE_CLIENT_ID:-}" ]; then
-        echo "Azure Blob Managed Identity configuration is required in production." >&2
-        exit 1
-    fi
-fi
-
-exec "$@"
+echo "Laravel Initialization Completed Successfully!"

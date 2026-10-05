@@ -104,13 +104,13 @@ export default function DriverDashboard() {
             { label: "لوحة السائق" }
           ]}
           action={
-            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-[var(--color-border)] shadow-xs">
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-[#E5E2D9] shadow-xs">
               <span className="text-xs text-slate-500 font-bold whitespace-nowrap">السائق المحدد:</span>
               <select
                 value={selectedDriverId}
                 disabled={isDriver}
                 onChange={(e) => setSelectedDriverId(e.target.value)}
-                className="bg-slate-50 text-slate-800 text-xs font-bold rounded-lg px-2.5 py-1.5 border border-[var(--color-border)] focus:outline-none focus:border-[var(--color-brand-green)]"
+                className="bg-slate-50 text-slate-800 text-xs font-bold rounded-lg px-2.5 py-1.5 border border-[#E5E2D9] focus:outline-none focus:border-[#3F6B3A]"
               >
                 {!isDriver && <option value="">جميع السائقين (عرض شمول)</option>}
                 {drivers.map((d) => (
@@ -124,12 +124,12 @@ export default function DriverDashboard() {
         />
 
         {/* Tab Buttons */}
-        <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-[var(--color-border)] mb-6 gap-2">
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-[#E5E2D9] mb-6 gap-2">
           <button
             onClick={() => setActiveTab("special_needs")}
             className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === "special_needs"
-                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                ? "bg-[#3F6B3A] text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -139,7 +139,7 @@ export default function DriverDashboard() {
             onClick={() => setActiveTab("representatives")}
             className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === "representatives"
-                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                ? "bg-[#3F6B3A] text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -152,7 +152,7 @@ export default function DriverDashboard() {
         {activeTab === "special_needs" && (
           <div className="space-y-4">
             {loading && (
-              <div className="bg-white p-8 rounded-2xl text-center text-[var(--color-text-muted)]">جاري تحميل طلبات المستفيدين...</div>
+              <div className="bg-white p-8 rounded-2xl text-center text-gray-400">جاري تحميل طلبات المستفيدين...</div>
             )}
 
             {!loading && beneficiaryDeliveries.map((d, idx) => {
@@ -160,16 +160,16 @@ export default function DriverDashboard() {
               const isDelivered = d.status === "delivered";
 
               return (
-                <div key={d.id || idx} className="bg-white rounded-2xl p-5 shadow-sm border border-[var(--color-border)] flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
+                <div key={d.id || idx} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
                   <div className="space-y-1.5 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full text-xs font-bold">
                         {b.has_special_needs ? "ذوو احتياجات خاصة" : "كبار السن"}
                       </span>
-                      <h3 className="text-base font-bold text-[var(--color-text-primary)]">{b.full_name || b.name || "المستفيد"}</h3>
+                      <h3 className="text-base font-bold text-gray-800">{b.full_name || b.name || "المستفيد"}</h3>
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] font-bold">
+                    <div className="flex items-center gap-3 text-xs text-gray-600 font-bold">
                       <span className="flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5 text-amber-600" />
                         {b.city || "مكة المكرمة"} - {b.district || "—"} ({b.street || "الشارع العام"})
@@ -195,7 +195,7 @@ export default function DriverDashboard() {
                       href={`https://maps.google.com/?q=${encodeURIComponent(`${b.city || 'مكة'} ${b.district || ''} ${b.street || ''}`)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-1.5 bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] hover:bg-amber-100 font-bold px-3 py-2 rounded-xl text-xs transition-colors"
+                      className="flex items-center gap-1.5 bg-amber-50 text-amber-800 hover:bg-amber-100 font-bold px-3 py-2 rounded-xl text-xs transition-colors"
                     >
                       <MapPin className="w-4 h-4" />
                       <span>الخريطة</span>
@@ -209,7 +209,7 @@ export default function DriverDashboard() {
                     ) : (
                       <button
                         onClick={() => confirmReceiptByQr(d.barcode_code)}
-                        className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-bold px-4 py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1 cursor-pointer"
                       >
                         <QrCode className="w-4 h-4" />
                         <span>تأكيد وقراءة QR ✓</span>
@@ -221,7 +221,7 @@ export default function DriverDashboard() {
             })}
 
             {!loading && beneficiaryDeliveries.length === 0 && (
-              <div className="bg-white p-10 rounded-2xl text-center text-[var(--color-text-muted)]">
+              <div className="bg-white p-10 rounded-2xl text-center text-gray-400">
                 لا توجد طلبات توصيل مستفيدين مسندة لهذا السائق حالياً.
               </div>
             )}
@@ -232,7 +232,7 @@ export default function DriverDashboard() {
         {activeTab === "representatives" && (
           <div className="space-y-4">
             {loading && (
-              <div className="bg-white p-8 rounded-2xl text-center text-[var(--color-text-muted)]">جاري تحميل توزيعات الجهات المستفيدة...</div>
+              <div className="bg-white p-8 rounded-2xl text-center text-gray-400">جاري تحميل توزيعات الجهات المستفيدة...</div>
             )}
 
             {!loading && repDeliveries.map((rd, idx) => {
@@ -240,21 +240,21 @@ export default function DriverDashboard() {
               const isDelivered = rd.status === "delivered";
 
               return (
-                <div key={rd.id || idx} className="bg-white rounded-2xl p-5 shadow-sm border border-[var(--color-border)] flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
+                <div key={rd.id || idx} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
                   <div className="space-y-1.5 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full text-xs font-bold">
                         جهة مستفيدة / شريكة
                       </span>
-                      <h3 className="text-base font-bold text-[var(--color-text-primary)]">{r.organization_name || r.name || r.full_name || "الجهة المستفيدة"}</h3>
+                      <h3 className="text-base font-bold text-gray-800">{r.organization_name || r.name || r.full_name || "الجهة المستفيدة"}</h3>
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] font-bold">
+                    <div className="flex items-center gap-3 text-xs text-gray-600 font-bold">
                       <span className="flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5 text-amber-600" />
                         {r.city || "مكة المكرمة"} - {r.district || r.district_name || "—"}
                       </span>
-                      <span className="text-[var(--color-text-secondary)] font-bold">👥 المستفيدون التابعون: {r.beneficiaries_count || 0} مستفيد</span>
+                      <span className="text-amber-800 font-bold">👥 المستفيدون التابعون: {r.beneficiaries_count || 0} مستفيد</span>
                     </div>
 
                     <div className="text-xs font-semibold text-amber-900 flex items-center gap-3">
@@ -280,7 +280,7 @@ export default function DriverDashboard() {
                     ) : (
                       <button
                         onClick={() => confirmReceiptByQr(rd.barcode_code)}
-                        className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-bold px-4 py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1 cursor-pointer"
                       >
                         <QrCode className="w-4 h-4" />
                         <span>تأكيد وقراءة QR ✓</span>
@@ -292,7 +292,7 @@ export default function DriverDashboard() {
             })}
 
             {!loading && repDeliveries.length === 0 && (
-              <div className="bg-white p-10 rounded-2xl text-center text-[var(--color-text-muted)]">
+              <div className="bg-white p-10 rounded-2xl text-center text-gray-400">
                 لا توجد طلبات توصيل جهات مستفيدة مسندة لهذا السائق حالياً.
               </div>
             )}

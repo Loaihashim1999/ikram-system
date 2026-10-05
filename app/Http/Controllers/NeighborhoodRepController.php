@@ -8,26 +8,13 @@ use App\Models\Distribution;
 use App\Models\InventoryItem;
 use App\Models\NeighborhoodRep;
 use App\Models\RepDistribution;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 
 class NeighborhoodRepController extends Controller
 {
-    public function driverOptions(): JsonResponse
-    {
-        return response()->json([
-            'data' => User::whereIn('role', ['driver', 'delivery_driver'])
-                ->where('is_active', true)
-                ->orderBy('full_name')
-                ->get(['id', 'full_name', 'role', 'is_active']),
-        ]);
-    }
-
-    public function index(Request $request): JsonResponse
+    public function index(?Request $request = null): JsonResponse
     {
         $query = NeighborhoodRep::withCount('repDistributions');
 
@@ -358,59 +345,46 @@ class NeighborhoodRepController extends Controller
 
     public function dispatchSupport(Request $request, string $id): JsonResponse
     {
-        return DB::transaction(function () use ($request, $id) {
-            $validated = $request->validate([
-                'basket_id' => 'required|uuid',
-                'scheduled_date' => 'required|date',
-                'driver_id' => 'nullable|string',
-            ]);
-            $guardItem = InventoryItem::whereKey($validated['basket_id'])->lockForUpdate()->first();
-            $guardCount = max(1, NeighborhoodRep::findOrFail($id)->beneficiaries_count);
-            if ($guardItem && (float) $guardItem->available_quantity < $guardCount) {
-                throw ValidationException::withMessages(['basket_id' => 'المخزون المتاح بعد الحجز غير كافٍ.']);
-            }
+        $validated = $request->validate([
+            'basket_id' => 'required|uuid',
+            'scheduled_date' => 'required|date',
+            'driver_id' => 'nullable|string',
+        ]);
 
-            $rep = NeighborhoodRep::findOrFail($id);
-            $count = max(1, $rep->beneficiaries_count);
+        $rep = NeighborhoodRep::findOrFail($id);
+        $count = max(1, $rep->beneficiaries_count);
 
-            $basket = Basket::whereKey($validated['basket_id'])->lockForUpdate()->first()
-                ?? InventoryItem::find($validated['basket_id']);
-            if (! $basket) {
-                return response()->json(['success' => false, 'message' => 'السلة أو الصنف غير موجود.'], 422);
-            }
+        $basket = Basket::find($validated['basket_id']) ?? InventoryItem::find($validated['basket_id']);
+        if (! $basket) {
+            return response()->json(['success' => false, 'message' => 'السلة أو الصنف غير موجود.'], 422);
+        }
 
-            if ($basket instanceof Basket && $basket->stock_quantity < $count) {
-                throw ValidationException::withMessages(['basket_id' => 'المخزون المتاح بعد الحجز غير كافٍ.']);
-            }
+        $code = 'REP-'.strtoupper(Str::random(6));
 
-            $code = 'REP-'.strtoupper(Str::random(6));
+        $repDist = RepDistribution::create([
+            'id' => (string) Str::uuid(),
+            'rep_id' => $rep->id,
+            'basket_id' => $basket->id,
+            'barcode_code' => $code,
+            'basket_count' => $count,
+            'target_beneficiaries_count' => $count,
+            'scheduled_at' => $validated['scheduled_date'],
+            'driver_id' => $validated['driver_id'] ?? null,
+            'status' => 'scheduled',
+        ]);
 
-            $repDist = RepDistribution::create([
-                'id' => (string) Str::uuid(),
-                'rep_id' => $rep->id,
-                'basket_id' => $basket->id,
-                'barcode_code' => $code,
-                'basket_count' => $count,
-                'target_beneficiaries_count' => $count,
-                'scheduled_at' => $validated['scheduled_date'],
-                'driver_id' => $validated['driver_id'] ?? null,
-                'status' => 'scheduled',
-            ]);
+        if ($basket instanceof Basket) {
+            $basket->decrement('stock_quantity', $count);
+        } elseif ($basket instanceof InventoryItem) {
+            $basket->decrement('current_quantity', $count);
+        }
 
-            if ($basket instanceof Basket) {
-                $basket->decrement('stock_quantity', $count);
-            } elseif ($basket instanceof InventoryItem) {
-                $basket->decrement('current_quantity', $count);
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => "تم تخصيص وتوجيه الدعم لمندوب الحي ({$count} سلة) وتمرير المهمة للسائق.",
-                'data' => $repDist,
-                'qr_code' => $code,
-            ]);
-
-        });
+        return response()->json([
+            'success' => true,
+            'message' => "تم تخصيص وتوجيه الدعم لمندوب الحي ({$count} سلة) وتمرير المهمة للسائق.",
+            'data' => $repDist,
+            'qr_code' => $code,
+        ]);
     }
 
     public function destroy(string $id): JsonResponse

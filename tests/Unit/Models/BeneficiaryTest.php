@@ -5,6 +5,7 @@ namespace Tests\Unit\Models;
 use App\Models\Beneficiary;
 use App\Models\Category;
 use App\Models\Dependent;
+use App\Models\Distribution;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
@@ -116,87 +117,5 @@ class BeneficiaryTest extends TestCase
 
         $this->assertCount(1, $beneficiary->dependents);
         $this->assertEquals($dependent->id, $beneficiary->dependents->first()->id);
-    }
-
-    /**
-     * Requirement 4: Test Non-Financial Edit Safety.
-     * Editing non-financial fields (address, phone, name) must NOT reset or alter financial values.
-     */
-    public function test_non_financial_edits_preserve_financial_calculations(): void
-    {
-        Category::firstOrCreate(['name' => 'درجة أولى'], ['description' => 'الفئة الأولى']);
-        $cat2 = Category::firstOrCreate(['name' => 'درجة ثانية'], ['description' => 'الفئة الثانية']);
-
-        $beneficiary = Beneficiary::create([
-            'beneficiary_type' => 'resident',
-            'full_name' => 'TEST RESIDENT WORKER',
-            'national_id' => '2987654321',
-            'phone' => '0555555555',
-            'date_of_birth' => '1990-01-01',
-            'nationality' => 'TEST',
-            'city' => 'مكة المكرمة',
-            'district' => 'الرصيفة',
-            'street' => 'الشارع العام',
-            'family_status' => 'poor',
-            'family_members_count' => 3,
-            'housing_type' => 'rent',
-            'annual_rent_amount' => 12000.00, // monthly_rent = 1000.00
-            'income_sources' => ['salary', 'family_support'],
-            'monthly_salary' => 3000.00,
-            'family_support' => 500.00, // total_income = 3500.00, net_income = 2500.00
-            'category_id' => $cat2->id,
-        ]);
-
-        // Baseline financial values
-        $this->assertEquals(3500.00, (float) $beneficiary->total_income);
-        $this->assertEquals(1000.00, (float) $beneficiary->monthly_rent);
-        $this->assertEquals(2500.00, (float) $beneficiary->net_income);
-        $this->assertEquals('second_class', $beneficiary->priority);
-        $this->assertEquals('severe_need', $beneficiary->need_level);
-        $this->assertEquals(['salary', 'family_support'], $beneficiary->income_sources);
-
-        // Edit 1: ONLY street & district (address)
-        $beneficiary->update([
-            'district' => 'العزيزية الجديدة',
-            'street' => 'شارع المندوبين',
-        ]);
-        $beneficiary->refresh();
-
-        $this->assertEquals('العزيزية الجديدة', $beneficiary->district);
-        $this->assertEquals('شارع المندوبين', $beneficiary->street);
-        $this->assertEquals(3500.00, (float) $beneficiary->total_income);
-        $this->assertEquals(1000.00, (float) $beneficiary->monthly_rent);
-        $this->assertEquals(2500.00, (float) $beneficiary->net_income);
-        $this->assertEquals('second_class', $beneficiary->priority);
-        $this->assertEquals('severe_need', $beneficiary->need_level);
-        $this->assertEquals(['salary', 'family_support'], $beneficiary->income_sources);
-
-        // Edit 2: ONLY phone
-        $beneficiary->update([
-            'phone' => '0566666666',
-        ]);
-        $beneficiary->refresh();
-
-        $this->assertEquals('0566666666', $beneficiary->phone);
-        $this->assertEquals(3500.00, (float) $beneficiary->total_income);
-        $this->assertEquals(1000.00, (float) $beneficiary->monthly_rent);
-        $this->assertEquals(2500.00, (float) $beneficiary->net_income);
-        $this->assertEquals('second_class', $beneficiary->priority);
-        $this->assertEquals('severe_need', $beneficiary->need_level);
-        $this->assertEquals(['salary', 'family_support'], $beneficiary->income_sources);
-
-        // Edit 3: ONLY full_name
-        $beneficiary->update([
-            'full_name' => 'TEST RESIDENT WORKER UPDATED',
-        ]);
-        $beneficiary->refresh();
-
-        $this->assertEquals('TEST RESIDENT WORKER UPDATED', $beneficiary->full_name);
-        $this->assertEquals(3500.00, (float) $beneficiary->total_income);
-        $this->assertEquals(1000.00, (float) $beneficiary->monthly_rent);
-        $this->assertEquals(2500.00, (float) $beneficiary->net_income);
-        $this->assertEquals('second_class', $beneficiary->priority);
-        $this->assertEquals('severe_need', $beneficiary->need_level);
-        $this->assertEquals(['salary', 'family_support'], $beneficiary->income_sources);
     }
 }

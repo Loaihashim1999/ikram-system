@@ -1,7 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { hasModuleAction } from "../../utils/modulePermissions";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
 import Button from "../../components/ui/Button";
@@ -34,17 +32,8 @@ import {
 import { exportApiDataToExcel } from "../../utils/excelExport";
 import { getDocumentPdfUrl } from "../../utils/documentUrl";
 
-const classificationLabel = (row) => {
-  if (row?.beneficiary_type === "citizen") return "مواطن";
-  if (row?.beneficiary_type === "resident") return "مقيم";
-  return "—";
-};
-
 export default function DailyBeneficiariesList({ embedded = false }) {
   const navigate = useNavigate();
-  const auth = useAuth();
-  const user = auth?.user ?? null;
-  const canDaily = (action) => hasModuleAction(user, "daily_beneficiaries", action);
 
   // Data & loading states
   const [beneficiaries, setBeneficiaries] = useState([]);
@@ -58,9 +47,6 @@ export default function DailyBeneficiariesList({ embedded = false }) {
   const [selectedDistrict, setSelectedDistrict] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
-  const [selectedType, setSelectedType] = useState("all");
-  const [nationality, setNationality] = useState("");
-  const [nationalityMissing, setNationalityMissing] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [lastDeliveryFrom, setLastDeliveryFrom] = useState("");
@@ -96,9 +82,6 @@ export default function DailyBeneficiariesList({ embedded = false }) {
         per_page: 15,
         search: search.trim() || undefined,
         district: selectedDistrict !== "all" ? selectedDistrict : undefined,
-        beneficiary_type: selectedType !== "all" ? selectedType : undefined,
-        nationality: nationalityMissing ? undefined : (nationality.trim() || undefined),
-        nationality_missing: nationalityMissing ? 1 : undefined,
         category_id: selectedCategory !== "all" ? selectedCategory : undefined,
         status: selectedStatus !== "all" ? selectedStatus : undefined,
         date_from: dateFrom || undefined,
@@ -128,7 +111,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
 
   useEffect(() => {
     fetchBeneficiaries(1);
-  }, [selectedDistrict, selectedCategory, selectedStatus, selectedType, nationality, nationalityMissing, dateFrom, dateTo, lastDeliveryFrom, lastDeliveryTo]);
+  }, [selectedDistrict, selectedCategory, selectedStatus, dateFrom, dateTo, lastDeliveryFrom, lastDeliveryTo]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -140,9 +123,6 @@ export default function DailyBeneficiariesList({ embedded = false }) {
     setSelectedDistrict("all");
     setSelectedCategory("all");
     setSelectedStatus("all");
-    setSelectedType("all");
-    setNationality("");
-    setNationalityMissing(false);
     setDateFrom("");
     setDateTo("");
     setLastDeliveryFrom("");
@@ -238,9 +218,6 @@ export default function DailyBeneficiariesList({ embedded = false }) {
       const params = {
         search: search.trim() || undefined,
         district: selectedDistrict !== "all" ? selectedDistrict : undefined,
-        beneficiary_type: selectedType !== "all" ? selectedType : undefined,
-        nationality: nationalityMissing ? undefined : (nationality.trim() || undefined),
-        nationality_missing: nationalityMissing ? 1 : undefined,
         category_id: selectedCategory !== "all" ? selectedCategory : undefined,
         status: selectedStatus !== "all" ? selectedStatus : undefined,
         date_from: dateFrom || undefined,
@@ -257,15 +234,13 @@ export default function DailyBeneficiariesList({ embedded = false }) {
         transform: (b, idx) => ({
           "#": idx + 1,
           "اسم المستفيد": b.full_name,
-          "التصنيف": classificationLabel(b),
-          "الجنسية": b.nationality?.trim() || "—",
           "رقم الهوية / الإقامة": b.national_id,
           "رقم الجوال": b.phone,
           "الحي": b.district || "غير محدد",
-          "تاريخ التسجيل": b.created_at ? String(b.created_at).slice(0, 10) : "—",
           "الفئة": b.category_name || b.category?.name || "أسر متعففة",
           "مرات الاستلام": b.total_received_count || 0,
           "تاريخ آخر استلام": b.last_delivery_date ? b.last_delivery_date.slice(0, 10) : "لم يستلم بعد",
+          "تاريخ التسجيل": b.created_at ? b.created_at.slice(0, 10) : "—",
           "الحالة": b.status === "active" ? "نشط" : "غير نشط",
           "ملاحظات": b.notes || "",
         }),
@@ -292,27 +267,27 @@ export default function DailyBeneficiariesList({ embedded = false }) {
           breadcrumbs={[{ label: "المستفيدون اليوميون" }]}
           actions={
             <div className="flex flex-wrap items-center gap-2.5">
-              {canDaily("export") && <Button
+              <Button
                 variant="outline"
                 size="sm"
                 icon={FileSpreadsheet}
                 onClick={handleExportExcel}
               >
                 تصدير إكسل
-              </Button>}
+              </Button>
 
-              {canDaily("create") && <Link to="/daily-beneficiaries/add">
+              <Link to="/daily-beneficiaries/add">
                 <Button variant="primary" size="sm" icon={UserPlus}>
                   إضافة مستفيد جديد
                 </Button>
-              </Link>}
+              </Link>
             </div>
           }
         />
       )}
 
         {/* Filter Card */}
-        <div className="ikram-panel p-4">
+        <div className="bg-white border border-[#E5E2D9] rounded-2xl p-4 shadow-xs">
           <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row items-center gap-3">
               <div className="relative flex-1 w-full">
                 <Search className="w-5 h-5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -321,14 +296,14 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="ابحث بالاسم الرباعي، رقم الهوية/الإقامة، أو رقم الجوال..."
-                  className="ikram-control pl-4 pr-11"
+                  className="w-full pl-4 pr-11 py-2.5 bg-white border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A] focus:ring-1 focus:ring-[#3F6B3A]"
                 />
               </div>
 
               <div className="flex items-center gap-2 w-full md:w-auto">
                 <button
                   type="submit"
-                  className="flex-1 md:flex-initial px-5 py-2.5 bg-[var(--color-brand-green)] text-white text-sm font-semibold rounded-lg hover:bg-[#345830] transition-colors"
+                  className="flex-1 md:flex-initial px-5 py-2.5 bg-[#3F6B3A] text-white text-sm font-semibold rounded-lg hover:bg-[#345830] transition-colors"
                 >
                   بحث
                 </button>
@@ -337,9 +312,9 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                   type="button"
                   onClick={() => setShowFilters(!showFilters)}
                   className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium transition-colors ${
-                    showFilters || selectedDistrict !== "all" || selectedStatus !== "all" || selectedType !== "all" || nationalityMissing || nationality.trim()
-                      ? "bg-[var(--color-bg-soft)] border-[var(--color-brand-gold)] text-[#8C6C26]"
-                      : "bg-white border-[var(--color-border)] text-slate-700 hover:bg-slate-50"
+                    showFilters || selectedDistrict !== "all" || selectedStatus !== "all"
+                      ? "bg-[#F5EDDA] border-[#C9A24A] text-[#8C6C26]"
+                      : "bg-white border-[#E5E2D9] text-slate-700 hover:bg-slate-50"
                   }`}
                 >
                   <Filter className="w-4 h-4" />
@@ -350,7 +325,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                   type="button"
                   onClick={handleResetFilters}
                   title="إعادة تعيين"
-                  className="p-2.5 bg-white border border-[var(--color-border)] text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                  className="p-2.5 bg-white border border-[#E5E2D9] text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
                 >
                   <RotateCcw className="w-4 h-4" />
                 </button>
@@ -359,49 +334,13 @@ export default function DailyBeneficiariesList({ embedded = false }) {
 
             {/* Expanded Filters Drawer */}
             {showFilters && (
-              <div className="mt-4 p-4 bg-white border border-[var(--color-border)] rounded-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-200">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">التصنيف</label>
-                  <select
-                    aria-label="التصنيف"
-                    value={selectedType}
-                    onChange={(e) => setSelectedType(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
-                  >
-                    <option value="all">الكل</option>
-                    <option value="citizen">مواطن</option>
-                    <option value="resident">مقيم</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">الجنسية</label>
-                  <input
-                    aria-label="الجنسية"
-                    type="text"
-                    value={nationality}
-                    onChange={(e) => setNationality(e.target.value)}
-                    disabled={nationalityMissing}
-                    placeholder="الجنسية"
-                    className="w-full px-3 py-2 bg-slate-50 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)] disabled:opacity-60"
-                  />
-                  <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-slate-600">
-                    <input
-                      aria-label="جنسية غير مسجلة"
-                      type="checkbox"
-                      checked={nationalityMissing}
-                      onChange={(e) => setNationalityMissing(e.target.checked)}
-                    />
-                    جنسية غير مسجلة
-                  </label>
-                </div>
-
+              <div className="mt-4 p-4 bg-white border border-[#E5E2D9] rounded-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-200">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5">الحي السكني</label>
                   <select
                     value={selectedDistrict}
                     onChange={(e) => setSelectedDistrict(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
                   >
                     <option value="all">جميع الأحياء</option>
                     {districts.map((d) => (
@@ -415,7 +354,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
                   >
                     <option value="all">جميع الفئات</option>
                     {categories.map((c) => (
@@ -429,7 +368,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                   <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
                   >
                     <option value="all">الكل</option>
                     <option value="active">نشط</option>
@@ -443,7 +382,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
                   />
                 </div>
               </div>
@@ -451,18 +390,15 @@ export default function DailyBeneficiariesList({ embedded = false }) {
           </div>
 
         {/* Data Table */}
-        <div className="ikram-panel overflow-hidden">
-          <div className="ikram-table-wrap">
-            <table className="ikram-table">
+        <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-right border-collapse">
               <thead>
-                <tr className="bg-[var(--color-bg-soft)] text-slate-700 text-xs font-bold border-b border-[var(--color-border)]">
+                <tr className="bg-[#FAF8F5] text-slate-700 text-xs font-bold border-b border-[#E5E2D9]">
                   <th className="py-3.5 px-4">اسم المستفيد</th>
-                  <th className="py-3.5 px-4">التصنيف</th>
                   <th className="py-3.5 px-4">رقم الجوال</th>
                   <th className="py-3.5 px-4">الهوية / الإقامة</th>
                   <th className="py-3.5 px-4">الحي</th>
-                  <th className="py-3.5 px-4">الجنسية</th>
-                  <th className="py-3.5 px-4">تاريخ التسجيل</th>
                   <th className="py-3.5 px-4">الفئة</th>
                   <th className="py-3.5 px-4 text-center">مرات الاستلام</th>
                   <th className="py-3.5 px-4 text-center">آخر استلام</th>
@@ -473,14 +409,14 @@ export default function DailyBeneficiariesList({ embedded = false }) {
               <tbody className="divide-y divide-slate-100 text-sm">
                 {loading ? (
                   <tr>
-                    <td colSpan="12" className="py-12 text-center text-slate-400">
-                      <div className="w-8 h-8 border-3 border-[var(--color-brand-green)] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <td colSpan="9" className="py-12 text-center text-slate-400">
+                      <div className="w-8 h-8 border-3 border-[#3F6B3A] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                       جاري تحميل بيانات المستفيدين اليوميين...
                     </td>
                   </tr>
                 ) : beneficiaries.length === 0 ? (
                   <tr>
-                    <td colSpan="12" className="py-12 text-center text-slate-400">
+                    <td colSpan="9" className="py-12 text-center text-slate-400">
                       لا يوجد مستفيدون يوميون يطابقون شروط البحث الحالية.
                     </td>
                   </tr>
@@ -488,13 +424,10 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                   beneficiaries.map((b) => (
                     <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3.5 px-4 font-bold text-slate-800">
-                        {canDaily("view") ? (
-                          <Link to={`/daily-beneficiaries/${b.id}`} className="hover:text-[var(--color-brand-green)] hover:underline">
-                            {b.full_name}
-                          </Link>
-                        ) : b.full_name}
+                        <Link to={`/daily-beneficiaries/${b.id}`} className="hover:text-[#3F6B3A] hover:underline">
+                          {b.full_name}
+                        </Link>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-700">{classificationLabel(b)}</td>
                       <td className="py-3.5 px-4 text-slate-600 font-mono text-xs" dir="ltr">
                         {b.phone}
                       </td>
@@ -503,12 +436,6 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                       </td>
                       <td className="py-3.5 px-4 text-slate-600">
                         {b.district || "غير محدد"}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600">
-                        {typeof b.nationality === "string" && b.nationality.trim() ? b.nationality.trim() : "—"}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600 text-xs">
-                        {b.created_at ? String(b.created_at).slice(0, 10) : "—"}
                       </td>
                       <td className="py-3.5 px-4 text-slate-600 text-xs">
                         <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
@@ -539,45 +466,49 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           {/* Quick Receive Button */}
-                          {canDaily("create") && <button
+                          <button
                             onClick={() => openQuickReceive(b)}
                             title="تسجيل استلام مساعدة فوري"
-                            className="p-1.5 text-[var(--color-brand-green)] hover:bg-[#EBF4EA] rounded-lg transition-colors"
+                            className="p-1.5 text-[#3F6B3A] hover:bg-[#EBF4EA] rounded-lg transition-colors"
                           >
                             <Package className="w-4 h-4" />
-                          </button>}
+                          </button>
 
-                          {canDaily("view") && <button
+                          {/* History */}
+                          <button
                             onClick={() => openHistory(b)}
                             title="سجل استلامات المستفيد"
-                            className="p-1.5 text-amber-600 hover:bg-[var(--color-bg-soft)] rounded-lg transition-colors"
+                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                           >
                             <History className="w-4 h-4" />
-                          </button>}
+                          </button>
 
-                          {canDaily("view") && <Link
+                          {/* Details */}
+                          <Link
                             to={`/daily-beneficiaries/${b.id}`}
                             title="عرض ملف المستفيد"
                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           >
                             <Eye className="w-4 h-4" />
-                          </Link>}
+                          </Link>
 
-                          {canDaily("edit") && <Link
+                          {/* Edit */}
+                          <Link
                             to={`/daily-beneficiaries/${b.id}/edit`}
                             title="تعديل البيانات"
                             className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                           >
                             <Edit className="w-4 h-4" />
-                          </Link>}
+                          </Link>
 
-                          {canDaily("delete") && <button
+                          {/* Delete */}
+                          <button
                             onClick={() => setDeleteTarget(b)}
                             title="حذف المستفيد"
                             className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>}
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -589,7 +520,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
 
           {/* Pagination */}
           {pagination.last_page > 1 && (
-            <div className="p-4 border-t border-[var(--color-border)] flex items-center justify-between">
+            <div className="p-4 border-t border-[#E5E2D9] flex items-center justify-between">
               <span className="text-xs text-slate-500">
                 إجمالي المستفيدين: <strong className="text-slate-800">{pagination.total}</strong> (صفحة {pagination.current_page} من {pagination.last_page})
               </span>
@@ -597,14 +528,14 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                 <button
                   disabled={pagination.current_page <= 1}
                   onClick={() => fetchBeneficiaries(pagination.current_page - 1)}
-                  className="p-2 border border-[var(--color-border)] rounded-lg text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+                  className="p-2 border border-[#E5E2D9] rounded-lg text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
                 <button
                   disabled={pagination.current_page >= pagination.last_page}
                   onClick={() => fetchBeneficiaries(pagination.current_page + 1)}
-                  className="p-2 border border-[var(--color-border)] rounded-lg text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+                  className="p-2 border border-[#E5E2D9] rounded-lg text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -636,8 +567,8 @@ export default function DailyBeneficiariesList({ embedded = false }) {
         {receiveTarget && (
           <div className="space-y-4">
             {createdVoucher ? (
-              <div className="p-4 bg-[#EBF4EA] border border-[var(--color-brand-green)]/30 rounded-xl space-y-3 text-center">
-                <CheckCircle2 className="w-12 h-12 text-[var(--color-brand-green)] mx-auto" />
+              <div className="p-4 bg-[#EBF4EA] border border-[#3F6B3A]/30 rounded-xl space-y-3 text-center">
+                <CheckCircle2 className="w-12 h-12 text-[#3F6B3A] mx-auto" />
                 <h3 className="font-bold text-slate-800 text-base">تم تسجيل الاستلام بنجاح!</h3>
                 <p className="text-xs text-slate-600">
                   تم إصدار سند الاستلام برقم: <strong className="text-[#8C6C26] font-mono text-sm">{createdVoucher.document_number}</strong>
@@ -647,7 +578,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                     href={getDocumentPdfUrl(`/documents/daily-receiving/${createdVoucher.id}/pdf`)}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand-gold)] hover:bg-[#B8923D] text-white rounded-lg text-xs font-bold transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-[#C9A24A] hover:bg-[#B8923D] text-white rounded-lg text-xs font-bold transition-colors"
                   >
                     <Printer className="w-4 h-4" />
                     طباعة سند الاستلام (PDF)
@@ -675,7 +606,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                   <select
                     value={selectedItem}
                     onChange={(e) => setSelectedItem(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
+                    className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
                   >
                     {inventoryItems.map((item) => (
                       <option key={item.id} value={item.id}>
@@ -701,7 +632,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                     max={selectedInventoryItemObj?.current_quantity || 1}
                     value={receiveQuantity}
                     onChange={(e) => setReceiveQuantity(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
+                    className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
                   />
                 </div>
 
@@ -712,7 +643,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                     value={receiveNotes}
                     onChange={(e) => setReceiveNotes(e.target.value)}
                     placeholder="تم التسليم يداً بيد بمقر الجمعية..."
-                    className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
+                    className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
                   />
                 </div>
 
@@ -728,7 +659,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                     type="button"
                     disabled={submittingReceive || !selectedItem}
                     onClick={handleConfirmReceive}
-                    className="px-5 py-2 bg-[var(--color-brand-green)] hover:bg-[#345830] text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+                    className="px-5 py-2 bg-[#3F6B3A] hover:bg-[#345830] text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
                   >
                     {submittingReceive ? "جاري التأكيد والخصم..." : "تأكيد الاستلام وخصم المخزون"}
                   </button>
@@ -779,7 +710,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                           href={getDocumentPdfUrl(`/documents/daily-receiving/${h.id}/pdf`)}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--color-bg-soft)] text-amber-700 hover:bg-amber-100 rounded text-[11px] font-bold"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded text-[11px] font-bold"
                         >
                           <Printer className="w-3.5 h-3.5" />
                           طباعة

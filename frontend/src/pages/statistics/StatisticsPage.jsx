@@ -78,24 +78,24 @@ export default function StatisticsPage() {
       {/* Header & Export Actions */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6 print:hidden">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <BarChart3 className="w-7 h-7 text-amber-600" />
             <span>الإحصائيات والتحليل الشامل للمستفيدين</span>
           </h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">عرض دقيق ومفصل لتصنيفات المستفيدين والدخل المالي والتقارير</p>
+          <p className="text-xs text-gray-500 mt-1">عرض دقيق ومفصل لتصنيفات المستفيدين والدخل المالي والتقارير</p>
         </div>
 
         <div className="flex gap-2">
           <button
             onClick={exportToCSV}
-            className="flex items-center gap-2 bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow"
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow"
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>تصدير Excel (CSV)</span>
           </button>
           <button
             onClick={handlePrintPDF}
-            className="flex items-center gap-2 bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow"
+            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow"
           >
             <Printer className="w-4 h-4" />
             <span>طباعة / تصدير PDF</span>
@@ -105,44 +105,44 @@ export default function StatisticsPage() {
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[var(--color-border)] flex items-center justify-between">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-[var(--color-text-muted)]">إجمالي المستفيدين</p>
+            <p className="text-xs font-semibold text-gray-500">إجمالي المستفيدين</p>
             <h3 className="text-2xl font-black text-amber-900 mt-1">{total}</h3>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{citizens} مواطن | {residents} مقيم</p>
+            <p className="text-[11px] text-gray-400 mt-1">{citizens} مواطن | {residents} مقيم</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-[var(--color-bg-soft)] flex items-center justify-center text-amber-700">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-700">
             <Users className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[var(--color-border)] flex items-center justify-between">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-[var(--color-text-muted)]">الدرجة الأولى والثانية</p>
+            <p className="text-xs font-semibold text-gray-500">الدرجة الأولى والثانية</p>
             <h3 className="text-2xl font-black text-green-700 mt-1">{firstClass + secondClass}</h3>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{firstClass} درجة أولى | {secondClass} درجة ثانية</p>
+            <p className="text-[11px] text-gray-400 mt-1">{firstClass} درجة أولى | {secondClass} درجة ثانية</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center text-green-700">
             <Award className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[var(--color-border)] flex items-center justify-between">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-[var(--color-text-muted)]">كبار السن وذوو الاحتياجات</p>
+            <p className="text-xs font-semibold text-gray-500">كبار السن وذوو الاحتياجات</p>
             <h3 className="text-2xl font-black text-purple-700 mt-1">{specialNeeds + elderly}</h3>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{specialNeeds} ذوو إعاقة | {elderly} مسن</p>
+            <p className="text-[11px] text-gray-400 mt-1">{specialNeeds} ذوو إعاقة | {elderly} مسن</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-purple-700">
             <HeartHandshake className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-[var(--color-border)] flex items-center justify-between">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-[var(--color-text-muted)]">متوسط الدخل الشهري</p>
+            <p className="text-xs font-semibold text-gray-500">متوسط الدخل الشهري</p>
             <h3 className="text-2xl font-black text-blue-800 mt-1">{avgIncome} <span className="text-xs font-normal">ر.س</span></h3>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">معدل جميع مصادر الدخل</p>
+            <p className="text-[11px] text-gray-400 mt-1">معدل جميع مصادر الدخل</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-700">
             <BarChart3 className="w-6 h-6" />
@@ -151,24 +151,24 @@ export default function StatisticsPage() {
       </div>
 
       {/* Visual Progress Bar Chart Breakdown */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-[var(--color-border)] mb-6">
-        <h2 className="text-base font-bold text-[var(--color-text-primary)] mb-4">📊 توزيع فئات المستفيدين النسبة والتناسب</h2>
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+        <h2 className="text-base font-bold text-gray-800 mb-4">📊 توزيع فئات المستفيدين النسبة والتناسب</h2>
         <div className="space-y-4">
           {[
-            { label: "درجة أولى (الأقل دخلاً)", count: firstClass, color: "bg-[var(--color-brand-green)]", text: "text-green-700" },
-            { label: "درجة ثانية (الدخل المتوسط)", count: secondClass, color: "bg-[var(--color-brand-gold)]", text: "text-[var(--color-brand-gold)]" },
+            { label: "درجة أولى (الأقل دخلاً)", count: firstClass, color: "bg-green-600", text: "text-green-700" },
+            { label: "درجة ثانية (الدخل المتوسط)", count: secondClass, color: "bg-amber-500", text: "text-amber-700" },
             { label: "ذوو الاحتياجات الخاصة", count: specialNeeds, color: "bg-purple-600", text: "text-purple-700" },
             { label: "كبار السن (60 سنة فأكثر)", count: elderly, color: "bg-blue-600", text: "text-blue-700" },
-            { label: "موظفو الجمعية", count: employees, color: "bg-[var(--color-text-muted)]", text: "text-[var(--color-text-secondary)]" },
+            { label: "موظفو الجمعية", count: employees, color: "bg-gray-600", text: "text-gray-700" },
           ].map((cat, idx) => {
             const pct = total > 0 ? ((cat.count / total) * 100).toFixed(1) : 0;
             return (
               <div key={idx}>
                 <div className="flex justify-between items-center text-xs mb-1">
-                  <span className="font-bold text-[var(--color-text-secondary)]">{cat.label}</span>
+                  <span className="font-bold text-gray-700">{cat.label}</span>
                   <span className={`font-bold ${cat.text}`}>{cat.count} مستفيد ({pct}%)</span>
                 </div>
-                <div className="w-full bg-[var(--color-bg-soft)] h-3 rounded-full overflow-hidden">
+                <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
                   <div className={`${cat.color} h-full transition-all duration-500`} style={{ width: `${pct}%` }}></div>
                 </div>
               </div>
@@ -178,13 +178,13 @@ export default function StatisticsPage() {
       </div>
 
       {/* Detailed Analysis Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-[var(--color-border)] p-6">
-        <h2 className="text-base font-bold text-[var(--color-text-primary)] mb-4">📋 جدول ملخص بيانات المستفيدين والتصنيفات</h2>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h2 className="text-base font-bold text-gray-800 mb-4">📋 جدول ملخص بيانات المستفيدين والتصنيفات</h2>
         
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-right border-collapse">
             <thead>
-              <tr className="bg-[var(--color-bg-soft)] text-amber-900 border-b border-[var(--color-border)]">
+              <tr className="bg-amber-50 text-amber-900 border-b border-amber-200">
                 <th className="p-3 font-bold">التصنيف</th>
                 <th className="p-3 font-bold">العدد الإجمالي</th>
                 <th className="p-3 font-bold">نسبة المواطنين</th>
@@ -192,41 +192,41 @@ export default function StatisticsPage() {
                 <th className="p-3 font-bold">ملاحظات آلية</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--color-border)]">
-              <tr className="hover:bg-[var(--color-bg-soft)]">
+            <tbody className="divide-y divide-gray-100">
+              <tr className="hover:bg-gray-50">
                 <td className="p-3 font-bold text-green-800">درجة أولى</td>
                 <td className="p-3 font-mono font-bold">{firstClass}</td>
                 <td className="p-3">{total > 0 ? ((items.filter(b => b.priority === "first_class" && (b.beneficiary_type || b.type) === "citizen").length / (firstClass || 1)) * 100).toFixed(0) : 0}%</td>
                 <td className="p-3">{total > 0 ? ((items.filter(b => b.priority === "first_class" && (b.beneficiary_type || b.type) === "resident").length / (firstClass || 1)) * 100).toFixed(0) : 0}%</td>
-                <td className="p-3 text-[var(--color-text-muted)]">الدخل الكلي أقل أو يساوي الحد الإداري (3000 ر.س)</td>
+                <td className="p-3 text-gray-500">الدخل الكلي أقل أو يساوي الحد الإداري (3000 ر.س)</td>
               </tr>
-              <tr className="hover:bg-[var(--color-bg-soft)]">
-                <td className="p-3 font-bold text-[var(--color-text-secondary)]">درجة ثانية</td>
+              <tr className="hover:bg-gray-50">
+                <td className="p-3 font-bold text-amber-800">درجة ثانية</td>
                 <td className="p-3 font-mono font-bold">{secondClass}</td>
                 <td className="p-3">{total > 0 ? ((items.filter(b => b.priority === "second_class" && (b.beneficiary_type || b.type) === "citizen").length / (secondClass || 1)) * 100).toFixed(0) : 0}%</td>
                 <td className="p-3">{total > 0 ? ((items.filter(b => b.priority === "second_class" && (b.beneficiary_type || b.type) === "resident").length / (secondClass || 1)) * 100).toFixed(0) : 0}%</td>
-                <td className="p-3 text-[var(--color-text-muted)]">الدخل الكلي بين 3001 إلى 6000 ر.س</td>
+                <td className="p-3 text-gray-500">الدخل الكلي بين 3001 إلى 6000 ر.س</td>
               </tr>
-              <tr className="hover:bg-[var(--color-bg-soft)]">
+              <tr className="hover:bg-gray-50">
                 <td className="p-3 font-bold text-purple-800">ذوو الاحتياجات الخاصة</td>
                 <td className="p-3 font-mono font-bold">{specialNeeds}</td>
                 <td className="p-3">{total > 0 ? ((items.filter(b => (b.priority === "special_needs" || b.has_special_needs) && (b.beneficiary_type || b.type) === "citizen").length / (specialNeeds || 1)) * 100).toFixed(0) : 0}%</td>
                 <td className="p-3">{total > 0 ? ((items.filter(b => (b.priority === "special_needs" || b.has_special_needs) && (b.beneficiary_type || b.type) === "resident").length / (specialNeeds || 1)) * 100).toFixed(0) : 0}%</td>
-                <td className="p-3 text-[var(--color-text-muted)]">أولويات التوصيل المباشر للمنزل</td>
+                <td className="p-3 text-gray-500">أولويات التوصيل المباشر للمنزل</td>
               </tr>
-              <tr className="hover:bg-[var(--color-bg-soft)]">
+              <tr className="hover:bg-gray-50">
                 <td className="p-3 font-bold text-blue-800">كبار السن</td>
                 <td className="p-3 font-mono font-bold">{elderly}</td>
                 <td className="p-3">{total > 0 ? ((items.filter(b => (b.priority === "elderly") && (b.beneficiary_type || b.type) === "citizen").length / (elderly || 1)) * 100).toFixed(0) : 0}%</td>
                 <td className="p-3">{total > 0 ? ((items.filter(b => (b.priority === "elderly") && (b.beneficiary_type || b.type) === "resident").length / (elderly || 1)) * 100).toFixed(0) : 0}%</td>
-                <td className="p-3 text-[var(--color-text-muted)]">مستفيدون بعمر 60 سنة وأكثر</td>
+                <td className="p-3 text-gray-500">مستفيدون بعمر 60 سنة وأكثر</td>
               </tr>
-              <tr className="hover:bg-[var(--color-bg-soft)]">
-                <td className="p-3 font-bold text-[var(--color-text-primary)]">موظفو الجمعية</td>
+              <tr className="hover:bg-gray-50">
+                <td className="p-3 font-bold text-gray-800">موظفو الجمعية</td>
                 <td className="p-3 font-mono font-bold">{employees}</td>
                 <td className="p-3">100%</td>
                 <td className="p-3">0%</td>
-                <td className="p-3 text-[var(--color-text-muted)]">صفحة وحسابات الموظفين الخاصة</td>
+                <td className="p-3 text-gray-500">صفحة وحسابات الموظفين الخاصة</td>
               </tr>
             </tbody>
           </table>

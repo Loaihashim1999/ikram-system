@@ -40,10 +40,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.post('/logout');
     } catch (error) {
-      // Password change revokes the token before logout; do not log auth config.
-      if (error.response?.status !== 401) {
-        console.warn('تعذر إرسال طلب تسجيل الخروج؛ تم إنهاء الجلسة المحلية.');
-      }
+      console.error('Logout error', error);
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('user');

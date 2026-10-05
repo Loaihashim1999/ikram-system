@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+
+use App\Models\AuditLog;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
@@ -20,13 +21,6 @@ class UserController extends Controller
         return response()->json(['data' => $users]);
     }
 
-    public function show(string $id): JsonResponse
-    {
-        $user = User::findOrFail($id);
-
-        return response()->json(['data' => $user]);
-    }
-
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -35,7 +29,7 @@ class UserController extends Controller
             'password' => 'required|string|min:6',
             'full_name' => 'required|string|max:150',
             'phone' => 'nullable|string|max:20',
-            'role' => ['required', Rule::in(['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly'])],
+            'role' => ['required', Rule::in(['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly', 'driver', 'delivery_driver'])],
             'permissions' => 'nullable|array',
         ], [
             'username.unique' => 'اسم المستخدم مستخدم بالفعل في حساب آخر.',
@@ -43,29 +37,25 @@ class UserController extends Controller
             'password.min' => 'يجب أن لا تقل كلمة المرور عن 6 أحرف.',
         ]);
 
-        $user = DB::transaction(function () use ($request, $validated) {
-            $user = User::create([
-                'id' => Str::uuid(),
-                'username' => $validated['username'],
-                'email' => $validated['email'] ?? null,
-                'password' => Hash::make($validated['password']),
-                'full_name' => $validated['full_name'],
-                'phone' => $validated['phone'] ?? null,
-                'role' => $validated['role'],
-                'permissions' => User::isDriverRole($validated['role']) ? User::DRIVER_PERMISSIONS : ($validated['permissions'] ?? null),
-                'is_active' => true,
-            ]);
-            $user->forceFill(['must_change_password' => true, 'temporary_password_expires_at' => now()->addHours(config('account_security.temporary_password_hours'))])->save();
+        $user = User::create([
+            'id' => Str::uuid(),
+            'username' => $validated['username'],
+            'email' => $validated['email'] ?? null,
+            'password' => Hash::make($validated['password']),
+            'full_name' => $validated['full_name'],
+            'phone' => $validated['phone'] ?? null,
+            'role' => $validated['role'],
+            'permissions' => User::isDriverRole($validated['role']) ? User::DRIVER_PERMISSIONS : ($validated['permissions'] ?? null),
+            'is_active' => true,
+        ]);
+
+        try {
             AuditLog::create([
                 'user_id' => $request->user()?->id,
                 'action' => 'CREATE_USER_ACCOUNT',
-                'target_table' => 'users',
-                'target_id' => $user->id,
                 'details' => "إنشاء حساب مستخدم جديد: {$user->username} ({$user->full_name}) برتبة {$user->role}",
             ]);
-
-            return $user;
-        });
+        } catch (\Exception $e) {}
 
         return response()->json([
             'success' => true,
@@ -84,7 +74,7 @@ class UserController extends Controller
             'username' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($user->id)],
             'email' => ['nullable', 'email', 'max:100', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => 'nullable|string|max:20',
-            'role' => ['sometimes', 'required', Rule::in(array_merge(['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly'], User::isDriverRole($user->role) ? [$user->role] : []))],
+            'role' => ['sometimes', 'required', Rule::in(['admin', 'assistant_admin', 'reception', 'staff', 'warehouse', 'readonly', 'driver', 'delivery_driver'])],
             'password' => 'nullable|string|min:6',
             'is_active' => 'nullable|boolean',
             'permissions' => 'nullable|array',
@@ -118,13 +108,13 @@ class UserController extends Controller
         if (array_key_exists('phone', $validated)) {
             $updateData['phone'] = $validated['phone'];
         }
-        if (isset($validated['role']) && (! $currentUser || $currentUser->role === 'admin')) {
+        if (isset($validated['role']) && (!$currentUser || $currentUser->role === 'admin')) {
             $updateData['role'] = $validated['role'];
         }
         if (array_key_exists('is_active', $validated)) {
             $updateData['is_active'] = $validated['is_active'];
         }
-        if (array_key_exists('permissions', $validated) && (! $currentUser || $currentUser->role === 'admin')) {
+        if (array_key_exists('permissions', $validated) && (!$currentUser || $currentUser->role === 'admin')) {
             $updateData['permissions'] = $validated['permissions'];
         }
         if (User::isDriverRole($updateData['role'] ?? $user->role)) {
@@ -134,23 +124,15 @@ class UserController extends Controller
             $updateData['password'] = Hash::make($validated['password']);
         }
 
-        DB::transaction(function () use ($user, $updateData, $validated, $currentUser) {
-            $user->update($updateData);
-            if (! empty($validated['password'])) {
-                $user->forceFill(['must_change_password' => true, 'temporary_password_expires_at' => now()->addHours(config('account_security.temporary_password_hours')), 'is_locked' => false, 'locked_until' => null, 'failed_login_attempts' => 0])->save();
-                $user->tokens()->delete();
-            }
-            if (! $user->is_active) {
-                $user->tokens()->delete();
-            }
+        $user->update($updateData);
+
+        try {
             AuditLog::create([
                 'user_id' => $currentUser?->id,
                 'action' => 'UPDATE_USER_ACCOUNT',
-                'target_table' => 'users',
-                'target_id' => $user->id,
                 'details' => "تعديل بيانات الحساب {$user->username} ({$user->full_name})",
             ]);
-        });
+        } catch (\Exception $e) {}
 
         return response()->json([
             'success' => true,
@@ -169,9 +151,6 @@ class UserController extends Controller
         DB::transaction(function () use ($request, $user) {
             $user->auditLogs()->get()->each(function (AuditLog $log) use ($user) {
                 $details = $log->details ?? [];
-                if (! is_array($details)) {
-                    $details = ['description' => $details];
-                }
                 $details['actor_name'] ??= $user->full_name;
                 $details['actor_role'] ??= $user->role;
                 $details['actor_username'] ??= $user->username;
@@ -214,7 +193,7 @@ class UserController extends Controller
         if ($request->user()?->role !== 'admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'ليس لديك الصلاحيات المطلوبة (خاص بمدير النظام).',
+                'message' => 'ليس لديك الصلاحيات المطلوبة (خاص بمدير النظام).'
             ], 403);
         }
 
@@ -223,22 +202,21 @@ class UserController extends Controller
         $currentState = $user->canReceiveNotifications();
         $newState = $request->has('can_receive_notifications')
             ? (bool) $request->input('can_receive_notifications')
-            : ! $currentState;
+            : !$currentState;
 
-        DB::transaction(function () use ($request, $user, $newState) {
-            $user->can_receive_notifications = $newState;
-            $permissions = $user->permissions ?? [];
-            $permissions['can_receive_notifications'] = $newState;
-            $user->permissions = $permissions;
-            $user->save();
+        $user->can_receive_notifications = $newState;
+        $permissions = $user->permissions ?? [];
+        $permissions['can_receive_notifications'] = $newState;
+        $user->permissions = $permissions;
+        $user->save();
+
+        try {
             AuditLog::create([
                 'user_id' => $request->user()?->id,
                 'action' => 'TOGGLE_NOTIFICATIONS',
-                'target_table' => 'users',
-                'target_id' => $user->id,
-                'details' => "تعديل صلاحية الإشعارات للمستخدم {$user->username} إلى: ".($newState ? 'مفعل' : 'معطل'),
+                'details' => "تعديل صلاحية الإشعارات للمستخدم {$user->username} إلى: " . ($newState ? 'مفعل' : 'معطل'),
             ]);
-        });
+        } catch (\Exception $e) {}
 
         return response()->json([
             'success' => true,
@@ -247,7 +225,7 @@ class UserController extends Controller
                 'id' => $user->id,
                 'username' => $user->username,
                 'can_receive_notifications' => $newState,
-            ],
+            ]
         ]);
     }
 }

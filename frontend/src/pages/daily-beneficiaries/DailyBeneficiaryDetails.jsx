@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../../context/AuthContext";
-import { hasModuleAction } from "../../utils/modulePermissions";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
 import Dialog from "../../components/overlays/Dialog";
@@ -36,8 +34,6 @@ import { getDocumentPdfUrl } from "../../utils/documentUrl";
 export default function DailyBeneficiaryDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const canDailyAction = (action) => hasModuleAction(user, 'daily_beneficiaries', action);
 
   const [beneficiary, setBeneficiary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -180,7 +176,7 @@ export default function DailyBeneficiaryDetails() {
     return (
       <MainLayout title="تحميل ملف المستفيد...">
         <div className="py-20 text-center text-slate-400">
-          <div className="w-10 h-10 border-4 border-[var(--color-brand-green)] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-10 h-10 border-4 border-[#3F6B3A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           جاري تحميل ملف المستفيد اليومي...
         </div>
       </MainLayout>
@@ -193,7 +189,7 @@ export default function DailyBeneficiaryDetails() {
         <div className="py-16 text-center text-slate-500">
           لم يتم العثور على المستفيد اليومي المطلوب.
           <div className="mt-4">
-            <Link to="/daily-beneficiaries" className="text-[var(--color-brand-green)] font-bold hover:underline">
+            <Link to="/daily-beneficiaries" className="text-[#3F6B3A] font-bold hover:underline">
               العودة لقائمة المستفيدين اليوميين
             </Link>
           </div>
@@ -222,25 +218,25 @@ export default function DailyBeneficiaryDetails() {
           ]}
           action={
             <div className="flex flex-wrap items-center gap-2">
-              {canDailyAction('create') && <Button
+              <Button
                 variant="secondary"
                 size="sm"
                 icon={Package}
                 onClick={openReceiveModal}
               >
                 تسجيل استلام مساعدة
-              </Button>}
+              </Button>
 
-              {canDailyAction('create') && <Button
+              <Button
                 variant="gold"
                 size="sm"
                 icon={Plus}
                 onClick={() => setShowDocModal(true)}
               >
                 إرفاق وثيقة
-              </Button>}
+              </Button>
 
-              {canDailyAction('edit') && <Button
+              <Button
                 variant="outline"
                 size="sm"
                 icon={Edit}
@@ -248,16 +244,16 @@ export default function DailyBeneficiaryDetails() {
                 to={`/daily-beneficiaries/${beneficiary.id}/edit`}
               >
                 تعديل
-              </Button>}
+              </Button>
 
-              {canDailyAction('delete') && <Button
+              <Button
                 variant="dangerOutline"
                 size="sm"
                 icon={Trash2}
                 onClick={() => setShowDelete(true)}
               >
                 حذف
-              </Button>}
+              </Button>
             </div>
           }
         />
@@ -265,10 +261,10 @@ export default function DailyBeneficiaryDetails() {
         {/* Profile Card & KPIs Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Info Card */}
-          <div className="ikram-panel space-y-5 p-4 sm:p-6 lg:col-span-2">
-            <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border)]">
+          <div className="lg:col-span-2 bg-white border border-[#E5E2D9] rounded-xl shadow-sm p-6 space-y-5">
+            <div className="flex items-center justify-between pb-4 border-b border-[#E5E2D9]">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] flex items-center justify-center font-bold text-lg">
+                <div className="w-12 h-12 rounded-full bg-[#3F6B3A]/10 text-[#3F6B3A] flex items-center justify-center font-bold text-lg">
                   {beneficiary.full_name.charAt(0)}
                 </div>
                 <div>
@@ -328,28 +324,28 @@ export default function DailyBeneficiaryDetails() {
             </div>
 
             {beneficiary.notes && (
-              <div className="p-3.5 bg-[var(--color-bg-soft)] border border-[var(--color-border)]/60 rounded-lg text-xs">
-                <strong className="text-[var(--color-text-secondary)] block mb-1">ملاحظات الحالة الاجتماعية:</strong>
+              <div className="p-3.5 bg-amber-50/50 border border-amber-200/60 rounded-lg text-xs">
+                <strong className="text-amber-800 block mb-1">ملاحظات الحالة الاجتماعية:</strong>
                 <p className="text-slate-700 leading-relaxed">{beneficiary.notes}</p>
               </div>
             )}
           </div>
 
           {/* Assistance Statistics KPI Card */}
-          <div className="ikram-panel space-y-4 bg-[var(--color-bg-soft)] p-4 sm:p-6">
-            <h3 className="font-bold text-slate-800 text-sm pb-3 border-b border-[var(--color-border)] flex items-center gap-2">
-              <Package className="w-4 h-4 text-[var(--color-brand-green)]" />
+          <div className="bg-[#FAF8F5] border border-[#E5E2D9] rounded-xl shadow-sm p-6 space-y-4">
+            <h3 className="font-bold text-slate-800 text-sm pb-3 border-b border-[#E5E2D9] flex items-center gap-2">
+              <Package className="w-4 h-4 text-[#3F6B3A]" />
               ملخص المساعدات المستلمة
             </h3>
 
             <div className="space-y-3">
-              <div className="p-4 bg-white border border-[var(--color-border)] rounded-lg text-center">
+              <div className="p-4 bg-white border border-[#E5E2D9] rounded-lg text-center">
                 <span className="text-xs text-slate-500 block">إجمالي مرات الاستلام</span>
                 <strong className="text-2xl font-bold text-[#2E5A27]">{beneficiary.total_received_count || 0}</strong>
                 <span className="text-[11px] text-slate-400 block mt-0.5">عمليات استلام مسجلة</span>
               </div>
 
-              <div className="p-4 bg-white border border-[var(--color-border)] rounded-lg text-center">
+              <div className="p-4 bg-white border border-[#E5E2D9] rounded-lg text-center">
                 <span className="text-xs text-slate-500 block">تاريخ آخر استلام</span>
                 <strong className="text-sm font-bold text-slate-800 mt-1 block">
                   {beneficiary.last_delivery_date
@@ -363,7 +359,7 @@ export default function DailyBeneficiaryDetails() {
                 </span>
               </div>
 
-              <div className="p-4 bg-white border border-[var(--color-border)] rounded-lg text-center">
+              <div className="p-4 bg-white border border-[#E5E2D9] rounded-lg text-center">
                 <span className="text-xs text-slate-500 block">تاريخ التسجيل بالنظام</span>
                 <strong className="text-xs font-bold text-slate-700 mt-1 block">
                   {new Date(beneficiary.created_at).toLocaleDateString("ar-SA")}
@@ -374,10 +370,10 @@ export default function DailyBeneficiaryDetails() {
         </div>
 
         {/* Assistance Receiving History Table */}
-        <div className="ikram-panel overflow-hidden">
-          <div className="p-5 border-b border-[var(--color-border)] flex items-center justify-between">
+        <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-[#E5E2D9] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <History className="w-5 h-5 text-[var(--color-brand-gold)]" />
+              <History className="w-5 h-5 text-[#C9A24A]" />
               <h2 className="font-bold text-slate-800 text-base">سجل استلامات المساعدات الغذائية</h2>
             </div>
             <span className="text-xs text-slate-500">
@@ -385,10 +381,10 @@ export default function DailyBeneficiaryDetails() {
             </span>
           </div>
 
-          <div className="ikram-table-wrap">
-            <table className="ikram-table text-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-right border-collapse text-xs">
               <thead>
-                <tr className="bg-[var(--color-bg-soft)] text-slate-700 font-bold border-b border-[var(--color-border)]">
+                <tr className="bg-[#FAF8F5] text-slate-700 font-bold border-b border-[#E5E2D9]">
                   <th className="py-3 px-4">رقم السند</th>
                   <th className="py-3 px-4">السلة / المادة الغذائية</th>
                   <th className="py-3 px-4 text-center">الكمية</th>
@@ -429,7 +425,7 @@ export default function DailyBeneficiaryDetails() {
                           href={getDocumentPdfUrl(`/documents/daily-receiving/${tx.id}/pdf`)}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--color-bg-soft)] text-[#8C6C26] hover:bg-[#ECE0C4] rounded-lg text-xs font-bold transition-colors"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#F5EDDA] text-[#8C6C26] hover:bg-[#ECE0C4] rounded-lg text-xs font-bold transition-colors"
                         >
                           <Printer className="w-3.5 h-3.5" />
                           طباعة السند
@@ -444,15 +440,15 @@ export default function DailyBeneficiaryDetails() {
         </div>
 
         {/* Uploaded Documents Gallery */}
-        <div className="ikram-panel p-4 sm:p-6">
-          <div className="flex items-center justify-between pb-4 mb-4 border-b border-[var(--color-border)]">
+        <div className="bg-white border border-[#E5E2D9] rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#E5E2D9]">
             <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-[var(--color-brand-green)]" />
+              <FileText className="w-5 h-5 text-[#3F6B3A]" />
               <h3 className="font-bold text-slate-800 text-base">الوثائق والمرفقات المعتمدة</h3>
             </div>
             <button
               onClick={() => setShowDocModal(true)}
-              className="flex items-center gap-1 text-xs font-bold text-[var(--color-brand-green)] hover:underline"
+              className="flex items-center gap-1 text-xs font-bold text-[#3F6B3A] hover:underline"
             >
               <Plus className="w-3.5 h-3.5" />
               إضافة وثيقة جديدة
@@ -469,7 +465,7 @@ export default function DailyBeneficiaryDetails() {
                   className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors flex flex-col justify-between"
                 >
                   <div className="flex items-start gap-2.5 mb-3">
-                    <div className="p-2 bg-white text-[var(--color-brand-green)] rounded border border-slate-200">
+                    <div className="p-2 bg-white text-[#3F6B3A] rounded border border-slate-200">
                       <FileCheck className="w-5 h-5" />
                     </div>
                     <div className="overflow-hidden">
@@ -509,8 +505,8 @@ export default function DailyBeneficiaryDetails() {
       >
         <div className="space-y-4">
           {createdVoucher ? (
-            <div className="p-4 bg-[#EBF4EA] border border-[var(--color-brand-green)]/30 rounded-xl space-y-3 text-center">
-              <CheckCircle2 className="w-12 h-12 text-[var(--color-brand-green)] mx-auto" />
+            <div className="p-4 bg-[#EBF4EA] border border-[#3F6B3A]/30 rounded-xl space-y-3 text-center">
+              <CheckCircle2 className="w-12 h-12 text-[#3F6B3A] mx-auto" />
               <h3 className="font-bold text-slate-800 text-base">تم تسجيل الاستلام بنجاح!</h3>
               <p className="text-xs text-slate-600">
                 رقم سند الاستلام: <strong className="text-[#8C6C26] font-mono text-sm">{createdVoucher.document_number}</strong>
@@ -520,7 +516,7 @@ export default function DailyBeneficiaryDetails() {
                   href={getDocumentPdfUrl(`/documents/daily-receiving/${createdVoucher.id}/pdf`)}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand-gold)] hover:bg-[#B8923D] text-white rounded-lg text-xs font-bold transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#C9A24A] hover:bg-[#B8923D] text-white rounded-lg text-xs font-bold transition-colors"
                 >
                   <Printer className="w-4 h-4" />
                   طباعة سند الاستلام
@@ -542,7 +538,7 @@ export default function DailyBeneficiaryDetails() {
                 <select
                   value={selectedItem}
                   onChange={(e) => setSelectedItem(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
+                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
                 >
                   {inventoryItems.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -568,7 +564,7 @@ export default function DailyBeneficiaryDetails() {
                   max={selectedInventoryItemObj?.current_quantity || 1}
                   value={receiveQuantity}
                   onChange={(e) => setReceiveQuantity(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
+                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
                 />
               </div>
 
@@ -579,7 +575,7 @@ export default function DailyBeneficiaryDetails() {
                   value={receiveNotes}
                   onChange={(e) => setReceiveNotes(e.target.value)}
                   placeholder="ملاحظات التسليم..."
-                  className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-brand-green)]"
+                  className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-sm focus:outline-none focus:border-[#3F6B3A]"
                 />
               </div>
 
@@ -595,7 +591,7 @@ export default function DailyBeneficiaryDetails() {
                   type="button"
                   disabled={submittingReceive || !selectedItem}
                   onClick={handleConfirmReceive}
-                  className="px-5 py-2 bg-[var(--color-brand-green)] hover:bg-[#345830] text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+                  className="px-5 py-2 bg-[#3F6B3A] hover:bg-[#345830] text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
                 >
                   {submittingReceive ? "جاري التأكيد..." : "تأكيد الاستلام وخصم المخزون"}
                 </button>
@@ -618,7 +614,7 @@ export default function DailyBeneficiaryDetails() {
             <select
               value={docType}
               onChange={(e) => setDocType(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
+              className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
             >
               <option value="national_id">صورة الهوية الوطنية</option>
               <option value="residence_id">صورة الإقامة</option>
@@ -636,7 +632,7 @@ export default function DailyBeneficiaryDetails() {
               value={docTitle}
               onChange={(e) => setDocTitle(e.target.value)}
               placeholder="مثال: الهوية الوطنية للمستفيد"
-              className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
+              className="w-full px-3 py-2 bg-white border border-[#E5E2D9] rounded-lg text-xs focus:outline-none focus:border-[#3F6B3A]"
             />
           </div>
 
@@ -646,7 +642,7 @@ export default function DailyBeneficiaryDetails() {
               type="file"
               accept=".pdf,.jpg,.jpeg,.png,.docx"
               onChange={(e) => setDocFile(e.target.files[0] || null)}
-              className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[var(--color-brand-green)]/10 file:text-[var(--color-brand-green)]"
+              className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#3F6B3A]/10 file:text-[#3F6B3A]"
             />
           </div>
 
@@ -661,7 +657,7 @@ export default function DailyBeneficiaryDetails() {
             <button
               type="submit"
               disabled={uploadingDoc || !docFile}
-              className="px-5 py-2 bg-[var(--color-brand-green)] text-white rounded-lg text-xs font-bold disabled:opacity-50"
+              className="px-5 py-2 bg-[#3F6B3A] text-white rounded-lg text-xs font-bold disabled:opacity-50"
             >
               {uploadingDoc ? "جاري الرفع..." : "رفع وحفظ الوثيقة"}
             </button>

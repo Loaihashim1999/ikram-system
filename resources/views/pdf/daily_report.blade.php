@@ -1,7 +1,26 @@
-@extends('pdf.letterhead_template', ['title' => 'التقرير اليومي لعمليات التوزيع والمساعدات'])
-@section('styles')
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>{{ $title ?? 'التقرير اليومي لعمليات التوزيع والمساعدات' }}</title>
+    <style>
+        @php
+            $reportFrame = file_exists(public_path('assets/33.jpeg')) 
+                ? public_path('assets/33.jpeg') 
+                : (file_exists(public_path('assets/33. jpeg')) ? public_path('assets/33. jpeg') : '');
+        @endphp
+        @page {
+            margin-top: 36mm;
+            margin-bottom: 22mm;
+            margin-left: 14mm;
+            margin-right: 14mm;
+            @if($reportFrame)
+            background: url('{{ $reportFrame }}') no-repeat 0 0;
+            background-image-resize: 6;
+            @endif
+        }
         body {
-            font-family: xbriyaz, sans-serif;
+            font-family: 'xbriyaz', 'tajawal', 'cairo', 'DejaVu Sans', sans-serif;
             color: #1A1A1A;
             font-size: 10px;
             line-height: 1.4;
@@ -78,8 +97,6 @@
             font-size: 9px;
             text-align: center;
         }
-        .data-table thead { display: table-header-group; }
-        .data-table tr { page-break-inside: avoid; }
         .badge {
             display: inline-block;
             padding: 2px 5px;
@@ -95,14 +112,16 @@
             border-collapse: collapse;
             text-align: center;
         }
-@endsection
-@section('content')
+    </style>
+</head>
+<body>
 
     {{-- ترويسة التقرير اليومي --}}
     <table class="header-table">
         <tr>
-            <td style="width: 25%; text-align: right;" class="pdf-muted">
-                وثيقة رسمية
+            <td style="width: 25%; text-align: right;">
+                <strong style="color: #2E5A27; font-size: 12px;">جمعية إكرام لحفظ الطعام</strong><br>
+                <span style="font-size: 9px; color: #666;">المملكة العربية السعودية</span>
             </td>
             <td style="width: 50%; text-align: center;">
                 <div class="header-title">التقرير اليومي للمساعدات والتوزيع</div>
@@ -220,21 +239,22 @@
     </table>
 
     {{-- التوقيعات الرسمية --}}
-    <table class="pdf-sign">
+    <table class="footer-signatures">
         <tr>
             <td style="width: 33%;">
-                <strong>مسؤول التوزيع الميداني:</strong><br>
+                <strong>مسؤول التوزيع الميداني:</strong><br><br>
                 <span>....................................</span>
             </td>
             <td style="width: 33%;">
-                <strong>أمين المستودع:</strong><br>
+                <strong>أمين المستودع:</strong><br><br>
                 <span>....................................</span>
             </td>
             <td style="width: 34%;">
-                <strong>مدير إدارة العمليات:</strong><br>
+                <strong>مدير إدارة العمليات:</strong><br><br>
                 <span>....................................</span>
             </td>
         </tr>
     </table>
 
-@endsection
+</body>
+</html>

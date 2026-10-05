@@ -55,15 +55,15 @@ export default function AddStaffPage() {
   };
 
   const cls = {
-    input:  "ikram-control",
-    select: "ikram-control",
-    label:  "ikram-label",
-    card:   "ikram-panel p-4 mb-4",
-    h2:     "ikram-section-title mb-4 border-b border-[var(--color-border)] pb-2",
+    input:  "w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 text-right",
+    select: "w-full rounded-lg border border-gray-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 text-right",
+    label:  "block text-sm font-semibold text-gray-700 mb-1",
+    card:   "bg-white rounded-2xl shadow-md p-6 mb-4",
+    h2:     "text-lg font-bold text-amber-800 mb-4 border-b border-amber-100 pb-2",
   };
 
   const Err = ({ f }) =>
-    errors[f] ? <p role="alert" className="text-[var(--color-danger)] text-xs mt-1">{errors[f][0]}</p> : null;
+    errors[f] ? <p className="text-red-500 text-xs mt-1">{errors[f][0]}</p> : null;
 
   return (
     <MainLayout>
@@ -186,7 +186,7 @@ export default function AddStaffPage() {
               <input type="checkbox" id="owns_house" name="owns_house"
                 checked={form.owns_house} onChange={handleChange}
                 className="w-4 h-4 accent-amber-600" />
-              <label htmlFor="owns_house" className="text-sm font-semibold text-[var(--color-text-secondary)] cursor-pointer">
+              <label htmlFor="owns_house" className="text-sm font-semibold text-gray-700 cursor-pointer">
                 يملك مسكناً
               </label>
             </div>
@@ -195,21 +195,21 @@ export default function AddStaffPage() {
           {/* جدول المعالين */}
           <div className="mt-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-[var(--color-text-secondary)]">👶 المعالون (التابعون)</h3>
+              <h3 className="font-semibold text-gray-700">👶 المعالون (التابعون)</h3>
               <button type="button" onClick={addDependent}
-                className="text-sm bg-amber-100 text-[var(--color-text-secondary)] px-3 py-1 rounded-lg hover:bg-amber-200 font-semibold">
+                className="text-sm bg-amber-100 text-amber-800 px-3 py-1 rounded-lg hover:bg-amber-200 font-semibold">
                 + إضافة معال
               </button>
             </div>
             {dependents.length === 0 ? (
-              <p className="text-[var(--color-text-muted)] text-sm py-3 text-center border rounded-lg">
+              <p className="text-gray-400 text-sm py-3 text-center border rounded-lg">
                 لا يوجد معالون
               </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)]">
+                    <tr className="bg-amber-50 text-amber-800">
                       <th className="p-2 text-right">#</th>
                       <th className="p-2 text-right">الاسم</th>
                       <th className="p-2 text-right">صلة القرابة</th>
@@ -220,7 +220,7 @@ export default function AddStaffPage() {
                   <tbody>
                     {dependents.map((dep, i) => (
                       <tr key={i} className="border-t">
-                        <td className="p-2 text-[var(--color-text-muted)]">{i + 1}</td>
+                        <td className="p-2 text-gray-400">{i + 1}</td>
                         <td className="p-2">
                           <input value={dep.name}
                             onChange={(e) => updateDep(i, "name", e.target.value)}

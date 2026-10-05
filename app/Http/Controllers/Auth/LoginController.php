@@ -45,21 +45,11 @@ class LoginController extends Controller
             ]);
         }
 
-        if ($user->is_locked && $user->locked_until?->isFuture()) {
-            throw ValidationException::withMessages(['username' => ['الحساب مقفل مؤقتاً. حاول مرة أخرى لاحقاً.']]);
-        }
-        if ($user->is_locked || $user->locked_until?->isPast()) {
-            $user->forceFill(['is_locked' => false, 'locked_until' => null])->save();
-        }
-
         // التحقق من كلمة المرور
         $passwordMatches = Hash::check($request->password, $user->password);
         if (! $passwordMatches) {
-            $attempts = $user->failed_login_attempts + 1;
-            $lockMinutes = $this->lockMinutes($user, $attempts);
-            $user->forceFill(['failed_login_attempts' => $attempts, 'is_locked' => $lockMinutes > 0, 'locked_until' => $lockMinutes > 0 ? now()->addMinutes($lockMinutes) : null])->save();
             throw ValidationException::withMessages([
-                'username' => [$lockMinutes > 0 ? "تم قفل الحساب مؤقتاً لمدة {$lockMinutes} دقيقة بعد محاولات فاشلة متكررة." : 'اسم المستخدم أو كلمة المرور غير صحيحة'],
+                'username' => ['اسم المستخدم أو كلمة المرور غير صحيحة'],
             ]);
         }
 
@@ -69,13 +59,6 @@ class LoginController extends Controller
                 'username' => ['هذا الحساب معطل. تواصل مع مسؤول النظام.'],
             ]);
         }
-
-        if ($user->temporary_password_expires_at?->lte(now())) {
-            throw ValidationException::withMessages(['username' => ['انتهت صلاحية كلمة المرور المؤقتة. اطلب من المدير إصدار كلمة جديدة.']]);
-        }
-        $user->forceFill(['failed_login_attempts' => 0, 'is_locked' => false, 'locked_until' => null])->save();
-
-        abort_if(User::isDriverRole($user->role), 403, 'استخدم رابط التكليف المؤقت للوصول إلى مهام التوصيل.');
 
         // إنشاء توكن المصادقة
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -104,25 +87,10 @@ class LoginController extends Controller
                     'full_name' => $user->full_name,
                     'role' => $user->role,
                     'permissions' => $user->permissions,
-                    'must_change_password' => $user->must_change_password,
                 ],
                 'token' => $token,
             ],
         ]);
-    }
-
-    private function lockMinutes(User $user, int $attempts): int
-    {
-        if ($user->role !== 'admin') {
-            return $attempts >= config('account_security.user_failure_limit') ? 1 : 0;
-        }
-        foreach (config('account_security.admin_lock_minutes') as $index => $minutes) {
-            if ($attempts <= (($index + 1) * 3)) {
-                return $minutes;
-            }
-        }
-
-        return (int) last(config('account_security.admin_lock_minutes'));
     }
 
     /**

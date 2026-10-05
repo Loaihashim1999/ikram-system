@@ -26,7 +26,7 @@
         </tr>
         <tr>
             <th>اسم المستفيد الرباعي</th>
-            <td><strong>{{ strip_tags($transaction->beneficiary->full_name ?? 'غير محدد') }}</strong></td>
+            <td><strong>{{ $transaction->beneficiary->full_name ?? 'غير محدد' }}</strong></td>
             <th>رقم الهوية / الإقامة</th>
             <td><strong style="letter-spacing: 1px;">{{ $transaction->beneficiary->national_id ?? 'غير متوفر' }}</strong></td>
         </tr>
@@ -53,7 +53,7 @@
         </tr>
         <tr>
             <th>نوع السلة / المادة</th>
-            <td colspan="3"><strong style="color: #2E5A27; font-size: 12px;">{{ strip_tags($transaction->basket_type_name) }}</strong></td>
+            <td colspan="3"><strong style="color: #2E5A27; font-size: 12px;">{{ $transaction->basket_type_name }}</strong></td>
         </tr>
         <tr>
             <th>الكمية المصروفة</th>
@@ -70,22 +70,22 @@
         @if($transaction->notes)
         <tr>
             <th>ملاحظات إضافية</th>
-            <td colspan="3" class="wrap">{{ strip_tags($transaction->notes) }}</td>
+            <td colspan="3">{{ $transaction->notes }}</td>
         </tr>
         @endif
     </table>
 
     {{-- الإقرار والتعهد --}}
     <div style="margin-top: 15px; padding: 10px; border: 1px dashed #C9A24B; background-color: #FAF8F5; border-radius: 4px; font-size: 10px; line-height: 1.6; text-align: justify;">
-        <strong>إقرار الاستلام:</strong> أقر أنا المستفيد الموضح بياناتي أعلاه بأنني قد استلمت كامل المساعدة العينية المقررة لي من {{ $associationName }} بحالة سليمة وجيدة، وذلك للاستفادة الأسرية الشخصية، والله على ما أقول شهيد.
+        <strong>إقرار الاستلام:</strong> أقر أنا المستفيد الموضح بياناتي أعلاه بأنني قد استلمت كامل المساعدة العينية المقررة لي من جمعية إكرام لحفظ الطعام بحالة سليمة وجيدة، وذلك للاستفادة الأسرية الشخصية، والله على ما أقول شهيد.
     </div>
 
     {{-- التوقيعات --}}
-    <table class="pdf-sign">
+    <table style="width: 100%; margin-top: 35px; border-collapse: collapse; text-align: center;">
         <tr>
             <td style="width: 33%; vertical-align: top;">
                 <strong>المستفيد المستلم:</strong><br><br>
-                <div style="font-size: 11px; color: #555;">{{ strip_tags($transaction->beneficiary->full_name ?? '') }}</div><br>
+                <div style="font-size: 11px; color: #555;">{{ $transaction->beneficiary->full_name ?? '' }}</div><br>
                 <span>التوقيع: ............................</span>
             </td>
             <td style="width: 33%; vertical-align: top;">

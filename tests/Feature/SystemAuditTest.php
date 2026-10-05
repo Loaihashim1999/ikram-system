@@ -29,7 +29,7 @@ class SystemAuditTest extends TestCase
 
     private function account(string $role = 'admin', array $permissions = []): User
     {
-        return User::create(['username' => 'TEST_'.Str::random(12), 'full_name' => 'TEST_ACCOUNT', 'password' => Str::random(40), 'role' => $role, 'permissions' => $permissions, 'is_active' => true, 'can_receive_notifications' => true]);
+        return User::create(['username' => 'TEST_'.Str::random(12), 'full_name' => 'TEST_ACCOUNT', 'password' => Str::random(40), 'role' => $role, 'permissions' => $permissions, 'is_active' => true]);
     }
 
     public function test_public_dangerous_routes_are_removed_and_reports_require_login(): void

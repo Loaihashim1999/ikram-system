@@ -19,7 +19,7 @@ class SendBeneficiaryNotification
 
             NotificationService::notifyAll('beneficiary_changed', $message, $event->beneficiary);
         } catch (\Throwable $e) {
-            Log::error('Beneficiary notification dispatch failed.', ['exception' => $e::class]);
+            Log::error('Failed to send beneficiary notifications: ' . $e->getMessage());
         }
     }
 }

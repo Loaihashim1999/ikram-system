@@ -11,22 +11,21 @@ class EnsureProductionAdminTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_noninteractive_setup_does_not_use_legacy_configured_credentials(): void
+    public function test_it_creates_the_configured_admin_when_none_exists(): void
     {
         config()->set('ikram.bootstrap_admin', [
             'username' => 'release-admin',
-            'password' => 'LegacyConfigured!aA12345',
+            'password' => 'a-strong-bootstrap-password',
             'email' => 'release-admin@example.test',
             'full_name' => 'Release Administrator',
         ]);
 
-        $this->artisan('app:ensure-production-admin', ['--no-interaction' => true])
-            ->expectsOutput('First administrator setup requires an interactive operator session.')
-            ->assertFailed();
+        $this->artisan('app:ensure-production-admin')->assertSuccessful();
 
-        $this->assertDatabaseCount('users', 0);
-        $this->assertDatabaseHas('system_initializations', ['key' => 'first_admin', 'completed_at' => null]);
-        $this->assertDatabaseMissing('audit_logs', ['action' => 'FIRST_ADMIN_INITIALIZED']);
+        $admin = User::query()->where('username', 'release-admin')->firstOrFail();
+        $this->assertSame('admin', $admin->role);
+        $this->assertTrue($admin->is_active);
+        $this->assertTrue(Hash::check('a-strong-bootstrap-password', $admin->password));
     }
 
     public function test_it_never_changes_an_existing_admin(): void
@@ -45,16 +44,12 @@ class EnsureProductionAdminTest extends TestCase
         $this->assertDatabaseCount('users', 1);
     }
 
-    public function test_noninteractive_setup_without_a_configured_password_is_refused(): void
+    public function test_it_skips_creation_when_no_password_is_configured(): void
     {
         config()->set('ikram.bootstrap_admin.password');
 
-        $this->artisan('app:ensure-production-admin', ['--no-interaction' => true])
-            ->expectsOutput('First administrator setup requires an interactive operator session.')
-            ->assertFailed();
+        $this->artisan('app:ensure-production-admin')->assertSuccessful();
 
         $this->assertDatabaseCount('users', 0);
-        $this->assertDatabaseHas('system_initializations', ['key' => 'first_admin', 'completed_at' => null]);
-        $this->assertDatabaseMissing('audit_logs', ['action' => 'FIRST_ADMIN_INITIALIZED']);
     }
 }

@@ -9,14 +9,12 @@ use App\Models\DailyInventoryItem;
 use App\Models\DailyInventoryMovement;
 use App\Models\DailyReceivingTransaction;
 use App\Models\Distribution;
+use App\Models\User;
 use App\Models\InventoryItem;
 use App\Models\InventoryMovement;
 use App\Models\NeighborhoodRep;
 use App\Models\Staff;
 use App\Models\StaffDistribution;
-use App\Models\User;
-use App\Services\GovernanceReportService;
-use App\Services\InventoryExpiryPolicy;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -130,7 +128,7 @@ class AnalyticsController extends Controller
         // أسر مقابل أفراد
         $familiesCount = Beneficiary::where(function ($q) {
             $q->where('beneficiary_type', 'family')
-                ->orWhere('family_members_count', '>', 1);
+              ->orWhere('family_members_count', '>', 1);
         })->count();
         $individualsCount = max(0, $totalBeneficiaries - $familiesCount);
 
@@ -186,7 +184,7 @@ class AnalyticsController extends Controller
         // ══════════════════════════════════════════════════════════════════════
         $totalStaff = Staff::count();
         $staffDistQuery = StaffDistribution::whereBetween('created_at', [$startDate, $endDate]);
-        $staffReceivedCount = (clone $staffDistQuery)->distinct('staff_id')->count('staff_id');
+        $staffReceivedCount = (clone $staffDistQuery)->distinct('staff_member_id')->count('staff_member_id');
         $staffNotReceivedCount = max(0, $totalStaff - $staffReceivedCount);
         $basketsDistributedToStaff = (clone $staffDistQuery)->count();
 
@@ -308,38 +306,23 @@ class AnalyticsController extends Controller
             'share_of_period_outflow' => $total > 0 ? round(((int) $row->quantity / $total) * 100, 1) : 0,
         ])->values();
 
-        // تتبع الصلاحيات وفق تقويم التطبيق؛ تعالج حسابات الـ model حد اليوم بشكل موحد لكلا المستودعين.
-        $dailyExpiryItems = DailyInventoryItem::whereNotNull('expiry_date')
-            ->get(['id', 'name', 'current_quantity', 'expiry_date', 'unit'])
-            ->map(fn (DailyInventoryItem $i) => (object) [
-                'id' => $i->id,
-                'name' => $i->name,
-                'current_quantity' => (int) $i->current_quantity,
-                'expiry_date' => $i->expiry_date instanceof \DateTimeInterface ? $i->expiry_date->format('Y-m-d') : substr((string) $i->expiry_date, 0, 10),
-                'unit' => $i->unit,
-                'remaining_days' => $i->remaining_days,
-                'expiry_status' => $i->expiry_status,
-                'source' => 'daily',
-            ]);
+        // تتبع الصلاحيات (Expiry Tracking)
+        $expiredItems = DailyInventoryItem::whereNotNull('expiry_date')
+            ->whereDate('expiry_date', '<', $today)
+            ->get(['id', 'name', 'current_quantity', 'expiry_date', 'unit']);
 
-        $warehouseExpiryItems = InventoryItem::whereNotNull('expiration_date')
-            ->get(['id', 'name', 'current_quantity', 'expiration_date', 'unit'])
-            ->map(fn (InventoryItem $i) => (object) [
-                'id' => $i->id,
-                'name' => $i->name,
-                'current_quantity' => (int) $i->current_quantity,
-                'expiry_date' => (string) $i->expiration_date,
-                'unit' => $i->unit,
-                'remaining_days' => $i->remaining_days,
-                'expiry_status' => $i->expiry_status,
-                'source' => 'warehouse',
-            ]);
+        $expiringIn7Days = DailyInventoryItem::whereNotNull('expiry_date')
+            ->whereBetween('expiry_date', [$today, $today->copy()->addDays(7)])
+            ->get(['id', 'name', 'current_quantity', 'expiry_date', 'unit']);
 
-        $expiryItems = $dailyExpiryItems->concat($warehouseExpiryItems);
-        $expiredItems = $expiryItems->filter(fn ($item) => $item->remaining_days !== null && $item->remaining_days <= 0)->values();
-        $expiringIn5Days = $expiryItems->filter(fn ($item) => $item->remaining_days !== null && $item->remaining_days >= 1 && $item->remaining_days <= InventoryExpiryPolicy::NEAR_EXPIRY_DAYS)->values();
-        $expiringIn30Days = $expiryItems->filter(fn ($item) => $item->remaining_days !== null && $item->remaining_days >= 6 && $item->remaining_days <= 30)->values();
-        $expiringIn60Days = $expiryItems->filter(fn ($item) => $item->remaining_days !== null && $item->remaining_days >= 31 && $item->remaining_days <= 60)->values();
+        $expiringIn30Days = DailyInventoryItem::whereNotNull('expiry_date')
+            ->whereBetween('expiry_date', [$today->copy()->addDays(8), $today->copy()->addDays(30)])
+            ->get(['id', 'name', 'current_quantity', 'expiry_date', 'unit']);
+
+        $expiringIn60Days = DailyInventoryItem::whereNotNull('expiry_date')
+            ->whereBetween('expiry_date', [$today->copy()->addDays(31), $today->copy()->addDays(60)])
+            ->get(['id', 'name', 'current_quantity', 'expiry_date', 'unit']);
+
         // ══════════════════════════════════════════════════════════════════════
         // 7. تحليلات التوصيل والسائقين (Delivery & Driver Analytics)
         // ══════════════════════════════════════════════════════════════════════
@@ -557,9 +540,8 @@ class AnalyticsController extends Controller
                 'expiry_alerts' => [
                     'expired' => $expiredItems,
                     'expired_count' => $expiredItems->count(),
-                    'in_5_days' => $expiringIn5Days,
-                    'in_5_days_count' => $expiringIn5Days->count(),
-                    'in_7_days_count' => $expiringIn5Days->count(),
+                    'in_7_days' => $expiringIn7Days,
+                    'in_7_days_count' => $expiringIn7Days->count(),
                     'in_30_days' => $expiringIn30Days,
                     'in_30_days_count' => $expiringIn30Days->count(),
                     'in_60_days' => $expiringIn60Days,
@@ -571,7 +553,6 @@ class AnalyticsController extends Controller
                 'total_drivers' => $totalDrivers,
                 'drivers' => $driversPerformance,
             ],
-            'nationality_analysis' => app(GovernanceReportService::class)->nationalityAnalysis($request, $startDate, $endDate),
         ]);
     }
 
@@ -579,15 +560,15 @@ class AnalyticsController extends Controller
     {
         switch ($type) {
             case 'daily':
-                return 'تقرير يوم '.$start->translatedFormat('l d F Y');
+                return 'تقرير يوم ' . $start->translatedFormat('l d F Y');
             case 'weekly':
-                return 'تقرير أسبوعي من '.$start->format('Y/m/d').' إلى '.$end->format('Y/m/d');
+                return 'تقرير أسبوعي من ' . $start->format('Y/m/d') . ' إلى ' . $end->format('Y/m/d');
             case 'monthly':
-                return 'تقرير شهر '.$start->translatedFormat('F Y');
+                return 'تقرير شهر ' . $start->translatedFormat('F Y');
             case 'yearly':
-                return 'التقرير السنوي لعام '.$start->format('Y');
+                return 'التقرير السنوي لعام ' . $start->format('Y');
             default:
-                return 'الفترة من '.$start->format('Y/m/d').' إلى '.$end->format('Y/m/d');
+                return 'الفترة من ' . $start->format('Y/m/d') . ' إلى ' . $end->format('Y/m/d');
         }
     }
 }

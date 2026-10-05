@@ -2,13 +2,10 @@
 
 namespace App\Models;
 
-use App\Events\BeneficiaryChanged;
-use App\Services\FinancialCalculationService;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Validation\ValidationException;
 
 class Beneficiary extends Model
 {
@@ -30,9 +27,7 @@ class Beneficiary extends Model
         'housing_type', 'annual_rent_amount', 'monthly_rent',
         'income_sources', 'monthly_salary',
         'social_security_amount', 'citizen_account_amount',
-        'retirement_pension', 'family_support',
-        'social_insurance_amount', 'other_income_amount', 'monthly_rent_direct_input',
-        'bank_name', 'iban_encrypted',
+        'retirement_pension', 'family_support', 'bank_name', 'iban_encrypted',
         'total_income', 'net_income',
         // موظف
         'is_employee', 'job_title', 'job_sector', 'national_address_image_url',
@@ -44,11 +39,10 @@ class Beneficiary extends Model
         // OCR
         'ocr_extracted_data',
         // إنشاء
-        'created_by', 'confirmed_at', 'confirmed_by', 'archived_at', 'archived_by', 'archive_reason',
+        'created_by',
     ];
 
     protected $casts = [
-        'confirmed_at' => 'datetime', 'archived_at' => 'datetime',
         'date_of_birth' => 'date:Y-m-d',
         'residence_issue_date' => 'date:Y-m-d',
         'residence_expiry_date' => 'date:Y-m-d',
@@ -66,49 +60,7 @@ class Beneficiary extends Model
         'ocr_extracted_data' => 'array',
         'total_income' => 'decimal:2',
         'net_income' => 'decimal:2',
-        'social_insurance_amount' => 'decimal:2',
-        'other_income_amount' => 'decimal:2',
-        'monthly_rent_direct_input' => 'decimal:2',
     ];
-
-    /**
-     * Exact سعودي is citizen. Any other non-empty nationality is resident.
-     * A submitted beneficiary_type or type that disagrees is rejected.
-     *
-     * @return array{nationality: string, beneficiary_type: string}
-     */
-    public static function classificationFromNationality(mixed $nationality, mixed $beneficiaryType = null, mixed $aliasType = null): array
-    {
-        $trimmed = is_string($nationality) || is_numeric($nationality) ? trim((string) $nationality) : '';
-        if ($trimmed === '') {
-            throw ValidationException::withMessages([
-                'nationality' => ['الجنسية مطلوبة.'],
-            ]);
-        }
-        if (mb_strlen($trimmed) > 100) {
-            throw ValidationException::withMessages([
-                'nationality' => ['الجنسية يجب ألا تتجاوز 100 حرف.'],
-            ]);
-        }
-
-        $derived = $trimmed === 'سعودي' ? 'citizen' : 'resident';
-        foreach ([$beneficiaryType, $aliasType] as $submitted) {
-            if ($submitted === null) {
-                continue;
-            }
-            $normalized = strtolower(trim((string) $submitted));
-            if ($normalized === '') {
-                continue;
-            }
-            if ($normalized !== $derived) {
-                throw ValidationException::withMessages([
-                    'beneficiary_type' => ['صفة المستفيد لا تطابق الجنسية المدخلة.'],
-                ]);
-            }
-        }
-
-        return ['nationality' => $trimmed, 'beneficiary_type' => $derived];
-    }
 
     // ─── Auto-compute total_income, monthly_rent & net_income on save ────────
 
@@ -117,26 +69,24 @@ class Beneficiary extends Model
         parent::boot();
 
         $compute = function (self $b) {
-            $calcService = app(FinancialCalculationService::class);
-            $res = $calcService->calculate($b->getAttributes());
+            $calcService = app(\App\Services\FinancialCalculationService::class);
+            $res = $calcService->calculate($b->attributesToArray());
             $b->total_income = $res['total_income'];
             $b->monthly_rent = $res['monthly_rent'];
             $b->net_income = $res['net_income'];
-            $b->priority = $res['priority'];
-            $b->category_id = $res['category_id'];
         };
 
         static::creating($compute);
         static::updating($compute);
         static::created(function ($b) {
-            BeneficiaryChanged::dispatch($b);
+            \App\Events\BeneficiaryChanged::dispatch($b);
         });
         static::updated(function ($b) {
-            BeneficiaryChanged::dispatch($b);
+            \App\Events\BeneficiaryChanged::dispatch($b);
         });
     }
 
-    // ─── Accessors ───────────────────────────────────────────────────────────
+    // ─── IBAN Accessors ──────────────────────────────────────────────────────
 
     /** Masked IBAN — safe to expose in JSON */
     public function getIbanMaskedAttribute(): ?string
@@ -153,91 +103,9 @@ class Beneficiary extends Model
         }
     }
 
-    /** Resident Need Level (مستوى احتياج المقيم: شديد / عادي) */
-    public function getNeedLevelAttribute(): ?string
-    {
-        if ($this->getAttribute('beneficiary_type') !== 'resident') {
-            return null;
-        }
-        $calcService = app(FinancialCalculationService::class);
-        $res = $calcService->calculate($this->getAttributes());
-
-        return $res['need_level'] ?? null;
-    }
-
-    /** Resident Need Level Label (المسمى العربي لمستوى الاحتياج) */
-    public function getNeedLevelLabelAttribute(): ?string
-    {
-        if ($this->getAttribute('beneficiary_type') !== 'resident') {
-            return null;
-        }
-        $calcService = app(FinancialCalculationService::class);
-        $res = $calcService->calculate($this->getAttributes());
-
-        return $res['need_level_label'] ?? null;
-    }
-
-    protected $appends = ['iban_masked', 'need_level', 'need_level_label'];
+    protected $appends = ['iban_masked'];
 
     protected $hidden = ['iban_encrypted'];
-
-    public function getNationalIdImageUrlAttribute(): ?string
-    {
-        return $this->privateDocumentUrl('national_id_image_url');
-    }
-
-    public function getResidenceIdImageUrlAttribute(): ?string
-    {
-        return $this->privateDocumentUrl('residence_id_image_url');
-    }
-
-    public function getCitizenAccountImageUrlAttribute(): ?string
-    {
-        return $this->privateDocumentUrl('citizen_account_image_url');
-    }
-
-    public function getSocialSecurityImageUrlAttribute(): ?string
-    {
-        return $this->privateDocumentUrl('social_security_image_url');
-    }
-
-    public function getPensionCertificateImageUrlAttribute(): ?string
-    {
-        return $this->privateDocumentUrl('pension_certificate_image_url');
-    }
-
-    public function getNationalAddressImageUrlAttribute(): ?string
-    {
-        return $this->privateDocumentUrl('national_address_image_url');
-    }
-
-    public function getRentalContractImageUrlAttribute(): ?string
-    {
-        return $this->privateDocumentUrl('rental_contract_image_url');
-    }
-
-    public function getElectricityBillImageUrlAttribute(): ?string
-    {
-        return $this->privateDocumentUrl('electricity_bill_image_url');
-    }
-
-    public function getSalaryCertificateUrlAttribute(): ?string
-    {
-        return $this->privateDocumentUrl('salary_certificate_url');
-    }
-
-    private function privateDocumentUrl(string $field): ?string
-    {
-        $path = $this->getRawOriginal($field);
-        if (! is_string($path) || $path === '' || str_contains($path, '://') || str_starts_with($path, '/')) {
-            return null;
-        }
-
-        return route('beneficiaries.documents.download', [
-            'beneficiary' => $this->getKey(),
-            'field' => $field,
-        ]);
-    }
 
     // ─── Relationships ───────────────────────────────────────────────────────
 
