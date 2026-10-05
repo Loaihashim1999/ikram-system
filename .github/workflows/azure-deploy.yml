@@ -56,6 +56,7 @@ jobs:
           php-version: "8.3"
           extensions: bcmath, gd, intl, mbstring, pdo_pgsql, pdo_sqlite, zip
           coverage: none
+          ini-values: memory_limit=512M
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -140,6 +141,13 @@ jobs:
             echo "::error::Release migration accepted SQLite."
             exit 1
           fi
+
+      - name: Install PDF test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils
+          pdftotext -v
+          pdfinfo -v
 
       - name: Run backend regression suite
         run: |

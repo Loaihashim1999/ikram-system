@@ -30,7 +30,8 @@ class SignedLocalStorageRouteTest extends TestCase
         $this->assertStringContainsString('max-age=0', $cacheControl);
         $this->assertStringContainsString('private', $cacheControl);
 
-        $tampered = preg_replace('/signature=./', 'signature=0', $url, 1);
+        $tampered = preg_replace('/([?&]signature=)[^&]+/', '$1invalid-signature', $url, 1);
+        $this->assertNotSame($url, $tampered);
         $this->get($tampered)->assertForbidden();
 
         $expired = URL::temporarySignedRoute('storage.local', now()->subMinute(), ['path' => 'audit/target.txt'], false);
