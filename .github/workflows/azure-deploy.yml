@@ -405,18 +405,21 @@ jobs:
             --name "$AZURE_MIGRATION_JOB_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --query name \
-            --output tsv)"
+            --output tsv \
+            --only-show-errors)"
+          EXECUTION="$(printf '%s\n' "$EXECUTION" | tail -n 1 | tr -d '[:space:]')"
           if [ -z "$EXECUTION" ] || [ "$EXECUTION" = "None" ]; then
             echo "::error::Migration job did not return an execution identifier."
             exit 1
           fi
           for attempt in $(seq 1 120); do
             STATUS="$(az containerapp job execution show \
-              --name "$EXECUTION" \
-              --job-name "$AZURE_MIGRATION_JOB_NAME" \
+              --name "$AZURE_MIGRATION_JOB_NAME" \
               --resource-group "$AZURE_RESOURCE_GROUP" \
+              --job-execution-name "$EXECUTION" \
               --query properties.status \
-              --output tsv)"
+              --output tsv \
+              --only-show-errors)"
             case "$STATUS" in
               Succeeded) exit 0 ;;
               Failed|Stopped|Degraded)
