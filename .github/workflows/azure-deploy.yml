@@ -307,23 +307,25 @@ jobs:
             echo "Directory lookup is not available to this identity. Client ID, tenant, and subscription matched."
           fi
 
-          # AcrPush built-in role. Match the id: this identity can read the assignment
-          # but cannot resolve the display name, so a name comparison is empty.
+          # AcrPush does not include roleAssignments/read. The CLI then returns an
+          # empty list with exit 0, so an empty result is not proof the role is missing.
+          # The registry push below is the authorization check.
           ACR_PUSH_ROLE_ID="8311e382-0749-4cb8-b61a-304f252e45ec"
           set +e
           ASSIGNMENTS="$(az role assignment list --assignee "$EXPECTED_OBJECT_ID" --scope "$ACR_SCOPE" --query "[].roleDefinitionId" --output tsv 2>/tmp/acr-role.err)"
           ROLE_STATUS=$?
           set -e
-          if [ "$ROLE_STATUS" -ne 0 ]; then
-            if grep -q "AuthorizationFailed" /tmp/acr-role.err; then
-              echo "This identity cannot read ACR role assignments. AcrPush remains assigned to id-ikram-github-prod."
-            else
-              echo "::error::Could not query the AcrPush assignment."
-              exit 1
-            fi
-          elif ! printf '%s\n' "$ASSIGNMENTS" | grep -q "$ACR_PUSH_ROLE_ID"; then
+          if [ "$ROLE_STATUS" -ne 0 ] && ! grep -q "AuthorizationFailed" /tmp/acr-role.err; then
+            echo "::error::Could not query the AcrPush assignment."
+            exit 1
+          fi
+          if printf '%s\n' "$ASSIGNMENTS" | grep -q "$ACR_PUSH_ROLE_ID"; then
+            echo "AcrPush is present on the production registry."
+          elif [ -n "$(printf '%s\n' "$ASSIGNMENTS" | grep -v '^null$' | tr -d '[:space:]')" ]; then
             echo "::error::AcrPush is missing on the production registry for id-ikram-github-prod."
             exit 1
+          else
+            echo "This identity cannot read ACR role assignments. AcrPush remains assigned to id-ikram-github-prod."
           fi
 
       - name: Push immutable commit image to ACR
