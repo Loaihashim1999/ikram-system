@@ -66,7 +66,11 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Create disposable test application key
-        run: echo "APP_KEY=base64:$(openssl rand -base64 32 | tr -d '\n')" >> "$GITHUB_ENV"
+        run: |
+          set -eu
+          key="base64:$(openssl rand -base64 32 | tr -d '\n')"
+          echo "::add-mask::$key"
+          echo "APP_KEY=$key" >> "$GITHUB_ENV"
 
       - name: Validate production startup and migration guards
         run: |
@@ -74,6 +78,7 @@ jobs:
           bash -n docker/entrypoint.sh docker/migrate.sh
 
           TEST_APP_KEY="base64:$(openssl rand -base64 32 | tr -d '\n')"
+          echo "::add-mask::$TEST_APP_KEY"
           TEST_AZURE_CLIENT_ID="00000000-0000-0000-0000-000000000000"
 
           # Valid production Managed Identity configuration must pass.
@@ -196,6 +201,7 @@ jobs:
           set -eu
           CONTAINER="ikram-smoke-${GITHUB_RUN_ID}"
           APP_KEY="base64:$(openssl rand -base64 32 | tr -d '\n')"
+          echo "::add-mask::$APP_KEY"
           trap 'docker rm -f "$CONTAINER" >/dev/null 2>&1 || true' EXIT
           docker run --detach \
             --name "$CONTAINER" \
@@ -269,19 +275,85 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Validate deployment identity and ACR access
+        run: |
+          set -eu
+          EXPECTED_CLIENT_ID="f8bead79-4434-4a5b-882f-bd6afc08bb9e"
+          EXPECTED_OBJECT_ID="579de15c-6459-444d-b2ea-dadabd4ac2f3"
+          EXPECTED_NAME="id-ikram-github-prod"
+          EXPECTED_SUBSCRIPTION="399c8d53-b58d-40e8-8165-998c305d189e"
+          EXPECTED_TENANT="c4960fc1-5ca1-41e3-bb22-3401fc472b3c"
+          ACR_SCOPE="/subscriptions/${EXPECTED_SUBSCRIPTION}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.ContainerRegistry/registries/${AZURE_ACR_NAME}"
+
+          ACCOUNT="$(az account show --query "{subscription:id, tenant:tenantId, name:user.name, type:user.type}" --output json)"
+          echo "$ACCOUNT"
+          SUBSCRIPTION="$(echo "$ACCOUNT" | jq -r .subscription)"
+          TENANT="$(echo "$ACCOUNT" | jq -r .tenant)"
+          SIGNED_IN="$(echo "$ACCOUNT" | jq -r .name)"
+          if [ "$AZURE_CLIENT_ID" != "$EXPECTED_CLIENT_ID" ] || [ "$SIGNED_IN" != "$EXPECTED_CLIENT_ID" ] || [ "$SUBSCRIPTION" != "$EXPECTED_SUBSCRIPTION" ] || [ "$TENANT" != "$EXPECTED_TENANT" ]; then
+            echo "::error::Azure login is not id-ikram-github-prod on the production subscription."
+            exit 1
+          fi
+
+          if PRINCIPAL="$(az ad sp show --id "$AZURE_CLIENT_ID" --query "{displayName:displayName, id:id}" --output json 2>/dev/null)"; then
+            echo "$PRINCIPAL"
+            DISPLAY_NAME="$(echo "$PRINCIPAL" | jq -r .displayName)"
+            OBJECT_ID="$(echo "$PRINCIPAL" | jq -r .id)"
+            if [ "$DISPLAY_NAME" != "$EXPECTED_NAME" ] || [ "$OBJECT_ID" != "$EXPECTED_OBJECT_ID" ]; then
+              echo "::error::Signed-in service principal does not match id-ikram-github-prod."
+              exit 1
+            fi
+          else
+            echo "Directory lookup is not available to this identity. Client ID, tenant, and subscription matched."
+          fi
+
+          set +e
+          ROLE="$(az role assignment list --assignee "$EXPECTED_OBJECT_ID" --scope "$ACR_SCOPE" --role AcrPush --query "[0].roleDefinitionName" --output tsv 2>/tmp/acr-role.err)"
+          ROLE_STATUS=$?
+          set -e
+          if [ "$ROLE_STATUS" -ne 0 ]; then
+            if grep -q "AuthorizationFailed" /tmp/acr-role.err; then
+              echo "This identity cannot read ACR role assignments. AcrPush was verified when the credential was configured."
+            else
+              echo "::error::Could not query the AcrPush assignment."
+              exit 1
+            fi
+          elif [ "$ROLE" != "AcrPush" ]; then
+            echo "::error::AcrPush is missing on the production registry for id-ikram-github-prod."
+            exit 1
+          fi
+
       - name: Push immutable commit image to ACR
         env:
           IMAGE: ${{ steps.image.outputs.image }}
         run: |
+          set -eu
           az acr login --name "$AZURE_ACR_NAME"
-          if EXISTS="$(az acr repository show-tags \
+          if az acr repository show \
             --name "$AZURE_ACR_NAME" \
-            --repository ikram-system \
-            --query "contains(@, '${GITHUB_SHA}')" \
-            --output tsv 2>/dev/null)" && [ "$EXISTS" = "true" ]; then
+            --image "ikram-system:${GITHUB_SHA}" \
+            --output none 2>/dev/null; then
+            echo "Commit image already exists. Reusing it without pushing."
             docker pull "$IMAGE"
           else
-            docker push "$IMAGE"
+            if ! docker push "$IMAGE"; then
+              echo "::error::Docker push to ACR failed."
+              az acr show \
+                --name "$AZURE_ACR_NAME" \
+                --query "{publicNetworkAccess:publicNetworkAccess, roleAssignmentMode:roleAssignmentMode, networkDefault:networkRuleSet.defaultAction}" \
+                --output json || true
+              az acr repository show \
+                --name "$AZURE_ACR_NAME" \
+                --repository ikram-system \
+                --query "{deleteEnabled:changeableAttributes.deleteEnabled, listEnabled:changeableAttributes.listEnabled, readEnabled:changeableAttributes.readEnabled, writeEnabled:changeableAttributes.writeEnabled}" \
+                --output json || true
+              az acr check-health --name "$AZURE_ACR_NAME" --yes || true
+              exit 1
+            fi
+            az acr repository show \
+              --name "$AZURE_ACR_NAME" \
+              --image "ikram-system:${GITHUB_SHA}" \
+              --output none
             az acr repository update \
               --name "$AZURE_ACR_NAME" \
               --image "ikram-system:${GITHUB_SHA}" \
