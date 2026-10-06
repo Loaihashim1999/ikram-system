@@ -287,15 +287,18 @@ jobs:
 
           ACCOUNT="$(az account show --query "{subscription:id, tenant:tenantId, name:user.name, type:user.type}" --output json)"
           echo "$ACCOUNT"
-          SUBSCRIPTION="$(echo "$ACCOUNT" | jq -r .subscription)"
-          TENANT="$(echo "$ACCOUNT" | jq -r .tenant)"
-          SIGNED_IN="$(echo "$ACCOUNT" | jq -r .name)"
-          if [ "$AZURE_CLIENT_ID" != "$EXPECTED_CLIENT_ID" ] || [ "$SIGNED_IN" != "$EXPECTED_CLIENT_ID" ] || [ "$SUBSCRIPTION" != "$EXPECTED_SUBSCRIPTION" ] || [ "$TENANT" != "$EXPECTED_TENANT" ]; then
+          # azure/login trims its inputs. A pasted variable can still contain a trailing
+          # newline, which makes this exact comparison fail after a successful login.
+          CLIENT_ID="$(printf '%s' "$AZURE_CLIENT_ID" | tr -d '[:space:]')"
+          SUBSCRIPTION="$(echo "$ACCOUNT" | jq -r .subscription | tr -d '[:space:]')"
+          TENANT="$(echo "$ACCOUNT" | jq -r .tenant | tr -d '[:space:]')"
+          SIGNED_IN="$(echo "$ACCOUNT" | jq -r .name | tr -d '[:space:]')"
+          if [ "$CLIENT_ID" != "$EXPECTED_CLIENT_ID" ] || [ "$SIGNED_IN" != "$EXPECTED_CLIENT_ID" ] || [ "$SUBSCRIPTION" != "$EXPECTED_SUBSCRIPTION" ] || [ "$TENANT" != "$EXPECTED_TENANT" ]; then
             echo "::error::Azure login is not id-ikram-github-prod on the production subscription."
             exit 1
           fi
 
-          if PRINCIPAL="$(az ad sp show --id "$AZURE_CLIENT_ID" --query "{displayName:displayName, id:id}" --output json 2>/dev/null)"; then
+          if PRINCIPAL="$(az ad sp show --id "$CLIENT_ID" --query "{displayName:displayName, id:id}" --output json 2>/dev/null)"; then
             echo "$PRINCIPAL"
             DISPLAY_NAME="$(echo "$PRINCIPAL" | jq -r .displayName)"
             OBJECT_ID="$(echo "$PRINCIPAL" | jq -r .id)"
