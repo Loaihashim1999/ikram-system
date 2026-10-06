@@ -185,17 +185,9 @@ jobs:
         env:
           IMAGE: ${{ steps.image.outputs.image }}
         run: |
-          docker run --rm --entrypoint sh "$IMAGE" -ec '
-            test ! -e /var/www/html/.env
-            test ! -d /var/www/html/.git
-            test ! -d /var/www/html/tests
-            test ! -e /var/www/html/database/database.sqlite
-            ! find /var/www/html -type f \( -name "*.sqlite" -o -name "*.sqlite3" -o -name "*.db" \) -print -quit | grep -q .
-            if grep -RIEq "AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|https?://[^/@[:space:]]{20,}@" /var/www/html; then
-              echo "Known credential pattern detected in image contents." >&2
-              exit 1
-            fi
-          '
+          docker run --rm --entrypoint sh \
+            -v "$GITHUB_WORKSPACE/.github/scripts/check-image-contents.sh:/tmp/check-image-contents.sh:ro" \
+            "$IMAGE" /tmp/check-image-contents.sh
 
       - name: Smoke-test local container without a database
         env:
@@ -302,17 +294,9 @@ jobs:
         env:
           IMAGE: ${{ steps.image.outputs.image }}
         run: |
-          docker run --rm --entrypoint sh "$IMAGE" -ec '
-            test ! -e /var/www/html/.env
-            test ! -d /var/www/html/.git
-            test ! -d /var/www/html/tests
-            test ! -e /var/www/html/database/database.sqlite
-            ! find /var/www/html -type f \( -name "*.sqlite" -o -name "*.sqlite3" -o -name "*.db" \) -print -quit | grep -q .
-            if grep -RIEq "AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|https?://[^/@[:space:]]{20,}@" /var/www/html; then
-              echo "Known credential pattern detected in image contents." >&2
-              exit 1
-            fi
-          '
+          docker run --rm --entrypoint sh \
+            -v "$GITHUB_WORKSPACE/.github/scripts/check-image-contents.sh:/tmp/check-image-contents.sh:ro" \
+            "$IMAGE" /tmp/check-image-contents.sh
 
       - name: Capture current production image
         id: previous
