@@ -1,0 +1,26 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "urn:ekram:controlled:20261004:libxml2-backport",
+  "author": "EKRAM controlled deployment review",
+  "timestamp": "2026-10-04T15:47:15.7230816Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-86140"
+      },
+      "products": [
+        {
+          "@id": "pkg:docker/acrikramprod399c8d.azurecr.io/ikram-system@sha256:a34efc39ea53a2b23241ba076c88742b7a827a7826915a9d6f9ccdf1872293d7",
+          "subcomponents": [
+            {
+              "@id": "pkg:apk/alpine/libxml2@2.13.9-r2?os_name=alpine&os_version=3.24"
+            }
+          ]
+        }
+      ],
+      "status": "fixed",
+      "action_statement": "This exact image replaces libxml2.so.2.13.9 with an ABI-preserving build containing GNOME fix d1686f91dbda141a752200419d35639fd6b38340 and existing Alpine CVE-2026-6732 fixes. Source and upstream patch hashes are verified; added/removed fix lines are byte-identical; zero-fuzz backport, reproducing unpatched negative control, 525312 patched bounds cases, 1471 upstream tests, 2158 fuzz inputs, unchanged exported symbols/SONAME and final PHP XML smoke passed. Runtime library SHA256 0f1c6f2c26c8b360501ffc6ba1e61479e2e66cbb0e8815b4eaeea7f616d57915; backport patch SHA256 8e8af4e8924fe154d290136f4b243018cce91ba35fdf9844500c44a37b05f3a5. Raw scanner still reports package metadata version; this is a fixed-status evidence statement, not blanket suppression. Do not apply to any other image digest."
+    }
+  ]
+}
