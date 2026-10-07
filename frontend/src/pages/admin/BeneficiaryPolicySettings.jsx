@@ -5,6 +5,7 @@ import api from '../../api/axios';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { PrimaryButton, DangerButton } from '../../components/ui/Button';
 import ErrorState from '../../components/ui/ErrorState';
+import EmptyState from '../../components/ui/EmptyState';
 
 const versionTiming = (version) => {
   const today = new Date().toISOString().slice(0, 10);
@@ -219,6 +220,7 @@ export default function BeneficiaryPolicySettings() {
   const [history, setHistory] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const policyErrors = useMemo(() => computePolicyErrors(form), [form]);
 
@@ -233,9 +235,13 @@ export default function BeneficiaryPolicySettings() {
     return { achievable, maxScore: Number(form.scoring.max_score) };
   }, [form.scoring]);
 
-  const load = () => Promise.all([api.get('/beneficiary-policy/permissions'), api.get('/beneficiary-policy/versions')])
-    .then(([p, v]) => { setPermissions(p.data.data || {}); setVersions(v.data.data || []); })
-    .catch(() => setError('تعذر تحميل إصدارات السياسة.'));
+  const load = () => {
+    setLoading(true); setError('');
+    return Promise.all([api.get('/beneficiary-policy/permissions'), api.get('/beneficiary-policy/versions')])
+      .then(([p, v]) => { setPermissions(p.data.data || {}); setVersions(v.data.data || []); })
+      .catch(() => setError('تعذر تحميل إصدارات السياسة.'))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => { load(); }, []);
 
@@ -336,14 +342,14 @@ export default function BeneficiaryPolicySettings() {
       if (modal.mode === 'create') await api.post('/beneficiary-policy/versions', payload);
       else await api.patch(`/beneficiary-policy/versions/${modal.version.id}`, payload);
       setModal(null); flash('ok', 'تم حفظ المسودة بنجاح.'); await load();
-    } catch (err) { flash('err', err.response?.data?.message || 'تعذر الحفظ.'); }
+    } catch { flash('err', 'تعذر حفظ المسودة. تحقق من البيانات وحاول مرة أخرى.'); }
     finally { setBusy(false); }
   };
 
   const act = async (action, id, extra = {}) => {
     setBusy(true);
     try { await api.post(`/beneficiary-policy/versions/${id}/${action}`, extra); setModal(null); flash('ok', 'تم تنفيذ العملية.'); await load(); }
-    catch (err) { flash('err', err.response?.data?.message || 'تعذر تنفيذ العملية.'); }
+    catch { flash('err', 'تعذر تنفيذ العملية. حاول مرة أخرى.'); }
     finally { setBusy(false); }
   };
 
@@ -393,20 +399,21 @@ export default function BeneficiaryPolicySettings() {
   });
 
   return (
-    <div className="max-w-5xl mx-auto px-4 pb-8">
-      <div className="rounded-[var(--radius-panel)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-        <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3 mb-4">
-          <h2 className="text-sm font-extrabold text-[var(--color-text-primary)]">🛡️ إصدارات سياسة المستفيدين</h2>
-          <div className="flex items-center gap-2">
+    <div className="min-w-0">
+      <div className="ikram-panel p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-3 mb-3">
+          <h2 className="text-sm font-extrabold text-[var(--color-text-primary)]">إصدارات سياسة المستفيدين</h2>
+          <div className="flex flex-wrap items-center gap-2">
             {can('edit_draft') && (
               <button type="button" onClick={openCreate} className="px-3 py-1.5 rounded-xl bg-[var(--color-brand-green)] text-white text-xs font-bold hover:bg-[var(--color-brand-green-hover)]">+ إنشاء مسودة جديدة</button>
             )}
-            <button type="button" onClick={() => load()} className="px-3 py-1.5 rounded-xl border border-[var(--color-border)] text-xs font-bold">تحديث</button>
+            <button type="button" onClick={() => load()} disabled={loading} className="ikram-btn ikram-btn-outline text-xs">تحديث</button>
           </div>
         </div>
 
         {message && <StatusBadge tone="success" label={message} />}
-        {error && <ErrorState title="تعذر تنفيذ العملية" description={error} />}
+        {error && <ErrorState compact title="تعذر تنفيذ العملية" description={error} onRetry={load} />}
+        {loading && <p role="status" className="py-3 text-sm">جارٍ تحميل إصدارات السياسة…</p>}
 
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-right">
@@ -421,7 +428,7 @@ export default function BeneficiaryPolicySettings() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]">
-              {versions.length === 0 && <tr><td colSpan="6" className="p-6 text-center text-[var(--color-text-muted)]">لا توجد إصدارات بعد.</td></tr>}
+              {!loading && !error && versions.length === 0 && <tr><td colSpan="6" className="p-2"><EmptyState title="لا توجد إصدارات بعد." description="ستظهر إصدارات السياسة هنا عند إضافتها." className="border-0 p-3" /></td></tr>}
               {versions.map((v) => (
                 <tr key={v.id} className="hover:bg-[var(--color-bg-soft)]">
                   <td className="p-2.5 font-bold text-[var(--color-text-primary)]">{v.policy_name}</td>

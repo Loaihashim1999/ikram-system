@@ -26,6 +26,13 @@ describe('POLICY-F unified beneficiary page', () => {
 
   const renderPage = () => render(<MemoryRouter><UnifiedBeneficiaryPage /></MemoryRouter>);
 
+  it('localizes model binding failures instead of exposing raw Laravel errors', async () => {
+    api.get.mockRejectedValue({ response: { data: { message: 'No query results for model [App\\Models\\Beneficiary] unified' } } });
+    renderPage();
+    expect(await screen.findByRole('alert')).toHaveTextContent('تعذر تحميل قائمة المستفيدين. حاول مرة أخرى.');
+    expect(screen.queryByText(/No query results/)).not.toBeInTheDocument();
+  });
+
   it('loads ALL and switches PERMANENT/DAILY through server query parameters', async () => {
     renderPage();
     await waitFor(() => expect(api.get).toHaveBeenCalledWith('/beneficiaries/unified', expect.objectContaining({ params: expect.objectContaining({ tab: 'all', page: 1, per_page: 25 }) })));

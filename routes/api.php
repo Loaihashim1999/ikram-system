@@ -170,10 +170,10 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
     Route::post('/beneficiaries/import',
         [BeneficiaryController::class, 'importExcel']);
 
-    Route::post('/beneficiaries/{beneficiary}', [BeneficiaryController::class, 'update']);
-    Route::post('/beneficiaries/{beneficiary}/restore', [BeneficiaryController::class, 'restore']);
-    Route::get('/beneficiaries/{beneficiary}/support-history', [BeneficiaryController::class, 'supportHistory']);
-    Route::apiResource('beneficiaries', BeneficiaryController::class);
+    Route::post('/beneficiaries/{beneficiary}', [BeneficiaryController::class, 'update'])->whereUuid('beneficiary');
+    Route::post('/beneficiaries/{beneficiary}/restore', [BeneficiaryController::class, 'restore'])->whereUuid('beneficiary');
+    Route::get('/beneficiaries/{beneficiary}/support-history', [BeneficiaryController::class, 'supportHistory'])->whereUuid('beneficiary');
+    Route::apiResource('beneficiaries', BeneficiaryController::class)->whereUuid('beneficiary');
 
     // تابعون (معالون) للمستفيد
     Route::post('/beneficiaries/{beneficiary}/dependents',

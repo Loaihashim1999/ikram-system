@@ -113,7 +113,7 @@ export default function UnifiedBeneficiaryPage() {
   const load = async () => {
     setLoading(true); setError('');
     try { const response = await api.get('/beneficiaries/unified', { params }); setResult(response.data.data || { data: [], total: 0, last_page: 1 }); }
-    catch (e) { setError(e.response?.data?.message || 'تعذر تحميل قائمة المستفيدين.'); }
+    catch { setError('تعذر تحميل قائمة المستفيدين. حاول مرة أخرى.'); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, [tab, page, filters]);
@@ -174,7 +174,7 @@ export default function UnifiedBeneficiaryPage() {
       setSupportStep(4);
       await load();
     } catch (e) {
-      setError(Object.values(e.response?.data?.errors || {}).flat()[0] || e.response?.data?.message || 'تعذر إنشاء طلب الدعم.');
+      setError('تعذر إنشاء طلب الدعم. تحقق من البيانات وحاول مرة أخرى.');
     } finally {
       setSupportBusy(false);
     }
@@ -274,7 +274,7 @@ export default function UnifiedBeneficiaryPage() {
         </>
       )}
     >
-    <DataTable columns={columns} data={result.data} loading={loading} error={error} onRetry={load} emptyMessage="لا توجد سجلات مطابقة" emptySubMessage="عدّل المرشحات أو امسحها لعرض نتائج أخرى." rowKey={(row) => `${row.source}-${row.id}`} getRowProps={() => ({ 'data-testid': 'unified-row' })} pagination currentPage={page} totalPages={result.last_page || 1} totalItems={result.total || 0} pageSize={25} onPageChange={setPage} />
+    {error ? <ErrorState compact title="تعذر تحميل قائمة المستفيدين" description={error} onRetry={load} /> : (<DataTable columns={columns} data={result.data} loading={loading} error={error} onRetry={load} emptyMessage="لا توجد سجلات مطابقة" emptySubMessage="عدّل المرشحات أو امسحها لعرض نتائج أخرى." rowKey={(row) => `${row.source}-${row.id}`} getRowProps={() => ({ 'data-testid': 'unified-row' })} pagination currentPage={page} totalPages={result.last_page || 1} totalItems={result.total || 0} pageSize={25} onPageChange={setPage} />)}
     <Dialog isOpen={importOpen} onClose={() => setImportOpen(false)} title="استيراد المستفيدين" subtitle="اختر هدف الاستيراد ثم ارفع ملف Excel أو CSV." icon={FileSpreadsheet} maxWidth="max-w-3xl">
       <label className="block max-w-sm space-y-1"><span className="ikram-label">هدف الاستيراد</span>
         <select aria-label="هدف الاستيراد" value={importTarget} onChange={(e) => setImportTarget(e.target.value)} className="ikram-control">
