@@ -35,7 +35,7 @@ export default function LoginPage() {
   return (
     <div className="ikram-auth" dir="rtl">
       <section className="ikram-auth-brand">
-        <img src={logoImg} alt="" className="h-16 w-auto object-contain" />
+        <img src={logoImg} alt="" className="h-16 w-auto self-start rounded-xl bg-[var(--color-bg-page)] p-3 object-contain" />
         <p className="text-3xl font-extrabold">جمعية إكرام</p>
         <p>لخدمة ضيوف الرحمن</p>
       </section>

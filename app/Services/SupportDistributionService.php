@@ -4,7 +4,10 @@ namespace App\Services;
 
 use App\Models\AuditLog;
 use App\Models\Beneficiary;
+use App\Models\BeneficiaryPolicyEvaluation;
+use App\Models\BeneficiaryPolicyVersion;
 use App\Models\InventoryItem;
+use App\Models\PolicyDecision;
 use App\Models\InventoryMovement;
 use App\Models\Organization;
 use App\Models\PickupLocation;
@@ -50,6 +53,9 @@ class SupportDistributionService
         };
         if ($type === 'beneficiary' && $recipient->archived_at) {
             $this->invalid('beneficiary_id', 'لا يمكن إنشاء دعم جديد لمستفيد مؤرشف.');
+        }
+        if ($type === 'beneficiary') {
+            $this->assertBeneficiaryMayReceiveSupport($recipient);
         }
         $data['recipient_name'] = $type === 'beneficiary' ? $recipient->full_name : $recipient->name;
         $data['recipient_reference'] = $type === 'organization' ? $recipient->code : (string) $recipient->id;
@@ -222,6 +228,47 @@ class SupportDistributionService
     private function notify(SupportDistribution $distribution, string $event): void
     {
         DB::afterCommit(fn () => NotificationService::notifyAll('support_'.$event, 'تحديث عملية الدعم '.$distribution->id, $distribution));
+    }
+
+    private function assertBeneficiaryMayReceiveSupport(Beneficiary $beneficiary): void
+    {
+        $today = now()->toDateString();
+        $evaluation = BeneficiaryPolicyEvaluation::query()
+            ->where('beneficiary_id', $beneficiary->id)
+            ->where('evaluation_status', BeneficiaryPolicyEvaluation::STATUS_COMPLETED)
+            ->whereHas('policyVersion', function ($query) use ($today) {
+                $query->where('status', BeneficiaryPolicyVersion::STATUS_PUBLISHED)
+                    ->where(function ($bounds) use ($today) {
+                        $bounds->whereNull('effective_from')->orWhereDate('effective_from', '<=', $today);
+                    })
+                    ->where(function ($bounds) use ($today) {
+                        $bounds->whereNull('effective_to')->orWhereDate('effective_to', '>=', $today);
+                    });
+            })
+            ->orderByDesc('evaluated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $evaluation) {
+            $this->invalid('beneficiary_id', 'لا يمكن تقديم الدعم قبل إكمال تقييم سياسة المستفيد.');
+        }
+        if ($evaluation->eligibility_decision === BeneficiaryPolicyEvaluation::ELIGIBILITY_REVIEW_REQUIRED) {
+            $this->invalid('beneficiary_id', 'لا يمكن تقديم الدعم قبل استكمال مراجعة السياسة.');
+        }
+        if ($evaluation->eligibility_decision !== BeneficiaryPolicyEvaluation::ELIGIBILITY_ELIGIBLE) {
+            $this->invalid('beneficiary_id', 'المستفيد غير مؤهل للدعم وفق آخر تقييم سياسة صالح.');
+        }
+        $decision = PolicyDecision::query()
+            ->where('evaluation_id', $evaluation->id)
+            ->orderByDesc('decided_at')
+            ->orderByDesc('id')
+            ->first();
+        if ($decision?->decision === 'rejected') {
+            $this->invalid('beneficiary_id', 'المستفيد غير مؤهل للدعم وفق آخر تقييم سياسة صالح.');
+        }
+        if ($decision?->decision !== 'approved') {
+            $this->invalid('beneficiary_id', 'لا يمكن تقديم الدعم قبل استكمال مراجعة السياسة.');
+        }
     }
 
     private function invalid(string $field, string $message): never

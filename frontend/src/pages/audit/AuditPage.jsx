@@ -73,15 +73,14 @@ export default function AuditPage() {
           "التاريخ والتوقيت": m.created_at ? new Date(m.created_at).toLocaleString('ar-SA') : "—",
         }));
       } else if (tab === "drivers") {
-        sheetName = "سجل وأداء السائقين";
-        filename = `سجل_السائقين_${new Date().toISOString().slice(0, 10)}.xlsx`;
-        exportRows = data.drivers.map((drv, idx) => ({
-          "م": idx + 1,
-          "اسم السائق": drv.full_name || drv.username || "—",
-          "رقم الجوال": drv.phone || "—",
-          "الدور والصلاحية": "سائق التوصيل الميداني",
-          "الحالة": "نشط في المنظومة",
-        }));
+        const response = await api.get('/documents/drivers/excel', { responseType: 'blob' });
+        const url = URL.createObjectURL(response.data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'drivers.xlsx';
+        link.click();
+        URL.revokeObjectURL(url);
+        return;
       }
 
       await exportArrayToExcel({

@@ -3,6 +3,7 @@ import beneficiaryApi from "../../api/beneficiaries";
 import distributionApi from "../../api/distributions";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
+import SearchField from "../../components/ui/SearchField";
 import HistoricalDistributionReferenceCard from "../../components/common/HistoricalDistributionReferenceCard";
 
 /* Inline QR / Barcode display component */
@@ -157,11 +158,11 @@ export default function SendSupportPage() {
 
           {/* Filters */}
           <div className="grid md:grid-cols-2 gap-3 mb-4">
-            <input
+            <SearchField
+              label="بحث المستفيدين"
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
               placeholder="بحث بالاسم أو رقم الهوية..."
-              className={cls.input}
             />
             <select
               value={categoryFilter}

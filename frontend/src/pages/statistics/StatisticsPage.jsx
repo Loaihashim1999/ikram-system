@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import beneficiaryApi from "../../api/beneficiaries";
 import MainLayout from "../../components/layout/MainLayout";
-import { BarChart3, FileSpreadsheet, Printer, Users, HeartHandshake, Award } from "lucide-react";
+import { BarChart3, Users, HeartHandshake, Award } from "lucide-react";
+import { PrimaryButton, SecondaryButton } from "../../components/ui/Button";
+import { downloadDocument, getDocumentPdfUrl } from "../../utils/documentUrl";
 
 export default function StatisticsPage() {
   const [items, setItems] = useState([]);
@@ -39,37 +41,14 @@ export default function StatisticsPage() {
 
   const avgIncome = total > 0 ? (totalMonthlyIncomeSum / total).toFixed(2) : 0;
 
-  // Export to CSV / Excel
-  const exportToCSV = () => {
-    if (items.length === 0) return alert("لا توجد بيانات للتصدير.");
-    
-    const headers = ["الاسم الكامل", "رقم الهوية", "الهاتف", "النوع", "التصنيف", "المدينة", "الحي", "الراتب الشهري", "حساب المواطن", "الضمان الاجتماعي"];
-    const rows = items.map((b) => [
-      `"${b.full_name || b.name || ''}"`,
-      `"${b.national_id || ''}"`,
-      `"${b.phone || ''}"`,
-      `"${(b.beneficiary_type || b.type) === 'citizen' ? 'مواطن' : 'مقيم'}"`,
-      `"${b.priority === 'first_class' ? 'درجة أولى' : b.priority === 'second_class' ? 'درجة ثانية' : b.priority === 'special_needs' ? 'ذوو احتياجات' : b.priority === 'elderly' ? 'كبار السن' : b.priority === 'employee' ? 'موظف' : 'غير محدد'}"`,
-      `"${b.city || ''}"`,
-      `"${b.district || ''}"`,
-      b.monthly_salary || 0,
-      b.citizen_account_amount || 0,
-      b.social_security_amount || 0,
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `تقرير_المستفيدين_إكرام_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const exportOfficialWorkbook = () => {
+    downloadDocument(getDocumentPdfUrl("/beneficiaries/unified/export"), "ikram-beneficiaries.xlsx")
+      .catch(() => alert("تعذر تصدير الملف."));
   };
 
-  // Export / Print PDF Report
-  const handlePrintPDF = () => {
-    window.print();
+  const exportOfficialReport = () => {
+    downloadDocument(getDocumentPdfUrl("/reports/comprehensive/pdf"), "governance-report.pdf")
+      .catch(() => alert("تعذر إصدار التقرير الرسمي."));
   };
 
   return (
@@ -86,20 +65,8 @@ export default function StatisticsPage() {
         </div>
 
         <div className="flex gap-2">
-          <button
-            onClick={exportToCSV}
-            className="flex items-center gap-2 bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>تصدير Excel (CSV)</span>
-          </button>
-          <button
-            onClick={handlePrintPDF}
-            className="flex items-center gap-2 bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow"
-          >
-            <Printer className="w-4 h-4" />
-            <span>طباعة / تصدير PDF</span>
-          </button>
+          <SecondaryButton type="button" onClick={exportOfficialWorkbook}>تصدير Excel</SecondaryButton>
+          <PrimaryButton type="button" onClick={exportOfficialReport}>التقرير الرسمي</PrimaryButton>
         </div>
       </div>
 

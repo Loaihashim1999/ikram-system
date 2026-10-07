@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     const requestToken = localStorage.getItem('token');
     try {
-      const response = await api.get('/me');
+      const response = await api.get('/me', { timeout: 8000 });
       if (localStorage.getItem('token') !== requestToken) return;
       const userData = response.data.data;
       localStorage.setItem('user', JSON.stringify(userData));

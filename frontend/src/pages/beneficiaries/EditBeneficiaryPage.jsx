@@ -5,21 +5,20 @@ import { getBeneficiary, updateBeneficiary } from '../../api/beneficiaries';
 import api from '../../api/axios';
 import MainLayout from '../../components/layout/MainLayout';
 import { calculateIncomeAndClassification } from '../../utils/financialCalculations';
-import PageHeader from '../../components/ui/PageHeader';
-import Button from '../../components/ui/Button';
+import { displayLabel } from '../../utils/displayVocabulary';
+import PageShell from '../../components/ui/PageShell';
+import SectionCard from '../../components/ui/SectionCard';
+import Tabs from '../../components/ui/Tabs';
+import FormField from '../../components/ui/FormField';
+import { PrimaryButton, SecondaryButton } from '../../components/ui/Button';
+import LoadingState from '../../components/ui/LoadingState';
+import ErrorState from '../../components/ui/ErrorState';
 import { 
-  Loader2, Save, X, User, MapPin, Users, DollarSign, FileText, 
+  Save, X, User, MapPin, Users, DollarSign, FileText,
   Plus, Trash2, Calculator
 } from 'lucide-react';
 
-const FAMILY_STATUS_OPTIONS = [
-  { value: "poor",                    label: "فقير" },
-  { value: "widow",                   label: "أرملة" },
-  { value: "widow_with_orphans",      label: "أرملة مع أيتام" },
-  { value: "divorced",                label: "مطلقة" },
-  { value: "divorced_with_children",  label: "مطلقة مع أطفال" },
-  { value: "abandoned",               label: "مهجورة" },
-];
+const FAMILY_STATUS_VALUES = ["poor", "widow", "widow_with_orphans", "divorced", "divorced_with_children", "abandoned"];
 
 const RELATIONSHIP_OPTIONS = [
   "ابن", "بنت", "زوجة", "أم", "أب", "أخ", "أخت",
@@ -32,6 +31,7 @@ export default function EditBeneficiaryPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
 
@@ -152,7 +152,7 @@ export default function EditBeneficiaryPage() {
 
       } catch (err) {
         console.error("Error loading beneficiary:", err);
-        alert("⚠️ تعذر تحميل بيانات المستفيد.");
+        setLoadError("تعذر تحميل بيانات المستفيد.");
       } finally {
         setLoading(false);
       }
@@ -304,104 +304,53 @@ export default function EditBeneficiaryPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex flex-col items-center justify-center py-24 gap-3" dir="rtl">
-          <Loader2 size={44} className="text-amber-600 animate-spin" />
-          <span className="text-[var(--color-text-muted)] font-bold text-sm">جاري تحميل بيانات المستفيد...</span>
-        </div>
+        <LoadingState message="جاري تحميل بيانات المستفيد..." />
       </MainLayout>
     );
   }
 
   const inputCls = "ikram-control";
   const labelCls = "ikram-label";
-  const sectionCls = "ikram-panel p-4 sm:p-6 mb-6";
-  const headerCls = "text-base font-extrabold text-amber-900 mb-5 border-b border-[var(--color-border)] pb-3 flex items-center justify-between";
+  const headerCls = "mb-5 flex items-center justify-between border-b border-[var(--color-border)] pb-3 text-base font-extrabold text-[var(--color-text-primary)]";
 
   return (
     <MainLayout>
-      <div className="max-w-5xl mx-auto p-6" dir="rtl">
-        
-        {/* Top Action Header */}
-        <PageHeader
-          title="تعديل بيانات المستفيد الشاملة"
-          subtitle={`${form.full_name} | رقم الهوية: ${form.national_id}`}
+      <div dir="rtl">
+        <PageShell
+          title="تعديل بيانات المستفيد"
+          description={`${form.full_name || "مستفيد"} | رقم الهوية: ${form.national_id || "—"}`}
           breadcrumbs={[
             { label: "الرئيسية", href: "/" },
             { label: "إدارة المستفيدين", href: "/beneficiaries" },
-            { label: "تعديل مستفيد" }
+            { label: form.full_name || "تعديل مستفيد", href: `/beneficiaries/${id}` },
+            { label: "تعديل" },
           ]}
-          action={
-            <Button variant="outline" size="sm" onClick={() => navigate("/beneficiaries")}>
-              ← العودة لقائمة المستفيدين
-            </Button>
-          }
+          secondaryActions={<SecondaryButton type="button" onClick={() => navigate("/beneficiaries")}>العودة للقائمة</SecondaryButton>}
+        >
+        {loadError && <ErrorState title="تعذر تحميل بيانات المستفيد" description={loadError} />}
+        <Tabs
+          tabs={[
+            { id: "basic", label: "البيانات الأساسية", testId: "edit-tab-basic" },
+            { id: "address", label: "السكن والعنوان", testId: "edit-tab-address" },
+            { id: "family", label: "الأسرة والتابعون", testId: "edit-tab-family" },
+            { id: "financial", label: "البيانات المالية", testId: "edit-tab-financial" },
+            { id: "documents", label: "الوثائق", testId: "edit-tab-documents" },
+          ]}
+          activeTab={activeTab}
+          onChange={setActiveTab}
         />
-
-        {/* Navigation Tabs Bar */}
-        <div className="ikram-panel mb-6 flex gap-1 overflow-x-auto p-1.5 text-xs font-bold" role="tablist" aria-label="أقسام تعديل المستفيد">
-          <button
-            type="button"
-            onClick={() => setActiveTab("basic")}
-            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "basic" ? "bg-[var(--color-brand-green)] text-white shadow-xs font-extrabold" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"
-            }`}
-          >
-            <User className="w-4 h-4" />
-            <span>1. البيانات الأساسية</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("address")}
-            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "address" ? "bg-[var(--color-brand-green)] text-white shadow-xs font-extrabold" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"
-            }`}
-          >
-            <MapPin className="w-4 h-4" />
-            <span>2. السكن والعنوان</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("family")}
-            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "family" ? "bg-[var(--color-brand-green)] text-white shadow-xs font-extrabold" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>3. الأسرة والتابعين ({dependents.length})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("financial")}
-            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "financial" ? "bg-[var(--color-brand-green)] text-white shadow-xs font-extrabold" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"
-            }`}
-          >
-            <DollarSign className="w-4 h-4" />
-            <span>4. البيانات المالية</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("documents")}
-            className={`flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "documents" ? "bg-[var(--color-brand-green)] text-white shadow-xs font-extrabold" : "text-amber-900 hover:bg-[var(--color-bg-soft)]"
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>5. الوثائق والمرفقات</span>
-          </button>
-        </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
 
           {/* TAB 1: Basic Info */}
           {activeTab === "basic" && (
-            <div className={sectionCls}>
+            <SectionCard className="mb-6">
               <div className={headerCls}>
                 <span className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-amber-600" />
+                  <User className="w-5 h-5 text-[var(--color-brand-gold)]" />
                   <span>البيانات الأساسية والهوية الشخصية</span>
                 </span>
-                <span className="text-xs bg-amber-100 text-amber-900 px-3 py-1 rounded-full font-bold">
+                <span className="text-xs bg-[var(--color-bg-soft)] text-[var(--color-text-primary)] px-3 py-1 rounded-full font-bold">
                   {form.beneficiary_type === "resident" ? "مقيم" : "مواطن سعودي"}
                 </span>
               </div>
@@ -504,15 +453,15 @@ export default function EditBeneficiaryPage() {
                   </select>
                 </div>
               </div>
-            </div>
+            </SectionCard>
           )}
 
           {/* TAB 2: Address */}
           {activeTab === "address" && (
-            <div className={sectionCls}>
+            <SectionCard className="mb-6">
               <div className={headerCls}>
                 <span className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-amber-600" />
+                  <MapPin className="w-5 h-5 text-[var(--color-brand-gold)]" />
                   <span>بيانات العنوان الوطني والموقع السكني</span>
                 </span>
               </div>
@@ -554,30 +503,29 @@ export default function EditBeneficiaryPage() {
                   />
                 </div>
               </div>
-            </div>
+            </SectionCard>
           )}
 
           {/* TAB 3: Family & Dependents */}
           {activeTab === "family" && (
-            <div className={sectionCls}>
+            <SectionCard className="mb-6">
               <div className={headerCls}>
                 <span className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-amber-600" />
+                  <Users className="w-5 h-5 text-[var(--color-brand-gold)]" />
                   <span>البيانات الأسرية والاجتماعية وسجل التابعين</span>
                 </span>
-                <button
-                  type="button"
-                  onClick={addDependent}
-                  className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
-                >
-                  <Plus size={14} />
-                  <span>إضافة فرد تابع جديد</span>
-                </button>
+                <SecondaryButton type="button" onClick={addDependent} icon={Plus}>إضافة فرد تابع جديد</SecondaryButton>
               </div>
 
+              <FormField label="الحالة الأسرية" name="family_status" className="mb-4 max-w-md">
+                <select name="family_status" value={form.family_status} onChange={handleChange} className="ikram-control w-full">
+                  {form.family_status && !FAMILY_STATUS_VALUES.includes(form.family_status) && <option value={form.family_status}>{displayLabel("family", form.family_status)}</option>}
+                  {FAMILY_STATUS_VALUES.map((value) => <option key={value} value={value}>{displayLabel("family", value)}</option>)}
+                </select>
+              </FormField>
               <div className="flex flex-wrap gap-2 mb-4">
                 {(form.beneficiary_type === "resident" ? [["salary", "راتب شهري"], ["family_support", "دعم الأسرة"]] : [["salary", "راتب شهري"], ["social_security", "ضمان اجتماعي"], ["citizen_account", "حساب المواطن"], ["retirement", "معاش تقاعدي"], ["family_support", "دعم الأسرة"]]).map(([source, label]) => (
-                  <button key={source} type="button" onClick={() => toggleIncome(source)} className={`px-3 py-2 rounded-xl border text-xs font-bold ${form.income_sources.includes(source) ? "bg-[var(--color-brand-green)] text-white" : "bg-white"}`}>{label}</button>
+                  <SecondaryButton key={source} type="button" onClick={() => toggleIncome(source)} aria-pressed={form.income_sources.includes(source)}>{label}</SecondaryButton>
                 ))}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -610,7 +558,7 @@ export default function EditBeneficiaryPage() {
                       />
                     </div>
 
-                    <div className="col-span-full bg-[var(--color-bg-soft)] p-3 rounded-xl border border-[var(--color-border)] text-xs flex items-center justify-between font-bold text-amber-900">
+                    <div className="col-span-full bg-[var(--color-bg-soft)] p-3 rounded-xl border border-[var(--color-border)] text-xs flex items-center justify-between font-bold text-[var(--color-text-primary)]">
                       <span>احتساب خصم السكن:</span>
                       <span className="font-mono">
                         الإيجار السنوي: {(parseFloat(form.annual_rent_amount) || (parseFloat(form.monthly_rent_amount) ? Math.round(parseFloat(form.monthly_rent_amount) * 12) : 0)).toLocaleString()} ريال ← الإيجار الشهري المحتسب: {(parseFloat(form.monthly_rent_amount) || (parseFloat(form.annual_rent_amount) ? Math.round((parseFloat(form.annual_rent_amount) / 12) * 100) / 100 : 0)).toLocaleString()} ريال
@@ -621,7 +569,7 @@ export default function EditBeneficiaryPage() {
 
                 <div>
                   <label className={labelCls}>تصنيف الدرجة الفئوية</label>
-                  <div className={inputCls + " font-extrabold text-amber-900 bg-[var(--color-bg-soft)]"}>{calcResult.categoryLabel}</div>
+                  <div className={inputCls + " font-extrabold text-[var(--color-text-primary)] bg-[var(--color-bg-soft)]"}>{calcResult.categoryLabel}</div>
                 </div>
 
                 <div className="flex items-center gap-2 pt-6">
@@ -631,7 +579,7 @@ export default function EditBeneficiaryPage() {
                     name="has_special_needs"
                     checked={form.has_special_needs}
                     onChange={handleChange}
-                    className="w-4 h-4 text-amber-600 rounded focus:ring-[var(--color-brand-gold)] cursor-pointer"
+                    className="w-4 h-4 text-[var(--color-brand-gold)] rounded focus:ring-[var(--color-brand-gold)] cursor-pointer"
                   />
                   <label htmlFor="has_special_needs" className="text-xs font-extrabold text-[var(--color-text-primary)] cursor-pointer select-none">
                     ♿ مسجل من ذوي الاحتياجات الخاصة (الإعاقة)
@@ -643,20 +591,20 @@ export default function EditBeneficiaryPage() {
               <div className="border border-[var(--color-border)] rounded-2xl p-4 bg-[var(--color-bg-soft)]/50">
                 <h3 className="font-bold text-xs text-[var(--color-text-primary)] mb-3 flex items-center justify-between">
                   <span>قائمة الأفراد التابعين للأسرة:</span>
-                  <span className="text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full font-mono font-bold text-[11px]">
+                  <span className="text-[var(--color-text-secondary)] bg-[var(--color-bg-soft)] px-2.5 py-0.5 rounded-full font-mono font-bold text-[11px]">
                     إجمالي التابعين: {dependents.length}
                   </span>
                 </h3>
 
                 {dependents.length === 0 ? (
-                  <div className="p-6 text-center text-[var(--color-text-muted)] text-xs bg-white rounded-xl border border-dashed border-[var(--color-border)]">
+                  <div className="p-6 text-center text-[var(--color-text-muted)] text-xs bg-[var(--color-surface)] rounded-xl border border-dashed border-[var(--color-border)]">
                     لا يوجد تابعين مسجلين حالياً. انقر على "إضافة فرد تابع جديد" بالأعلى لإدراجهم.
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {dependents.map((dep, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded-xl border border-[var(--color-border)] flex flex-wrap md:flex-nowrap items-center gap-3 shadow-2xs">
-                        <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-900 font-bold text-xs flex items-center justify-center font-mono">
+                      <div key={idx} className="bg-[var(--color-surface)] p-3 rounded-xl border border-[var(--color-border)] flex flex-wrap md:flex-nowrap items-center gap-3 ">
+                        <span className="w-6 h-6 rounded-full bg-[var(--color-bg-soft)] text-[var(--color-text-primary)] font-bold text-xs flex items-center justify-center font-mono">
                           {idx + 1}
                         </span>
 
@@ -671,7 +619,7 @@ export default function EditBeneficiaryPage() {
                         <select
                           value={dep.relationship}
                           onChange={(e) => updateDependent(idx, "relationship", e.target.value)}
-                          className="w-32 px-2 py-1.5 rounded-lg border text-xs bg-white focus:ring-1 focus:ring-[var(--color-brand-gold)] font-bold"
+                          className="w-32 px-2 py-1.5 rounded-lg border text-xs bg-[var(--color-surface)] focus:ring-1 focus:ring-[var(--color-brand-gold)] font-bold"
                         >
                           {RELATIONSHIP_OPTIONS.map(rel => (
                             <option key={rel} value={rel}>{rel}</option>
@@ -699,15 +647,15 @@ export default function EditBeneficiaryPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </SectionCard>
           )}
 
           {/* TAB 4: Financial Info */}
           {activeTab === "financial" && (
-            <div className={sectionCls}>
+            <SectionCard className="mb-6">
               <div className={headerCls}>
                 <span className="flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-amber-600" />
+                  <DollarSign className="w-5 h-5 text-[var(--color-brand-gold)]" />
                   <span>البيانات المالية ومصادر الدخل الشهري</span>
                 </span>
               </div>
@@ -782,7 +730,7 @@ export default function EditBeneficiaryPage() {
                       value={form.monthly_rent_amount}
                       onChange={handleChange}
                       placeholder="مثال: 1000"
-                      className={inputCls + " font-mono font-bold border-amber-300"}
+                      className={inputCls + " font-mono font-bold border-[var(--color-border)]"}
                     />
                     <span className="text-[11px] text-[var(--color-text-muted)] block mt-1">يُخصم من إجمالي الدخل لتحديد الدخل المحتسب</span>
                   </div>
@@ -791,55 +739,55 @@ export default function EditBeneficiaryPage() {
 
               {/* Formula & Calculation Box */}
               <div className="p-4 bg-[var(--color-bg-soft)] rounded-2xl border border-[var(--color-border)] text-xs space-y-2">
-                <div className="flex items-center gap-2 font-bold text-amber-900">
+                <div className="flex items-center gap-2 font-bold text-[var(--color-text-primary)]">
                   <Calculator size={16} />
                   <span>معادلة الاحتساب بعد اقتطاع الإيجار:</span>
                 </div>
-                <p className="font-mono text-[var(--color-text-secondary)] bg-white p-2.5 rounded-xl border border-[var(--color-border)]">{calcResult.formulaText}</p>
+                <p className="font-mono text-[var(--color-text-secondary)] bg-[var(--color-surface)] p-2.5 rounded-xl border border-[var(--color-border)]">{calcResult.formulaText}</p>
               </div>
 
               {/* Financial Summary Cards */}
               <div className="grid sm:grid-cols-3 gap-3 pt-2">
-                <div className="bg-white p-4 rounded-2xl border border-[var(--color-border)] shadow-2xs">
+                <div className="bg-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-border)] ">
                   <span className="text-xs text-[var(--color-text-muted)] block font-bold mb-1">إجمالي الدخل الشهري</span>
                   <strong className="text-base font-mono text-[var(--color-text-primary)]">{calcResult.totalGrossIncome.toLocaleString()} ريال</strong>
                 </div>
 
-                <div className="bg-white p-4 rounded-2xl border border-[var(--color-border)] shadow-2xs">
+                <div className="bg-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-border)] ">
                   <span className="text-xs text-[var(--color-text-muted)] block font-bold mb-1">الإيجار الشهري</span>
                   <strong className="text-base ikram-numeric text-[var(--color-danger)]">{calcResult.monthlyRent.toLocaleString()} ريال</strong>
                 </div>
 
-                <div className="bg-white p-4 rounded-2xl border-2 border-emerald-500 shadow-2xs">
+                <div className="bg-[var(--color-surface)] p-4 rounded-2xl border-2 border-[var(--color-border)] ">
                   <span className="text-xs text-[var(--color-success)] font-bold block mb-1">صافي الدخل بعد الإيجار</span>
                   <strong className="text-base ikram-numeric text-[var(--color-success)]">{calcResult.eligibleIncome.toLocaleString()} ريال</strong>
                 </div>
               </div>
 
               {/* Total Income Summary Card */}
-              <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-5 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-md">
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-panel)] border border-[var(--color-border)] bg-[var(--color-bg-soft)] p-5 text-[var(--color-text-primary)]">
                 <div>
                   <span className="text-xs font-bold block opacity-90 mb-1">صافي الدخل المعتمد للأهلية والتصنيف:</span>
                   <span className="text-2xl font-black font-mono">
                     {totalIncome.toLocaleString()} ريال سعودي
                   </span>
                 </div>
-                <div className="bg-white/20 backdrop-blur-xs px-4 py-2 rounded-xl text-xs font-extrabold border border-white/30 flex items-center gap-2">
+                <div className="bg-[var(--color-surface)]/20 backdrop-blur-xs px-4 py-2 rounded-xl text-xs font-extrabold border border-white/30 flex items-center gap-2">
                   <span>الفئة المحسوبة: {calcCategoryLabel()}</span>
                   {form.beneficiary_type === 'resident' && calcResult.needLevelLabel && (
-                    <span className="bg-white/30 px-2 py-0.5 rounded-md text-[11px]">مستوى الاحتياج: {calcResult.needLevelLabel}</span>
+                    <span className="bg-[var(--color-surface)]/30 px-2 py-0.5 rounded-md text-[11px]">مستوى الاحتياج: {calcResult.needLevelLabel}</span>
                   )}
                 </div>
               </div>
-            </div>
+            </SectionCard>
           )}
 
           {/* TAB 5: Documents */}
           {activeTab === "documents" && (
-            <div className={sectionCls}>
+            <SectionCard className="mb-6">
               <div className={headerCls}>
                 <span className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-amber-600" />
+                  <FileText className="w-5 h-5 text-[var(--color-brand-gold)]" />
                   <span>إرفاق وتحديث الوثائق والمستندات الرسمية</span>
                 </span>
               </div>
@@ -892,50 +840,28 @@ export default function EditBeneficiaryPage() {
                   onChange={handleFileChange}
                 />
               </div>
-            </div>
+            </SectionCard>
           )}
 
           {/* Form Action Controls */}
-          <div className="ikram-panel sticky bottom-4 z-10 flex flex-col items-stretch justify-between gap-3 p-4 sm:flex-row sm:items-center sm:p-5">
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={() => navigate("/beneficiaries")}
-              icon={X}
-            >
-              إلغاء
-            </Button>
-
-            <div className="flex items-center gap-3">
-              {activeTab !== "documents" && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  onClick={() => {
+          <SectionCard>
+            <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+              <SecondaryButton type="button" onClick={() => navigate("/beneficiaries")} icon={X}>إلغاء</SecondaryButton>
+              <div className="flex flex-wrap items-center gap-3">
+                {activeTab !== "documents" && (
+                  <SecondaryButton type="button" onClick={() => {
                     const order = ["basic", "address", "family", "financial", "documents"];
                     const nextIdx = order.indexOf(activeTab) + 1;
                     if (nextIdx < order.length) setActiveTab(order[nextIdx]);
-                  }}
-                >
-                  التالي ←
-                </Button>
-              )}
-
-              <Button
-                type="submit"
-                variant="gold"
-                size="md"
-                loading={saving}
-                icon={Save}
-              >
-                {saving ? "جاري حفظ البيانات وتحديث المستندات..." : "حفظ التعديلات والتصنيف"}
-              </Button>
+                  }}>التالي</SecondaryButton>
+                )}
+                <PrimaryButton type="submit" loading={saving} icon={Save}>{saving ? "جاري حفظ البيانات وتحديث المستندات..." : "حفظ التعديلات"}</PrimaryButton>
+              </div>
             </div>
-          </div>
+          </SectionCard>
 
         </form>
+        </PageShell>
       </div>
     </MainLayout>
   );
@@ -961,18 +887,18 @@ function FileUploadItem({ name, label, existingUrl, onChange, accept = "image/*"
   };
 
   return (
-    <div className="border-2 border-dashed border-[var(--color-border)] rounded-2xl p-4 hover:border-[var(--color-brand-gold)] transition-colors bg-white flex flex-col justify-between">
+    <div className="border-2 border-dashed border-[var(--color-border)] rounded-2xl p-4 hover:border-[var(--color-brand-gold)] transition-colors bg-[var(--color-surface)] flex flex-col justify-between">
       <div>
         <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-1">{label}</label>
         
         {existingUrl && !selectedFile && (
-          <div className="mb-2 flex items-center justify-between text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 p-2 rounded-xl">
+          <div className="mb-2 flex items-center justify-between text-[11px] bg-[var(--color-bg-soft)] text-[var(--color-text-primary)] border border-[var(--color-border)] p-2 rounded-xl">
             <span className="font-bold">✓ توجد وثيقة مسجلة مسبقاً بالنظام</span>
             <a
               href={getDocFullUrl(existingUrl)}
               target="_blank"
               rel="noreferrer"
-              className="text-emerald-900 underline font-bold"
+              className="text-[var(--color-text-primary)] underline font-bold"
             >
               معاينة
             </a>
@@ -989,7 +915,7 @@ function FileUploadItem({ name, label, existingUrl, onChange, accept = "image/*"
       </div>
 
       {selectedFile && (
-        <p className="text-[11px] text-green-700 font-extrabold mt-2 bg-green-50 p-1.5 rounded-lg border border-green-200">
+        <p className="text-[11px] font-bold mt-2 text-[var(--color-text-secondary)]">
           ✓ تم اختيار ملف جديد: {selectedFile}
         </p>
       )}

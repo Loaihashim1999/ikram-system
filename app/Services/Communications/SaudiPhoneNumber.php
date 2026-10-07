@@ -23,4 +23,33 @@ class SaudiPhoneNumber
 
         return $digits;
     }
+
+    public function display(?string $stored): string
+    {
+        $digits = preg_replace('/[^0-9]/', '', (string) $stored);
+        if (preg_match('/^9665[0-9]{8}$/D', $digits)) {
+            return '0'.substr($digits, 3);
+        }
+
+        return trim((string) $stored);
+    }
+
+    /**
+     * Classify a stored value without writing it.
+     * VALID is already canonical. AUTO-FIX SAFE can be normalized to exactly one canonical number.
+     */
+    public function classifyStored(?string $stored): string
+    {
+        $digits = preg_replace('/[^0-9]/', '', trim((string) $stored));
+        if (preg_match('/^9665[0-9]{8}$/D', $digits)) {
+            return 'VALID';
+        }
+        try {
+            $this->normalize($stored);
+
+            return 'AUTO-FIX SAFE';
+        } catch (ValidationException) {
+            return 'MANUAL REVIEW';
+        }
+    }
 }

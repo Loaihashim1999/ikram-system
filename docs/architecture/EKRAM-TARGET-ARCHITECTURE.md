@@ -44,5 +44,21 @@ A0 records and serializes shared-file ownership before changes. A8/A9: DeliveryC
 
 Preserve existing receipt/inventory/IDOR tests. Add confirmation bypass and atomic rollback, archive/history retention, separate workflow route/API visibility, full filtered export, driver CRUD/metrics, old-token invalidation, wrong-driver/task denial, invalid-code no-effects, replay one receipt/movement, proof authorization/content and provider ambiguity tests. E2E-006/E2E-007 remain unproven until their full permitted external/browser chains are evidenced; mock acceptance cannot close them.
 
+## Phase 1 foundation (2026-10-06)
+
+Shared UI now has one page hierarchy and one token set. Domain boundaries below stay in force for later phases. This section does not mean those modules were rebuilt.
+
+| Boundary | Rule |
+|---|---|
+| Beneficiary registry and registration | One beneficiary workspace. Confirmation stays on the backend. |
+| Policy and scoring | `PolicyScoringService` is the only score. The UI displays the stored breakdown. |
+| Support | One support aggregate. Approval still owns stock. |
+| Direct handover | Pickup only. No driver actions on that page. |
+| Home delivery | Delivery only. Separate page and queries. |
+| Driver | `Driver` is not a `User`. Access stays the capability link. |
+| Notifications | Existing `NotificationService`. Targets must open the related record. |
+| Reports and documents | Counts and PDFs come from backend queries and the shared document layout. |
+| Operational metrics | Backend formulas in `docs/analytics/EKRAM-METRIC-DEFINITIONS.md`. The UI does not subtract all beneficiaries from delivered people. |
+
 ## Implemented recovery clarification (2026-10-04)
 An authorized administrator can reopen the same revoked incomplete assignment with an active matching driver. Reopening rotates the token/expiry, clears revocation on the current row, preserves the prior revocation audit and task membership, cancels obsolete communications, and validates locked task ownership/status. The old token remains invalid. Completed assignments cannot be reopened. Reassignment to a different driver is not implemented; no historical membership is deleted.

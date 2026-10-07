@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
-import { Package, Download, Printer, Calendar, MapPin, User, Clock } from 'lucide-react';
+import { Package, Download, Calendar, MapPin, User, Clock } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
+import { SecondaryButton } from '../ui/Button';
+import { exportApiDataToExcel } from '../../utils/excelExport';
+import { displayLabel } from '../../utils/displayVocabulary';
 
 /**
  * ReceiptHistoryTimeline:
@@ -16,37 +18,33 @@ export default function ReceiptHistoryTimeline({
   title = "سجل الاستلام والتسليم التاريخي",
   recipientName = "",
   recipientType = "beneficiary", // beneficiary | employee | organization
+  beneficiaryId = "",
+  organizationId = "",
 }) {
   const [viewMode, setViewMode] = useState('timeline'); // 'timeline' | 'table'
 
   const exportToExcel = () => {
-    if (!records || records.length === 0) {
-      alert("لا توجد سجلات استلام لتصديرها.");
+    if (!beneficiaryId && !organizationId) {
+      alert("تصدير السجل الكامل يحتاج مرجع المستفيد أو الجهة.");
       return;
     }
-
-    const rows = records.map((rec, idx) => ({
-      "م": idx + 1,
-      "تاريخ الاستلام": rec.received_at || rec.delivered_at || rec.created_at ? new Date(rec.received_at || rec.delivered_at || rec.created_at).toLocaleDateString('ar-SA') : '—',
-      "نوع السلة / الدعم": rec.basket?.name || rec.basket_name || rec.type || "سلة غذائية",
-      "نقطة الاستلام / التوصيل": rec.pickup_location || rec.location || "مقر الجمعية",
-      "المستخدم المنفذ / السائق": rec.driver?.full_name || rec.executor?.name || rec.executed_by || "الإدارة",
-      "رمز الـ QR / الكود": rec.qr_code_hash || rec.barcode_code || rec.code || "—",
-      "حالة التسليم": rec.status === 'delivered' ? 'تم التسليم' : 'مجدول',
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "سجل الاستلامات");
-    XLSX.writeFile(workbook, `سجل_استلام_${recipientName || 'المستفيد'}_${Date.now()}.xlsx`);
-  };
-
-  const handlePrint = () => {
-    window.print();
+    exportApiDataToExcel({
+      endpoint: '/support/distributions',
+      params: { ...(beneficiaryId ? { beneficiary_id: beneficiaryId } : {}), ...(organizationId ? { organization_id: organizationId } : {}) },
+      filename: `سجل_استلام_${recipientName || 'المستفيد'}`,
+      sheetName: 'سجل الاستلام',
+      transform: (row) => ({
+        'المستفيد': row.recipient_name || recipientName,
+        'مرجع العملية': row.id,
+        'طريقة التسليم': displayLabel('fulfillment', row.fulfillment_method),
+        'الحالة': displayLabel('status', row.status),
+        'تاريخ الإكمال': row.completed_at || '',
+      }),
+    }).catch((error) => alert(error.message || 'تعذر تصدير السجل.'));
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-[var(--color-border)] p-5 shadow-xs" dir="rtl">
+    <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-5 shadow-xs" dir="rtl">
       {/* Header with Export Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-3">
@@ -68,7 +66,7 @@ export default function ReceiptHistoryTimeline({
               type="button"
               onClick={() => setViewMode('timeline')}
               className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                viewMode === 'timeline' ? 'bg-white shadow-xs text-[var(--color-brand-gold)]' : 'text-[var(--color-text-muted)]'
+                viewMode === 'timeline' ? 'bg-[var(--color-surface)] shadow-xs text-[var(--color-brand-gold)]' : 'text-[var(--color-text-muted)]'
               }`}
             >
               خط زمني
@@ -77,7 +75,7 @@ export default function ReceiptHistoryTimeline({
               type="button"
               onClick={() => setViewMode('table')}
               className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                viewMode === 'table' ? 'bg-white shadow-xs text-[var(--color-brand-gold)]' : 'text-[var(--color-text-muted)]'
+                viewMode === 'table' ? 'bg-[var(--color-surface)] shadow-xs text-[var(--color-brand-gold)]' : 'text-[var(--color-text-muted)]'
               }`}
             >
               جدول
@@ -85,25 +83,7 @@ export default function ReceiptHistoryTimeline({
           </div>
 
           {/* Export buttons */}
-          <button
-            type="button"
-            onClick={exportToExcel}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E6F4EC] text-[#2E7D32] hover:bg-green-100 rounded-xl text-xs font-bold transition-colors border border-[#A5D6A7]"
-            title="تصدير السجل إلى ملف Excel"
-          >
-            <Download size={14} />
-            <span>Excel</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-bg-soft)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-soft)] rounded-xl text-xs font-bold transition-colors border border-[var(--color-border)]"
-            title="طباعة / حفظ كـ PDF"
-          >
-            <Printer size={14} />
-            <span>PDF</span>
-          </button>
+          <SecondaryButton type="button" icon={Download} onClick={exportToExcel}>تصدير Excel</SecondaryButton>
         </div>
       </div>
 
@@ -152,7 +132,7 @@ export default function ReceiptHistoryTimeline({
                   </div>
 
                   {(rec.qr_code_hash || rec.barcode_code) && (
-                    <div className="text-[11px] font-mono text-[var(--color-text-muted)] bg-white p-2 rounded-xl border border-[var(--color-border)] flex items-center justify-between mt-2">
+                    <div className="text-[11px] font-mono text-[var(--color-text-muted)] bg-[var(--color-surface)] p-2 rounded-xl border border-[var(--color-border)] flex items-center justify-between mt-2">
                       <span>رمز العملية (Single-Use QR):</span>
                       <span className="font-bold text-[var(--color-text-primary)]">{rec.qr_code_hash || rec.barcode_code}</span>
                     </div>

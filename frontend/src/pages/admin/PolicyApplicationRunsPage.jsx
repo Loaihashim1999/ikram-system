@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../api/axios';
 import PageHeader from '../../components/ui/PageHeader';
+import SearchField from '../../components/ui/SearchField';
 
 const runStatuses = { draft: 'مسودة', simulated: 'تمت المحاكاة', approved_for_execution: 'معتمد للتنفيذ', running: 'قيد التنفيذ', completed: 'مكتمل', completed_with_errors: 'مكتمل مع أخطاء', failed: 'فشل', cancelled: 'ملغي' };
 const itemStatuses = { pending: 'بانتظار المعالجة', simulated: 'تمت المحاكاة', processing: 'قيد المعالجة', completed: 'مكتمل', review_required: 'يتطلب مراجعة', not_applicable: 'غير منطبق', failed: 'فشل', cancelled: 'ملغي' };
@@ -125,8 +126,8 @@ export default function PolicyApplicationRunsPage() {
           <p className="text-[11px] text-[var(--color-text-muted)]">نطاق التطبيق: {modeLabels[mode] || mode || 'غير محدد'}</p>
           {mode === 'selected_existing_and_new' && (
             <div className="space-y-2" data-testid="candidate-picker">
-              <label htmlFor="candidate-search" className="text-[11px] font-bold">اختيار المستفيدين المحددين</label>
-              <input id="candidate-search" aria-label="بحث مستفيد" className="ikram-control" value={search} onChange={(e) => { setSearch(e.target.value); loadCandidates(e.target.value); }} onFocus={() => candidates.length === 0 && loadCandidates('')} />
+              <p className="text-[11px] font-bold">اختيار المستفيدين المحددين</p>
+              <SearchField id="candidate-search" label="بحث مستفيد" placeholder="اسم المستفيد" value={search} onChange={(e) => { setSearch(e.target.value); loadCandidates(e.target.value); }} onFocus={() => candidates.length === 0 && loadCandidates('')} />
               <ul className="max-h-40 overflow-y-auto border rounded divide-y">
                 {candidates.map((c) => (
                   <li key={c.id} className="p-1 text-[11px] flex items-center gap-2">

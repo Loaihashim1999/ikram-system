@@ -108,4 +108,22 @@ class User extends Authenticatable
 
         return ! empty($perms['can_receive_notifications']);
     }
+
+    public function canDeleteOwnNotifications(): bool
+    {
+        if ($this->role === 'admin') {
+            return true;
+        }
+
+        return ($this->permissions['notifications']['delete'] ?? false) === true;
+    }
+
+    public function canPurgeNotifications(): bool
+    {
+        if ($this->role === 'admin') {
+            return true;
+        }
+
+        return ($this->permissions['notifications']['purge'] ?? false) === true;
+    }
 }

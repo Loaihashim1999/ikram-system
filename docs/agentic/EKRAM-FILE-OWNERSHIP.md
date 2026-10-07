@@ -35,3 +35,19 @@ Rules:
 ## Final handoff
 
 A1 and A2 returned all implementation files to A0 after targeted verification. A10 returned communications implementation to A0 before acting as independent A12 browser QA. A0 serialized integration and repaired defects returned by A12/A13, including beneficiary import confirmation, housing upload validation and notification overlay behavior. A13 edited only its review report. A12 owns tests/Browser/ekram-remediation-gate.mjs, its fixture and the E2E evidence reports; it returns defects without repairing application source. All application implementation ownership is now with A0 for final verification and documentation.
+
+## Phase 1 and later module assignment (2026-10-06)
+
+Phase 1 shared UI is with A4, reviewed by A0. Later phases take the paths below and return them to A0 before the next writer starts.
+
+| Later phase | Owner | Paths |
+|---|---|---|
+| Beneficiary list and workspace | A6 | `frontend/src/pages/beneficiaries/*`, beneficiary API client |
+| Policy scoring display | A7 | `PolicyReviewLinks.jsx`, `app/Services/BeneficiaryPolicy/*` |
+| Direct handover | A8 | `DirectHandoverPage.jsx`, receipt verification |
+| Home delivery and drivers | A9 | `HomeDeliveryPage.jsx`, `DriversDirectoryPage.jsx`, `DriverAccessPage.jsx`, `DriverAccessService.php` |
+| Notifications | A10 | `NotificationCenter.jsx`, `NotificationService.php` |
+| Metrics and governance | A2 then A3 | `AnalyticsController.php`, `GovernancePage.jsx` |
+| Documents | A11 | PDF blades and `PdfExportController` |
+| Authorization | A5 | `ModulePermission`, route guards |
+| Shared design primitives | A4 until handoff | `frontend/src/components/ui/*`, `frontend/src/theme/tokens.js`, `frontend/src/index.css` |

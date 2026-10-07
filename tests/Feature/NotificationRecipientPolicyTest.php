@@ -26,6 +26,7 @@ class NotificationRecipientPolicyTest extends TestCase
         $enabled = $this->account('TEST_ENABLED_ADMIN', true);
         $disabled = $this->account('TEST_DISABLED_ADMIN', false);
         $beneficiary = Beneficiary::create(['full_name' => 'TEST RECEIPT BENEFICIARY', 'national_id' => '9777777777', 'phone' => '0507777777']);
+        \Tests\Support\EligibleSupport::approve($beneficiary, $enabled);
         $stock = InventoryItem::create(['name' => 'TEST receipt', 'unit' => 'kg', 'current_quantity' => 5, 'min_threshold' => 1]);
         $location = PickupLocation::create(['name' => 'TEST pickup']);
         $service = app(SupportDistributionService::class);

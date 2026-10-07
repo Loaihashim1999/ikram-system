@@ -48,7 +48,15 @@ class ModulePermission
                 'organizations' => 'representatives',
                 default => null,
             },
-            'documents' => str_contains($path, 'daily-receiving') ? 'daily_beneficiaries' : (str_contains($path, 'staff-receipt') ? 'staff' : (str_contains($path, 'rep-receipt') ? 'representatives' : (str_contains($path, 'individual-receipt') || str_contains($path, '/receipt/') ? 'delivery' : 'beneficiaries'))),
+            'documents' => match (true) {
+                str_contains($path, 'daily-receiving') => 'daily_beneficiaries',
+                str_contains($path, 'staff-receipt') => 'staff',
+                str_contains($path, 'rep-receipt') => 'representatives',
+                str_contains($path, 'inventory') => 'warehouse',
+                str_contains($path, 'drivers') => 'delivery',
+                str_contains($path, 'individual-receipt'), str_contains($path, '/receipt/') => 'delivery',
+                default => 'beneficiaries',
+            },
             default => null,
         };
         if ($segment === 'support') {

@@ -6,6 +6,7 @@ use App\Models\Beneficiary;
 use App\Models\BeneficiaryPolicyEvaluation;
 use App\Models\BeneficiaryPolicyVersion;
 use App\Services\FinancialCalculationService;
+use Illuminate\Validation\ValidationException;
 
 /**
  * PolicyFinancialEvaluationService — POLICY-B + POLICY-C evaluation orchestrator.
@@ -45,6 +46,19 @@ final class PolicyFinancialEvaluationService
 
         if (! $version->isPublished()) {
             abort(409, 'لا يمكن إجراء تقييم مالي على نسخة سياسة غير منشورة.');
+        }
+        $today = now()->toDateString();
+        $starts = $version->effective_from?->toDateString();
+        $ends = $version->effective_to?->toDateString();
+        if ($starts !== null && $starts > $today) {
+            throw ValidationException::withMessages([
+                'policy_version_id' => 'لا يمكن تقييم المستفيد على نسخة لم يبدأ سريانها بعد.',
+            ]);
+        }
+        if ($ends !== null && $today > $ends) {
+            throw ValidationException::withMessages([
+                'policy_version_id' => 'لا يمكن تقييم المستفيد على نسخة منتهية السريان.',
+            ]);
         }
 
         return $this->evaluations->create($this->compute($beneficiary, $version), $actorId);
@@ -179,6 +193,7 @@ final class PolicyFinancialEvaluationService
                     'exclusion_threshold' => $exclusionThreshold,
                 ],
                 'components' => $scoring['components'],
+                'breakdown' => PolicyScoreBreakdown::fromComponents($scoring['components'], $config['scoring']['dimensions'] ?? []),
                 'total_score' => $scoring['total_score'],
                 'score_category' => $scoring['score_category'],
                 'reviews' => $reviews,

@@ -9,6 +9,7 @@ use App\Models\BeneficiaryPolicyEvaluation;
 use App\Models\PolicyDecision;
 use App\Models\SocialAssessment;
 use App\Services\BeneficiaryPolicy\PolicyApprovalService;
+use App\Services\BeneficiaryPolicy\PolicyScoreBreakdown;
 use App\Services\BeneficiaryPolicy\PolicyDocumentVerificationService;
 use App\Services\BeneficiaryPolicy\PolicyReviewService;
 use App\Services\BeneficiaryPolicy\SocialAssessmentService;
@@ -29,7 +30,7 @@ class PolicyReviewController extends Controller
     {
         Beneficiary::findOrFail($beneficiary);
 
-        $rows = BeneficiaryPolicyEvaluation::where('beneficiary_id', $beneficiary)->orderByDesc('evaluated_at')->get();
+        $rows = BeneficiaryPolicyEvaluation::with('policyVersion')->where('beneficiary_id', $beneficiary)->orderByDesc('evaluated_at')->orderByDesc('id')->get();
         $data = $rows->map(function ($evaluation) {
             $review = app(PolicyReviewService::class)->data($evaluation);
 
@@ -38,6 +39,8 @@ class PolicyReviewController extends Controller
                 'gross_counted_income', 'monthly_rent', 'family_size', 'family_member_deduction',
                 'adjusted_net_household_income', 'net_income_per_capita']) + [
                     'current_state' => $review['current_state'],
+                    'policy_version' => $evaluation->policyVersion?->only(['id', 'version', 'policy_name', 'status', 'effective_from', 'effective_to']),
+                    'score_breakdown' => PolicyScoreBreakdown::fromSnapshot($evaluation->scoring_snapshot),
                     'decision_history' => $review['decision_history']->map(fn ($decision) => $decision->only(['decision', 'decided_at', 'human_readable_reason'])),
                 ];
         });

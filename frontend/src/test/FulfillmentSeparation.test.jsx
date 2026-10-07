@@ -37,7 +37,8 @@ describe('separate fulfillment workflows', () => {
   });
   it('loads only delivery and exposes driver operations with no handover confirmation form', async () => {
     mount(<HomeDeliveryPage />);
-    expect(await screen.findByRole('link', { name: 'دليل السائقين' })).toHaveAttribute('href', '/admin/drivers');
+    expect(await screen.findByRole('heading', { name: 'إدارة التوصيل للمنازل' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'دليل السائقين' })).not.toBeInTheDocument();
     expect(api.get).toHaveBeenCalledWith('/support/distributions', { params: expect.objectContaining({ fulfillment_method: 'delivery' }) });
     expect(screen.queryByLabelText('رمز الاستلام')).not.toBeInTheDocument();
   });

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import beneficiaryApi from "../../api/beneficiaries";
 import distributionApi from "../../api/distributions";
 import api from "../../api/axios";
+import SearchField from "../../components/ui/SearchField";
 
 /* ─── QR code helper (canvas-based, no external lib) ─────────────── */
 // We use a simple canvas-based approach for the QR code display.
@@ -160,10 +161,12 @@ export default function DistributionPage() {
       {step === 0 && (
         <div className={cls.card}>
           <h2 className="text-lg font-bold text-[var(--color-text-secondary)] mb-4">🔍 اختر المستفيدين</h2>
-          <input
-            value={searchQ} onChange={(e) => setSearchQ(e.target.value)}
+          <SearchField
+            className="mb-3"
+            label="بحث المستفيدين"
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
             placeholder="بحث بالاسم أو رقم الهوية..."
-            className={cls.input + " mb-3"}
           />
           <div className="overflow-x-auto max-h-96 overflow-y-auto border rounded-xl">
             <table className="w-full text-sm">

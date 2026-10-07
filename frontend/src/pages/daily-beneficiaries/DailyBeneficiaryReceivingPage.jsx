@@ -6,6 +6,7 @@ import KpiCard from "../../components/ui/KpiCard";
 import Button from "../../components/ui/Button";
 import Dialog from "../../components/overlays/Dialog";
 import Toast from "../../components/ui/Toast";
+import SearchField from "../../components/ui/SearchField";
 import {
   getDailyBeneficiaries,
   getDailyInventory,
@@ -14,7 +15,6 @@ import {
 } from "../../api/dailyBeneficiaries";
 import {
   Package,
-  Search,
   CheckCircle2,
   Printer,
   History,
@@ -311,17 +311,13 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
           <div className="space-y-4">
             {/* Search & District Filter */}
             <div className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center gap-3">
-              <div className="relative flex-1 w-full">
-                <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchBeneficiary}
-                  onChange={(e) => setSearchBeneficiary(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && loadBeneficiaries(1)}
-                  placeholder="ابحث باسم المستفيد، رقم الهوية، أو الجوال..."
-                  className="w-full pl-3 pr-10 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
-                />
-              </div>
+              <SearchField
+                label="بحث المستفيدين"
+                value={searchBeneficiary}
+                onChange={(e) => setSearchBeneficiary(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && loadBeneficiaries(1)}
+                placeholder="ابحث باسم المستفيد، رقم الهوية، أو الجوال..."
+              />
 
               <div className="flex items-center gap-2 w-full md:w-auto">
                 <select
@@ -442,17 +438,13 @@ export default function DailyBeneficiaryReceivingPage({ embedded = false, initia
           <div className="space-y-4">
             {/* Filter Bar */}
             <div className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-center gap-3">
-              <div className="relative flex-1 w-full">
-                <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchTx}
-                  onChange={(e) => setSearchTx(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && loadTransactions(1)}
-                  placeholder="ابحث برقم السند، اسم المستفيد، أو رقم الهوية..."
-                  className="w-full pl-3 pr-10 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
-                />
-              </div>
+              <SearchField
+                label="بحث السندات"
+                value={searchTx}
+                onChange={(e) => setSearchTx(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && loadTransactions(1)}
+                placeholder="ابحث برقم السند، اسم المستفيد، أو رقم الهوية..."
+              />
 
               <div className="flex items-center gap-2 w-full md:w-auto">
                 <input

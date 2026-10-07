@@ -115,6 +115,7 @@ class SupportEngineTest extends TestCase
     public function test_beneficiary_and_staff_are_real_recipients(): void
     {
         $b = Beneficiary::create(['full_name' => 'TEST recipient', 'national_id' => '1234567890', 'phone' => '0501234567', 'beneficiary_type' => 'citizen']);
+        \Tests\Support\EligibleSupport::approve($b, $this->actor);
         $s = Staff::create(['name' => 'TEST employee', 'national_id' => '2234567890', 'phone' => '0501234568', 'job_title' => 'TEST', 'department' => 'TEST', 'hire_date' => '2026-01-01', 'phone' => '0501234568', 'status' => 'active']);
         foreach ([['beneficiary', $b], ['staff', $s]] as [$type,$recipient]) {
             $id = $this->createSupport(['recipient_type' => $type, 'organization_id' => null, $type.'_id' => $recipient->id]);

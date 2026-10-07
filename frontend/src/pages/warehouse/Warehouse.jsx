@@ -8,12 +8,13 @@ import Dialog from '../../components/overlays/Dialog';
 import ConfirmDialog from '../../components/overlays/ConfirmDialog';
 import StatusBadge from '../../components/ui/StatusBadge';
 import FormField from '../../components/ui/FormField';
+import SearchField from '../../components/ui/SearchField';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { hasModuleAction } from '../../utils/modulePermissions';
 import {
   Package, AlertTriangle, Plus, Trash2,
-  ArrowUpCircle, Loader2, Search, RefreshCw,
+  ArrowUpCircle, Loader2, RefreshCw,
   Calendar, Clock, CheckCircle2, FileSpreadsheet,
   Edit, Eye, Info
 } from 'lucide-react';
@@ -346,16 +347,12 @@ export default function Warehouse() {
 
         {/* Filter & Search Bar */}
         <div className="bg-white p-4 rounded-2xl border border-[var(--color-border)] mb-4 flex flex-wrap items-center gap-3 shadow-xs">
-          <div className="flex-1 min-w-[200px] relative">
-            <Search size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="ابحث عن اسم الصنف أو الوصف..."
-              className="w-full pr-9 pl-4 py-2 rounded-xl border border-[var(--color-border)] focus:border-[var(--color-brand-gold)] outline-none text-xs text-right bg-[var(--color-bg-soft)]"
-            />
-          </div>
+          <SearchField
+            label="بحث الأصناف"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ابحث عن اسم الصنف أو الوصف..."
+          />
 
           <div className="flex items-center gap-2">
             <select

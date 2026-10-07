@@ -55,6 +55,13 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+    | Public origin for links opened by people outside the hosting network.
+    | Local and test environments fall back to APP_URL. Production driver
+    | links refuse Container Apps and localhost hosts.
+    */
+    'public_url' => env('APP_PUBLIC_URL', env('APP_URL', 'http://localhost')),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

@@ -10,6 +10,18 @@ import api from "../api/axios";
 /**
  * Auto-fit column widths based on cell content length
  */
+function forceIdentifierText(ws, data, headerRow) {
+  const headers = Object.keys(data[0] || {});
+  headers.forEach((header, column) => {
+    if (!/هاتف|جوال|هوي|مرجع|رقم/.test(String(header))) return;
+    data.forEach((row, index) => {
+      const value = Object.values(row)[column];
+      const address = XLSX.utils.encode_cell({ r: headerRow + 1 + index, c: column });
+      ws[address] = { t: "s", v: value == null ? "" : String(value), z: "@" };
+    });
+  });
+}
+
 function fitToColumn(data, headers) {
   const colWidths = {};
 
@@ -52,6 +64,7 @@ export function exportArrayToExcel({ filename = "ikram-export", sheetName = "ا�
   // Calculate column widths
   const headers = Object.keys(data[0] || {});
   ws["!cols"] = fitToColumn(data, headers);
+  forceIdentifierText(ws, data, metadata ? 5 : 0);
 
   XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
 

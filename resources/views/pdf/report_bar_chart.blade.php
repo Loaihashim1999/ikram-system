@@ -2,7 +2,7 @@
 <table class="data-table"><thead><tr><th>{{ $label ?? 'الفئة' }}</th><th class="num">العدد</th><th>المقارنة</th></tr></thead><tbody>
 @forelse($values as $name => $count)
 <tr>
-<td class="wrap">{{ $name }}</td>
+<td class="wrap">{{ \App\Support\Documents\DocumentLabels::prose($name) }}</td>
 <td class="num">{{ $count }}</td>
 @php($share = max(0, min(100, (int) round(100 * $count / $maximum))))
 <td style="padding:1.2mm 1mm">

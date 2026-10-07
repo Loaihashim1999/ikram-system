@@ -38,7 +38,7 @@ class BeneficiaryController extends Controller
         $perPage = min(max((int) $request->input('per_page', 25), 1), 100);
         $page = max((int) $request->input('page', 1), 1);
         $total = DB::query()->fromSub($union, 'unified_beneficiaries')->count();
-        $pageQuery = DB::query()->fromSub($union, 'unified_beneficiaries');
+        $pageQuery = $this->withDaysWithoutReceipt(DB::query()->fromSub($union, 'unified_beneficiaries'));
         $this->applyUnifiedSort($pageQuery, $request);
         $rows = $this->attachLatestCompletedReceipts($pageQuery->forPage($page, $perPage)->get());
 
@@ -55,7 +55,7 @@ class BeneficiaryController extends Controller
         $tab = $request->input('tab', 'all');
         abort_unless(in_array($tab, ['all', 'permanent', 'daily'], true), 422);
         $this->authorizeUnifiedTab($request, $tab, true);
-        $exportQuery = DB::query()->fromSub($this->unifiedQuery($request, $tab), 'unified_beneficiaries');
+        $exportQuery = $this->withDaysWithoutReceipt(DB::query()->fromSub($this->unifiedQuery($request, $tab), 'unified_beneficiaries'));
         $this->applyUnifiedSort($exportQuery, $request);
         $rows = $exportQuery->get();
 
@@ -68,8 +68,8 @@ class BeneficiaryController extends Controller
         }
         foreach ($rows as $index => $row) {
             $excelRow = $index + 2;
-            $values = [($row->source === 'daily' ? 'يومي' : 'دائم'), $row->full_name, $row->beneficiary_type,
-                $row->city, $row->district, $row->status];
+            $values = [($row->source === 'daily' ? 'يومي' : 'دائم'), $row->full_name, \App\Support\Documents\DocumentLabels::text($row->beneficiary_type),
+                $row->city, $row->district, \App\Support\Documents\DocumentLabels::text($row->status)];
             foreach ($values as $column => $value) {
                 $sheet->setCellValueExplicit(
                     Coordinate::stringFromColumnIndex($column + 1).$excelRow,
@@ -110,12 +110,68 @@ class BeneficiaryController extends Controller
     private function applyUnifiedSort($query, Request $request): void
     {
         $sort = (string) $request->input('sort', 'created_at');
-        $allowed = ['full_name', 'created_at', 'district', 'beneficiary_type', 'completed_receipt_count', 'latest_completed_at'];
+        $allowed = ['full_name', 'created_at', 'district', 'beneficiary_type', 'completed_receipt_count', 'latest_completed_at', 'policy_score', 'policy_category', 'days_without_receipt'];
         if (! in_array($sort, $allowed, true)) {
             $sort = 'created_at';
         }
         $direction = strtolower((string) $request->input('direction', 'desc')) === 'asc' ? 'asc' : 'desc';
+        if (in_array($sort, ['policy_score', 'policy_category', 'days_without_receipt'], true)) {
+            $query->orderByRaw($sort.' IS NULL');
+        }
         $query->orderBy($sort, $direction)->orderBy('id', 'desc');
+    }
+
+    /**
+     * Latest persisted evaluation only. Scoring is not recalculated for the list.
+     * Rows with no evaluation stay null and sort last for policy_score, policy_category, and days_without_receipt.
+     */
+    private function latestPolicyEvaluations()
+    {
+        return DB::table('beneficiary_policy_evaluations as evaluation')
+            ->select([
+                'evaluation.beneficiary_id',
+                'evaluation.eligibility_decision as policy_result',
+                'evaluation.policy_score',
+                'evaluation.score_category as policy_category',
+            ])
+            ->whereRaw('evaluation.id = (
+                select latest_evaluation.id from beneficiary_policy_evaluations as latest_evaluation
+                where latest_evaluation.beneficiary_id = evaluation.beneficiary_id
+                order by latest_evaluation.evaluated_at desc, latest_evaluation.id desc
+                limit 1
+            )');
+    }
+
+    /**
+     * List support status is the newest support distribution for the beneficiary,
+     * ordered by created_at then id. Older operations are not used as the summary.
+     */
+    private function latestSupportStates()
+    {
+        return DB::table('support_distributions as support_row')
+            ->select([
+                'support_row.beneficiary_id',
+                'support_row.status as support_status',
+            ])
+            ->where('support_row.recipient_type', 'beneficiary')
+            ->whereNotNull('support_row.beneficiary_id')
+            ->whereRaw("support_row.id = (
+                select latest_support.id from support_distributions as latest_support
+                where latest_support.beneficiary_id = support_row.beneficiary_id
+                  and latest_support.recipient_type = 'beneficiary'
+                order by latest_support.created_at desc, latest_support.id desc
+                limit 1
+            )");
+    }
+
+    /** Historical receipt recency. Null means never received; it is not an overdue entitlement. */
+    private function withDaysWithoutReceipt($query)
+    {
+        $days = DB::connection()->getDriverName() === 'pgsql'
+            ? 'CASE WHEN unified_beneficiaries.latest_completed_at IS NULL THEN NULL ELSE (CURRENT_DATE - unified_beneficiaries.latest_completed_at::date) END'
+            : "CASE WHEN unified_beneficiaries.latest_completed_at IS NULL THEN NULL ELSE CAST((julianday('now') - julianday(unified_beneficiaries.latest_completed_at)) AS INTEGER) END";
+
+        return $query->select('unified_beneficiaries.*')->selectRaw($days.' as days_without_receipt');
     }
 
     private function completedSupportReceiptsByBeneficiary()
@@ -157,6 +213,12 @@ class BeneficiaryController extends Controller
             ->leftJoinSub($this->completedSupportReceiptsByBeneficiary(), 'completed_receipts', function ($join) {
                 $join->on('beneficiaries.id', '=', 'completed_receipts.beneficiary_id');
             })
+            ->leftJoinSub($this->latestPolicyEvaluations(), 'latest_policy', function ($join) {
+                $join->on('beneficiaries.id', '=', 'latest_policy.beneficiary_id');
+            })
+            ->leftJoinSub($this->latestSupportStates(), 'latest_support', function ($join) {
+                $join->on('beneficiaries.id', '=', 'latest_support.beneficiary_id');
+            })
             ->select([
                 'beneficiaries.id',
                 'beneficiaries.full_name',
@@ -174,6 +236,11 @@ class BeneficiaryController extends Controller
                 'beneficiaries.archived_at',
                 DB::raw('COALESCE(completed_receipts.completed_receipt_count, 0) as completed_receipt_count'),
                 'completed_receipts.latest_completed_at',
+                'beneficiaries.national_id',
+                'latest_policy.policy_result',
+                'latest_policy.policy_score',
+                'latest_policy.policy_category',
+                'latest_support.support_status',
             ])
             ->where(fn ($q) => $q->where('beneficiaries.is_employee', false)->orWhereNull('beneficiaries.is_employee'))
             ->where(fn ($q) => $q->where('beneficiaries.priority', '!=', 'employee')->orWhereNull('beneficiaries.priority'));
@@ -201,6 +268,11 @@ class BeneficiaryController extends Controller
                 DB::raw('NULL as archived_at'),
                 DB::raw('COALESCE(daily_completed_receipts.completed_receipt_count, 0) as completed_receipt_count'),
                 'daily_completed_receipts.latest_completed_at',
+                'daily_beneficiaries.national_id',
+                DB::raw('NULL as policy_result'),
+                DB::raw('NULL as policy_score'),
+                DB::raw('NULL as policy_category'),
+                DB::raw('NULL as support_status'),
             ])
             ->whereNull('daily_beneficiaries.deleted_at');
         if ($request->input('archived') === 'only') {
@@ -251,6 +323,27 @@ class BeneficiaryController extends Controller
             }
             if ($request->filled('date_to')) {
                 $query->whereDate('created_at', '<=', $request->input('date_to'));
+            }
+            if ($request->filled('policy_result')) {
+                $domain === 'permanent'
+                    ? $query->where('latest_policy.policy_result', $request->input('policy_result'))
+                    : $query->whereRaw('1 = 0');
+            }
+            if ($request->filled('policy_category')) {
+                $domain === 'permanent'
+                    ? $query->where('latest_policy.policy_category', $request->input('policy_category'))
+                    : $query->whereRaw('1 = 0');
+            }
+            if ($request->filled('support_status')) {
+                $domain === 'permanent'
+                    ? $query->where('latest_support.support_status', $request->input('support_status'))
+                    : $query->whereRaw('1 = 0');
+            }
+            if ($request->input('receipt_history') === 'received') {
+                $query->whereRaw('COALESCE('.($domain === 'permanent' ? 'completed_receipts.completed_receipt_count' : 'daily_completed_receipts.completed_receipt_count').', 0) > 0');
+            }
+            if ($request->input('receipt_history') === 'never') {
+                $query->whereRaw('COALESCE('.($domain === 'permanent' ? 'completed_receipts.completed_receipt_count' : 'daily_completed_receipts.completed_receipt_count').', 0) = 0');
             }
         }
         $result = array_shift($queries)['query'];

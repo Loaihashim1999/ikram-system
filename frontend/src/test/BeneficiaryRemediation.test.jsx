@@ -28,7 +28,7 @@ describe('beneficiary remediation boundaries', () => {
   });
 
   it('prefills the routed beneficiary and creates a canonical delivery draft', async () => {
-    api.get.mockImplementation((path) => Promise.resolve({ data: { data: path === '/beneficiaries/b1' ? { id: 'b1', full_name: 'EKRAM-E2E-TEST' } : path === '/inventory' ? [{ id: 'stock1', name: 'صنف تجريبي' }] : [] } }));
+    api.get.mockImplementation((path) => Promise.resolve({ data: { data: path === '/beneficiaries/b1' ? { id: 'b1', full_name: 'EKRAM-E2E-TEST' } : path.includes('/evaluations') ? [{ eligibility_decision: 'eligible', current_state: 'approved', evaluated_at: '2026-10-01T00:00:00' }] : path === '/inventory' ? [{ id: 'stock1', name: 'صنف تجريبي' }] : [] } }));
     api.post.mockResolvedValue({ data: { data: { id: 'support1' } } });
     render(<MemoryRouter initialEntries={['/beneficiaries/b1/support']}><Routes><Route path="/beneficiaries/:id/support" element={<SupportRequestPage />} /><Route path="/support-delivery" element={<p>تم حفظ الطلب</p>} /></Routes></MemoryRouter>);
     await screen.findByText('EKRAM-E2E-TEST');

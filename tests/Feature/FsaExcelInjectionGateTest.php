@@ -105,8 +105,8 @@ class FsaExcelInjectionGateTest extends TestCase
         $response = $this->get('/api/reports/comprehensive/excel?start_date=2026-01-01&end_date=2026-12-31')->assertOk();
         $path = $this->saveExcel($response->streamedContent(), 'comprehensive-injection');
         $book = IOFactory::load($path);
-        $sheet = $book->getSheetByName('beneficiaries_snapshot');
-        $this->assertNotNull($sheet, 'beneficiaries_snapshot sheet must exist');
+        $sheet = $book->getSheetByName('المستفيدون');
+        $this->assertNotNull($sheet, 'beneficiaries sheet must exist');
 
         // Column letters from permanentColumns order: full_name=B, monthly_salary=K, total_income=L, monthly_rent=M.
         $this->assertSame('K', Coordinate::stringFromColumnIndex(11));

@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route, Link } from 'react-router-dom';
 import PolicyDReviewPage from '../pages/admin/PolicyDReviewPage';
 import api from '../api/axios';
 vi.mock('../api/axios', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }));
+vi.mock('../components/layout/MainLayout', () => ({ default: ({ children }) => <div>{children}</div> }));
 
 const review = (capabilities = {}) => ({ beneficiary: { id: 'b1', full_name: 'Loaded beneficiary' }, policy_version: { version: 'v1' }, evaluation: { id: 'e1', financial_snapshot: { net_income_per_capita: 321 }, income_category: 'b', policy_score: '19.0000', score_category: 'c' }, documents: [], medical_evidence: null, social_assessment: null, approval_blockers: ['REQUIRED_DOCUMENTS_INCOMPLETE'], current_state: 'pending', decision_history: [], capabilities });
 const show = () => render(<MemoryRouter initialEntries={['/review/e1']}><Link to="/review/e2">Other evaluation</Link><Routes><Route path="/review/:evaluationId" element={<PolicyDReviewPage />} /></Routes></MemoryRouter>);
@@ -13,19 +14,19 @@ describe('POLICY-D review UI contract', () => {
   it('renders loaded facts and omits decision controls for a pending view-only review', async () => {
     api.get.mockResolvedValue({ data: { data: review({ view_documents: true }) } });
     show();
-    expect(await screen.findByText('Loaded beneficiary')).toBeInTheDocument();
+    expect((await screen.findAllByText('Loaded beneficiary')).length).toBeGreaterThan(0);
     expect(screen.getByTestId('financial-result')).toHaveTextContent('321');
-    expect(screen.getByTestId('income-category')).toHaveTextContent('b');
+    expect(screen.getByTestId('income-category')).toHaveTextContent('الفئة الثانية');
     expect(screen.queryByRole('button', { name: 'اعتماد القرار' })).not.toBeInTheDocument();
   });
   it('shows API rejection without inventing a successful business outcome', async () => {
-    api.get.mockResolvedValue({ data: { data: review({ decide: true }) } });
+    api.get.mockResolvedValue({ data: { data: { ...review({ decide: true }), approval_blockers: [] } } });
     api.post.mockRejectedValue({ response: { data: { errors: { approval: ['REQUIRED_DOCUMENTS_INCOMPLETE'] } } } });
     show();
     fireEvent.click(await screen.findByRole('button', { name: 'اعتماد القرار' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('REQUIRED_DOCUMENTS_INCOMPLETE');
+    expect(await screen.findByRole('alert')).toHaveTextContent('الوثائق المطلوبة غير مكتملة');
     expect(screen.getByTestId('decision-history')).toBeEmptyDOMElement();
-    expect(screen.getByTestId('decision-state')).toHaveTextContent('قرار معلق');
+    expect(screen.getByTestId('decision-state')).toHaveTextContent('بانتظار القرار');
   });
   it('reports denied or failed reads', async () => {
     api.get.mockRejectedValue(new Error('403'));

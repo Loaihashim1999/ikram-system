@@ -9,7 +9,7 @@ import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
 import StatusBadge from "../../components/ui/StatusBadge";
 import {
-  Trash2, Edit3, Shield, Truck, UserCheck, UserPlus, Globe, RefreshCw, Copy, Eye, EyeOff, AlertTriangle, FileSpreadsheet
+  Trash2, Edit3, Shield, UserCheck, UserPlus, Globe, RefreshCw, Copy, Eye, EyeOff, AlertTriangle, FileSpreadsheet
 } from "lucide-react";
 import { exportArrayToExcel } from "../../utils/excelExport";
 
@@ -60,11 +60,6 @@ const ROLE_PERMISSIONS_PRESETS = {
     title: "مساعد / نائب المدير (Assistant Supervisor)",
     badge: "bg-green-100 text-green-900 border-green-300 font-bold",
     desc: "إدارة تشغيلية يومية، مراجعة المستفيدين والمستودع وتعيين السائقين وفق الصلاحيات الممنوحة.",
-  },
-  delivery_driver: {
-    title: "سائق / مندوب التوصيل (Driver)",
-    badge: "bg-blue-100 text-blue-900 border-blue-300 font-bold",
-    desc: "عرض قوائم التوصيل المسندة إليه فقط وتأكيد الاستلام ومسح كود الـ QR (ممنوع من تعديل البيانات أو كشف الوثائق).",
   },
 };
 
@@ -367,7 +362,7 @@ export default function UsersPage() {
         />
 
         {/* Roles Guide Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {Object.entries(ROLE_PERMISSIONS_PRESETS).map(([key, info]) => (
             <div key={key} className="bg-white p-4 rounded-2xl border border-[var(--color-border)] shadow-xs">
               <span className={`px-3 py-1 rounded-full text-xs font-bold border ${info.badge}`}>
@@ -430,13 +425,7 @@ export default function UsersPage() {
                             <span>مساعد المدير</span>
                           </span>
                         )}
-                        {u.role === "delivery_driver" && (
-                          <span className="bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-lg text-[11px] font-bold inline-flex items-center gap-1">
-                            <Truck size={13} />
-                            <span>سائق ميداني</span>
-                          </span>
-                        )}
-                        {!["admin", "assistant_admin", "delivery_driver"].includes(u.role) && (
+                        {!["admin", "assistant_admin"].includes(u.role) && (
                           <span className="bg-[var(--color-bg-soft)] text-[var(--color-text-primary)] border border-[var(--color-border)] px-2 py-0.5 rounded-lg text-[11px] font-bold">
                             {displayLabel('role', u.role)}
                           </span>
@@ -672,8 +661,8 @@ export default function UsersPage() {
 
             {/* Permissions Matrix */}
             {(form.role === "driver" || form.role === "delivery_driver") ? (
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
-                صلاحيات السائق ثابتة: يرى مهامه المسندة إليه فقط، ويؤكد التسليم عبر QR أو رمز التحقق اليدوي.
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-soft)] p-4 text-sm leading-7 text-[var(--color-text-primary)]">
+                السائق ليس حساب دخول. يصل إلى مهامه عبر رابط القدرة فقط.
               </div>
             ) : <div className="pt-2">
               <div className="flex items-center justify-between mb-2">

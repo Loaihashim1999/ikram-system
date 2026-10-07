@@ -596,6 +596,206 @@ Own independent quality gates and release readiness.
 
 ---
 
+## Skill 13 — `ekram-design-system`
+
+### Purpose
+Make every EKRAM page one coherent product.
+
+### Scope
+Tokens, typography, spacing, cards, buttons, inputs, tables, filters, tabs, dialogs, badges, empty/loading states, Arabic RTL, mobile driver portal.
+
+### Inputs
+`frontend/src/theme/tokens.js`, shared components, page screenshots.
+
+### Rules
+Reuse shared components. No page-specific visual systems. Consistent page header, action hierarchy, and table structure. Driver portal keeps EKRAM identity and is mobile-first.
+
+### Required checks
+Shared tokens used. Primary/secondary/danger actions distinct. RTL and numeric alignment reviewed.
+
+### Do not
+Scatter arbitrary colors or spacing. Redesign a page without the shared system.
+
+### Outputs
+Shared frontend components. `docs/design/EKRAM-DESIGN-SYSTEM.md`.
+
+---
+
+## Skill 14 — `ekram-beneficiary-workspace`
+
+### Purpose
+Own the beneficiary operational experience.
+
+### Scope
+List, details, registration, edit, archive, restore, family, finance, documents, policy, support, receipt history.
+
+### Inputs
+Beneficiary routes, detail page, permissions, related APIs.
+
+### Rules
+Detail is the workspace. Actions follow permissions. No dead tabs or disconnected counters. No final registration without confirmation.
+
+### Required checks
+Registration, review, confirmation, persistence, archive, restore, policy linkage, support linkage.
+
+### Do not
+Show actions the API rejects. Invent fields that are not stored.
+
+### Outputs
+Workspace behavior and tests.
+
+---
+
+## Skill 15 — `ekram-policy-scoring`
+
+### Purpose
+Make policy scoring deterministic, explainable, and auditable.
+
+### Scope
+Rules, inputs, points, thresholds, classification, breakdown, score sort/filter, immutable snapshots.
+
+### Inputs
+Published policy version, beneficiary snapshot, `PolicyScoringService`.
+
+### Rules
+`total_score` is the sum of applicable rule points from one evaluated policy version. Scoring is server-side. Historical evaluations stay immutable.
+
+### Required checks
+Each rule exposes rule id, label, input, condition, awarded points, max points, and reason. Re-evaluation creates a new record.
+
+### Do not
+Score only in the UI. Rewrite an old evaluation when beneficiary data changes. Apply citizen policy silently to residents.
+
+### Outputs
+Score service, breakdown, classification mapping, tests, UI representation.
+
+---
+
+## Skill 16 — `ekram-operational-metrics`
+
+### Purpose
+Make dashboard and report calculations match the fulfillment domain.
+
+### Scope
+Date range, due, completed, pending, not received, overdue, delivered, unique beneficiaries, driver and support metrics.
+
+### Inputs
+Selected period, support/delivery operations, completion timestamps.
+
+### Rules
+`TOTAL_DUE` counts operations due or ready in the period. `COMPLETED` counts those with a valid completion timestamp. `NOT_COMPLETED = TOTAL_DUE - COMPLETED`. `OVERDUE` counts due operations past the period end without completion. Operation counts stay distinct from unique beneficiary counts. «لم يستلم» is not all beneficiaries minus delivered beneficiaries.
+
+### Required checks
+Same date field for every period metric. Null completion is not completed. Labels state operation versus beneficiary.
+
+### Do not
+Mix an all-table snapshot into a period metric without a label.
+
+### Outputs
+`docs/analytics/EKRAM-METRIC-DEFINITIONS.md` and metric tests.
+
+---
+
+## Skill 17 — `ekram-driver-link`
+
+### Purpose
+Generate and validate driver links on the canonical host.
+
+### Scope
+Canonical URL, `APP_URL`, capability token, HTTPS, host, expiry, assignment scope, regeneration.
+
+### Inputs
+`DriverAccessService`, production host `https://systemben.ekramfb.org.sa`.
+
+### Rules
+Operational links use the canonical host, not a Container Apps revision hostname. A link opens the matching driver and only that driver's assignments. Do not weaken validation to make a link open.
+
+### Required checks
+Generate, store, open, accept, correct driver, correct assignments.
+
+### Do not
+Put the capability token in query logs. Treat a driver as a normal user account.
+
+### Outputs
+Host-correct link proof.
+
+---
+
+## Skill 18 — `ekram-professional-pdf`
+
+### Purpose
+Replace browser-style prints with one institutional PDF system.
+
+### Scope
+A4, RTL, Arabic type, branding, frame, header, footer, pagination, tables, charts.
+
+### Inputs
+Association document layout and official document templates.
+
+### Rules
+No browser URL, browser date, browser header/footer, empty trailing page, clipped content, or raw technical codes. Page X of Y. Repeat table headers. Break pages only when content requires it.
+
+### Required checks
+Beneficiary, governance, policy, support, receipt, and delivery-proof PDFs.
+
+### Do not
+Print a browser page as an official document.
+
+### Outputs
+Shared PDF layout and document-specific templates.
+
+---
+
+## Skill 19 — `ekram-data-quality`
+
+### Purpose
+Classify bad operational data without mutating real records.
+
+### Scope
+Phones, duplicate drivers, `EKRAM-E2E-TEST` rows, orphan assignments, support without beneficiary, delivery without assignment, completion without timestamp, invalid policy snapshots, inconsistent statuses.
+
+### Inputs
+Read-only operational queries. Production database access remains forbidden from this workspace.
+
+### Rules
+Classify each issue as auto-fix safe, manual review, test data, valid data, or unknown. Delete only conclusively identified synthetic business data at the cleanup stage.
+
+### Required checks
+Inventory of active `EKRAM-E2E-TEST` business records. No real-record deletion.
+
+### Do not
+Automatically update production rows. Delete audit records required for retention.
+
+### Outputs
+`reports/EKRAM-DATA-QUALITY.md`.
+
+---
+
+## Skill 20 — `ekram-ui-audit`
+
+### Purpose
+Reject pages that work but do not look like the rest of EKRAM.
+
+### Scope
+Title, breadcrumb, primary action, KPI cards, filters, tables, Arabic wording, spacing, type, empty/error states, menus, pagination, mobile.
+
+### Inputs
+Implemented pages after functional freeze.
+
+### Rules
+Run after functional implementation and before final QA. Compare major pages side by side.
+
+### Required checks
+Shared header, table, filter, and action patterns. Driver page usable on a phone.
+
+### Do not
+Accept a technically working page with a one-off visual system.
+
+### Outputs
+UI consistency findings.
+
+---
+
 # 3. Agent Team
 
 ## A0 — Orchestrator / Engineering Lead

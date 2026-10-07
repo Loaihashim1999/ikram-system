@@ -10,7 +10,19 @@ import { Loader2 } from 'lucide-react';
  * - ghost: Flat with hover background
  * - danger: Crimson Red (#DC2626) strictly for destructive operations
  */
-export default function Button({
+export function PrimaryButton(props) {
+  return <Button variant="primary" {...props} />;
+}
+
+export function SecondaryButton(props) {
+  return <Button variant="secondary" {...props} />;
+}
+
+export function DangerButton(props) {
+  return <Button variant="danger" {...props} />;
+}
+
+function Button({
   children,
   variant = 'primary',
   size = 'md',
@@ -60,3 +72,5 @@ export default function Button({
     </Component>
   );
 }
+
+export default Button;

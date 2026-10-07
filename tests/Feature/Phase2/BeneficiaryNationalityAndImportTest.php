@@ -541,4 +541,89 @@ class BeneficiaryNationalityAndImportTest extends TestCase
 
         return $distributionId;
     }
+
+    public function test_unified_list_returns_latest_policy_and_support_without_rescoring(): void
+    {
+        $evaluated = $this->beneficiary('EVALUATED', 'سعودي', 'citizen');
+        $unevaluated = $this->beneficiary('UNEVALUATED', 'يمني', 'resident');
+        $versionId = (string) Str::uuid();
+        DB::table('beneficiary_policy_versions')->insert([
+            'id' => $versionId,
+            'policy_name' => 'اختبار',
+            'policy_scope' => 'citizen_beneficiaries',
+            'version' => '1',
+            'status' => 'published',
+            'configuration' => '{}',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('beneficiary_policy_evaluations')->insert([
+            'id' => (string) Str::uuid(),
+            'beneficiary_id' => $evaluated->id,
+            'policy_version_id' => $versionId,
+            'evaluation_status' => 'completed',
+            'evaluated_at' => '2026-01-01 00:00:00',
+            'eligibility_decision' => 'ineligible',
+            'policy_score' => 10,
+            'score_category' => 'E',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('beneficiary_policy_evaluations')->insert([
+            'id' => (string) Str::uuid(),
+            'beneficiary_id' => $evaluated->id,
+            'policy_version_id' => $versionId,
+            'evaluation_status' => 'completed',
+            'evaluated_at' => '2026-06-01 00:00:00',
+            'eligibility_decision' => 'eligible',
+            'policy_score' => 80,
+            'score_category' => 'A',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('support_distributions')->insert([
+            'id' => (string) Str::uuid(),
+            'recipient_type' => 'beneficiary',
+            'beneficiary_id' => $evaluated->id,
+            'recipient_name' => 'EVALUATED',
+            'fulfillment_method' => 'pickup',
+            'status' => 'draft',
+            'created_at' => '2026-01-01 00:00:00',
+            'updated_at' => now(),
+        ]);
+        DB::table('support_distributions')->insert([
+            'id' => (string) Str::uuid(),
+            'recipient_type' => 'beneficiary',
+            'beneficiary_id' => $evaluated->id,
+            'recipient_name' => 'EVALUATED',
+            'fulfillment_method' => 'pickup',
+            'status' => 'ready',
+            'created_at' => '2026-06-01 00:00:00',
+            'updated_at' => now(),
+        ]);
+
+        $rows = collect($this->getJson('/api/beneficiaries/unified?tab=permanent&sort=policy_score&direction=desc')->assertOk()->json('data.data'));
+        $this->assertSame($evaluated->id, $rows->first()['id']);
+        $this->assertSame('eligible', $rows->firstWhere('id', $evaluated->id)['policy_result']);
+        $this->assertEquals(80, $rows->firstWhere('id', $evaluated->id)['policy_score']);
+        $this->assertSame('A', $rows->firstWhere('id', $evaluated->id)['policy_category']);
+        $this->assertSame('ready', $rows->firstWhere('id', $evaluated->id)['support_status']);
+        $this->assertNull($rows->firstWhere('id', $unevaluated->id)['policy_result']);
+        $this->assertNull($rows->firstWhere('id', $unevaluated->id)['days_without_receipt']);
+
+        $eligible = collect($this->getJson('/api/beneficiaries/unified?tab=permanent&policy_result=eligible')->assertOk()->json('data.data'))->pluck('id');
+        $this->assertTrue($eligible->contains($evaluated->id));
+        $this->assertFalse($eligible->contains($unevaluated->id));
+
+        $category = collect($this->getJson('/api/beneficiaries/unified?tab=permanent&policy_category=A')->assertOk()->json('data.data'))->pluck('id');
+        $this->assertTrue($category->contains($evaluated->id));
+
+        $ready = collect($this->getJson('/api/beneficiaries/unified?tab=permanent&support_status=ready')->assertOk()->json('data.data'))->pluck('id');
+        $this->assertTrue($ready->contains($evaluated->id));
+        $this->assertFalse($ready->contains($unevaluated->id));
+
+        $never = collect($this->getJson('/api/beneficiaries/unified?tab=permanent&receipt_history=never')->assertOk()->json('data.data'))->pluck('id');
+        $this->assertTrue($never->contains($unevaluated->id));
+        $this->assertTrue($never->contains($evaluated->id));
+    }
 }

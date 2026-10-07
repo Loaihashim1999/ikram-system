@@ -1,26 +1,24 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+﻿import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import beneficiaryApi from "../../api/beneficiaries";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import { calculateIncomeAndClassification } from "../../utils/financialCalculations";
-import PageHeader from "../../components/ui/PageHeader";
-import Button from "../../components/ui/Button";
-import {
-  CheckCircle2, AlertCircle, Save, FileText,
-  UserCheck, Users, Calculator
-} from "lucide-react";
+import { displayLabel } from "../../utils/displayVocabulary";
+import PageShell from "../../components/ui/PageShell";
+import SectionCard from "../../components/ui/SectionCard";
+import Tabs from "../../components/ui/Tabs";
+import FormField from "../../components/ui/FormField";
+import { PrimaryButton, SecondaryButton } from "../../components/ui/Button";
+import StatusBadge from "../../components/ui/StatusBadge";
+import EmptyState from "../../components/ui/EmptyState";
+import ErrorState from "../../components/ui/ErrorState";
+import KpiCard from "../../components/ui/KpiCard";
+import { Save } from "lucide-react";
 
 /* ═══════════════════════ خيارات وحالات الأسرة ═══════════════════════ */
 
-const FAMILY_STATUS_OPTIONS = [
-  { value: "poor",                    label: "فقير" },
-  { value: "widow",                   label: "أرملة" },
-  { value: "widow_with_orphans",      label: "أرملة مع أيتام" },
-  { value: "divorced",                label: "مطلقة" },
-  { value: "divorced_with_children",  label: "مطلقة مع أطفال" },
-  { value: "abandoned",               label: "مهجورة" },
-];
+const FAMILY_STATUS_VALUES = ["poor", "widow", "widow_with_orphans", "divorced", "divorced_with_children", "abandoned"];
 
 const CITIZEN_INCOME_OPTIONS = [
   { value: "salary",           label: "راتب شهري" },
@@ -50,11 +48,23 @@ const INITIAL_DEPENDENT = { name: "", relationship: "", date_of_birth: "" };
 
 const STEPS = [
   { id: 1, label: "البيانات الأساسية" },
-  { id: 2, label: "بيانات الأسرة والسكن" },
-  { id: 3, label: "البيانات المالية والاحتساب" },
-  { id: 4, label: "الوثائق والمرفقات" },
-  { id: 5, label: "مراجعة وتأكيد الحفظ والتصنيف" },
+  { id: 2, label: "الأسرة والتابعون" },
+  { id: 3, label: "البيانات المالية" },
+  { id: 4, label: "الوثائق" },
+  { id: 5, label: "المراجعة" },
+  { id: 6, label: "تأكيد وحفظ المستفيد" },
 ];
+
+const DOCUMENT_LABELS = {
+  national_id_image: "صورة الهوية الوطنية",
+  residence_id_image: "صورة الإقامة",
+  national_address_image: "العنوان الوطني",
+  rental_contract_image: "عقد الإيجار أو فاتورة الكهرباء",
+  salary_certificate: "مشهد الراتب",
+  social_security_image: "مشهد الضمان الاجتماعي",
+  citizen_account_image: "إثبات حساب المواطن",
+  pension_certificate_image: "شهادة المعاش التقاعدي",
+};
 
 /* ═══════════════════════ الحالة الابتدائية (خالية تماماً من البيانات البنكية) ═══════════════════════ */
 
@@ -385,601 +395,346 @@ export default function AddBeneficiaryPage() {
     }
   };
 
-  const cls = {
-    input:   "ikram-control",
-    select:  "ikram-control font-bold",
-    label:   "ikram-label",
-    helper:  "text-[11px] text-[var(--color-text-muted)] mt-1 block",
-    section: "ikram-panel p-4 sm:p-5 mb-5",
-    h2:      "text-sm font-extrabold text-[var(--color-text-primary)] mb-4 border-b border-[var(--color-border)] pb-2.5 flex items-center gap-2",
-  };
+  const errorText = Object.values(errors).flat().filter(Boolean).join(" ");
+  const incomeOptions = classification === "citizen" ? CITIZEN_INCOME_OPTIONS : classification === "resident" ? RESIDENT_INCOME_OPTIONS : [];
+  const registrationTitle = classification === "citizen" ? "تسجيل مستفيد مواطن جديد" : classification === "resident" ? "تسجيل مستفيد مقيم جديد" : "تسجيل مستفيد جديد";
+  const onReview = step >= 5;
 
-  const Err = ({ f }) => {
-    const err = errors[f];
-    return err ? <p role="alert" className="text-[var(--color-danger)] text-xs mt-1 font-bold">{err[0]}</p> : null;
+  const openStep = (id) => {
+    const next = Number(id);
+    if (next === step) return;
+    if (next < step || validateCurrentStep(step)) setStep(next);
   };
 
   return (
     <MainLayout>
-      <div className="p-4 lg:p-6 max-w-5xl mx-auto" dir="rtl">
-        {/* Toast */}
-        {toast && (
-          <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-[var(--color-brand-green)] text-white font-extrabold px-6 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-2 text-xs">
-            <CheckCircle2 className="w-5 h-5" />
-            <span>{toast}</span>
-          </div>
-        )}
-
-        {/* Top Header */}
-        <PageHeader
-          title={classification === "citizen" ? "تسجيل مستفيد مواطن جديد" : classification === "resident" ? "تسجيل مستفيد مقيم جديد" : "تسجيل مستفيد جديد"}
-          subtitle="تعبئة البيانات، اقتطاع الإيجار، والتصنيف التلقائي (خالي تماماً من الحقول البنكية)"
+      <div dir="rtl">
+        <PageShell
           breadcrumbs={[
             { label: "الرئيسية", href: "/" },
             { label: "إدارة المستفيدين", href: "/beneficiaries" },
-            { label: classification === "citizen" ? "تسجيل مواطن" : classification === "resident" ? "تسجيل مقيم" : "تسجيل مستفيد" }
+            { label: classification === "citizen" ? "تسجيل مواطن" : classification === "resident" ? "تسجيل مقيم" : "تسجيل مستفيد" },
           ]}
-          action={
-            <Button variant="outline" size="sm" onClick={() => navigate("/beneficiaries")}>
-              ← العودة للقائمة
-            </Button>
-          }
-        />
+          title={onReview ? "مراجعة بيانات المستفيد" : registrationTitle}
+          description={onReview ? "راجع البيانات قبل تأكيد وحفظ المستفيد." : "تعبئة البيانات، اقتطاع الإيجار، والتصنيف التلقائي."}
+          secondaryActions={<SecondaryButton type="button" onClick={() => navigate("/beneficiaries")}>العودة للقائمة</SecondaryButton>}
+        >
+          {toast && <StatusBadge tone="success" label={toast} />}
+          <Tabs
+            tabs={STEPS.map((item) => ({ id: String(item.id), label: item.label, testId: `registration-step-${item.id}` }))}
+            activeTab={String(step)}
+            onChange={openStep}
+          />
+          {errorText && <ErrorState title="يرجى تعبئة الحقول الإلزامية المطلوبة للمتابعة" description={errorText} />}
 
-        {/* Step Tabs */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {STEPS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => {
-                if (s.id < step || validateCurrentStep(step)) {
-                  setStep(s.id);
-                }
-              }}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                step === s.id
-                  ? "bg-[var(--color-brand-green)] text-white shadow-xs"
-                  : s.id < step
-                  ? "bg-[var(--color-bg-soft)] text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/30"
-                  : "bg-[var(--color-bg-soft)] text-[var(--color-text-muted)]"
-              }`}
-            >
-              {s.id}. {s.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Global Errors Banner */}
-        {Object.keys(errors).length > 0 && (
-          <div className="mb-6 p-4 bg-[#FEE2E2] border border-[#FCA5A5] rounded-2xl text-[#B91C1C] text-xs shadow-xs">
-            <div className="flex items-center gap-2 font-bold text-xs mb-1">
-              <AlertCircle className="w-4 h-4" />
-              <span>يرجى تعبئة الحقول الإلزامية المطلوبة للمتابعة:</span>
-            </div>
-            <ul className="list-disc list-inside space-y-0.5 mr-2 font-medium">
-              {Object.values(errors).flat().map((e, i) => (
-                <li key={i}>{e}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} encType="multipart/form-data">
-          {/* ══════════ STEP 1: البيانات الأساسية ══════════ */}
-          {step === 1 && (
-            <div className={cls.section}>
-              <h2 className={cls.h2}>📋 البيانات الشخصية والمعلومات الأساسية (جميع الحقول إلزامية)</h2>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                  <label className={cls.label}>الاسم الرباعي الكامل *</label>
-                  <input name="full_name" value={form.full_name} onChange={handleChange} className={cls.input} placeholder="الاسم الرباعي كما في الهوية" required />
-                  <Err f="full_name" />
+          <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-5">
+            {step === 1 && (
+              <SectionCard title="البيانات الأساسية">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <FormField label="الاسم الرباعي الكامل" name="full_name" required error={errors.full_name?.[0]}>
+                    <input name="full_name" value={form.full_name} onChange={handleChange} className="ikram-control w-full" placeholder="الاسم الرباعي كما في الهوية" required />
+                  </FormField>
+                  <FormField label={classification === "citizen" ? "رقم الهوية الوطنية" : classification === "resident" ? "رقم الإقامة" : "رقم الهوية أو الإقامة"} name="national_id" required error={errors.national_id?.[0]} helperText={idStatus === "checking" ? "جاري التحقق من الهوية..." : idStatus === "taken" ? "رقم الهوية مسجل مسبقاً في النظام" : idStatus === "ok" ? "متاح للتسجيل" : undefined}>
+                    <input name="national_id" value={form.national_id} onChange={handleChange} onBlur={handleNationalIdBlur} maxLength={20} required className="ikram-control w-full font-mono" placeholder={classification === "citizen" ? "10XXXXXXXX" : classification === "resident" ? "20XXXXXXXX" : ""} />
+                  </FormField>
+                  <FormField label="رقم الجوال المعتمد" name="phone" required error={errors.phone?.[0]}>
+                    <input name="phone" value={form.phone} onChange={handleChange} className="ikram-control w-full font-mono" placeholder="05XXXXXXXX" required />
+                  </FormField>
+                  <FormField label="تاريخ الميلاد" name="date_of_birth" required error={errors.date_of_birth?.[0]}>
+                    <input name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} className="ikram-control w-full font-mono" required />
+                  </FormField>
+                  <FormField label="مكان الميلاد" name="place_of_birth">
+                    <input name="place_of_birth" value={form.place_of_birth} onChange={handleChange} className="ikram-control w-full" placeholder="مثال: مكة المكرمة" />
+                  </FormField>
+                  <FormField label="الجنسية" name="nationality" required error={errors.nationality?.[0]} helperText={classification === "citizen" ? "التصنيف: مواطن" : classification === "resident" ? "التصنيف: مقيم. أي جنسية غير سعودي تُسجَّل مقيماً." : "اكتب الجنسية. سعودي = مواطن، وأي جنسية أخرى = مقيم."}>
+                    <input name="nationality" value={form.nationality} onChange={handleChange} className="ikram-control w-full" placeholder="سعودي، أو جنسية أخرى" maxLength={100} required />
+                  </FormField>
+                  <FormField label="المدينة" name="city" required error={errors.city?.[0]}>
+                    <input name="city" value={form.city} onChange={handleChange} className="ikram-control w-full" required />
+                  </FormField>
+                  <FormField label="اسم الحي السكني" name="district" required error={errors.district?.[0]}>
+                    <input name="district" value={form.district} onChange={handleChange} className="ikram-control w-full" placeholder="مثال: النوارية" required />
+                  </FormField>
+                  <FormField label="الشارع أو أقرب معلم" name="street" required error={errors.street?.[0]}>
+                    <input name="street" value={form.street} onChange={handleChange} className="ikram-control w-full" placeholder="مثال: بجوار جامع الفرقان" required />
+                  </FormField>
                 </div>
+              </SectionCard>
+            )}
 
-                <div>
-                  <label className={cls.label}>رقم {classification === "citizen" ? "الهوية الوطنية" : classification === "resident" ? "الإقامة" : "الهوية أو الإقامة"} *</label>
-                  <input
-                    name="national_id" value={form.national_id} onChange={handleChange}
-                    onBlur={handleNationalIdBlur} maxLength={20} required
-                    className={`${cls.input} font-mono ${
-                      idStatus === "taken" ? "border-red-500" : idStatus === "ok" ? "border-green-500" : ""
-                    }`}
-                    placeholder={classification === "citizen" ? "10XXXXXXXX" : classification === "resident" ? "20XXXXXXXX" : ""}
-                  />
-                  {idStatus === "checking" && <p className="text-[var(--color-text-muted)] text-[11px] mt-1">⏳ جاري التحقق من الهوية...</p>}
-                  {idStatus === "taken"    && <p className="text-[#C24B3F] text-[11px] mt-1 font-bold">❌ رقم الهوية مسجل مسبقاً في النظام</p>}
-                  {idStatus === "ok"       && <p className="text-[var(--color-brand-green)] text-[11px] mt-1 font-bold">✓ متاح للتسجيل</p>}
-                  <Err f="national_id" />
-                </div>
-
-                <div>
-                  <label className={cls.label}>رقم الجوال المعتمد *</label>
-                  <input name="phone" value={form.phone} onChange={handleChange} className={cls.input + " font-mono"} placeholder="05XXXXXXXX" required />
-                  <Err f="phone" />
-                </div>
-
-                <div>
-                  <label className={cls.label}>تاريخ الميلاد *</label>
-                  <input name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} className={cls.input + " font-mono"} required />
-                  <Err f="date_of_birth" />
-                </div>
-
-                <div>
-                  <label className={cls.label}>مكان الميلاد</label>
-                  <input name="place_of_birth" value={form.place_of_birth} onChange={handleChange} className={cls.input} placeholder="مثال: مكة المكرمة" />
-                </div>
-
-                <div>
-                  <label className={cls.label}>الجنسية *</label>
-                  <input name="nationality" value={form.nationality} onChange={handleChange} className={cls.input} placeholder="سعودي، أو جنسية أخرى" maxLength={100} required />
-                  <span className={cls.helper}>{classification === "citizen" ? "مواطن" : classification === "resident" ? "مقيم" : "الجنسية الفارغة ليست سعودياً."}</span>
-                  <Err f="nationality" />
-                </div>
-
-                <div>
-                  <label className={cls.label}>المدينة *</label>
-                  <input name="city" value={form.city} onChange={handleChange} className={cls.input} required />
-                  <Err f="city" />
-                </div>
-
-                <div>
-                  <label className={cls.label}>اسم الحي السكني *</label>
-                  <input name="district" value={form.district} onChange={handleChange} className={cls.input} placeholder="مثال: النوارية / الشرائع / الجموم" required />
-                  <Err f="district" />
-                </div>
-
-                <div>
-                  <label className={cls.label}>الشارع أو أقرب معلم *</label>
-                  <input name="street" value={form.street} onChange={handleChange} className={cls.input} placeholder="مثال: بجوار جامع الفرقان" required />
-                  <Err f="street" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ══════════ STEP 2: الأسرة والسكن ══════════ */}
-          {step === 2 && (
-            <>
-              <div className={cls.section}>
-                <h2 className={cls.h2}>👨‍👩‍👧 البيانات الأسرية والاجتماعية وحالة السكن (إلزامية)</h2>
-                <div className="grid md:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <label className={cls.label}>الحالة الاجتماعية للأسرة *</label>
-                    <select name="family_status" value={form.family_status} onChange={handleChange} className={cls.select} required>
-                      <option value="">-- اختر الحالة الأسرية --</option>
-                      {FAMILY_STATUS_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                    <Err f="family_status" />
-                  </div>
-
-                  <div>
-                    <label className={cls.label}>إجمالي عدد أفراد الأسرة بالمنزل *</label>
-                    <input name="family_members_count" type="number" min="1" value={form.family_members_count} onChange={handleChange} className={cls.input + " font-mono"} required />
-                    <Err f="family_members_count" />
-                  </div>
-
-                  <div>
-                    <label className={cls.label}>فئة ذوي الاحتياجات الخاصة</label>
-                    <div className="mt-2 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="has_special_needs"
-                        name="has_special_needs"
-                        checked={form.has_special_needs}
-                        onChange={handleChange}
-                        className="w-4 h-4 rounded text-[var(--color-brand-green)] accent-[var(--color-brand-green)]"
-                      />
-                      <label htmlFor="has_special_needs" className="text-xs font-bold text-purple-900 cursor-pointer">
+            {step === 2 && (
+              <>
+                <SectionCard title="الأسرة والتابعون">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <FormField label="الحالة الاجتماعية للأسرة" name="family_status" required error={errors.family_status?.[0]}>
+                      <select name="family_status" value={form.family_status} onChange={handleChange} className="ikram-control w-full" required>
+                        <option value="">اختر الحالة الأسرية</option>
+                        {FAMILY_STATUS_VALUES.map((value) => (
+                          <option key={value} value={value}>{displayLabel("family", value)}</option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <FormField label="إجمالي عدد أفراد الأسرة بالمنزل" name="family_members_count" required error={errors.family_members_count?.[0]}>
+                      <input name="family_members_count" type="number" min="1" value={form.family_members_count} onChange={handleChange} className="ikram-control w-full font-mono" required />
+                    </FormField>
+                    <FormField label="فئة ذوي الاحتياجات الخاصة" name="has_special_needs">
+                      <label className="flex min-h-11 items-center gap-2 text-sm font-bold text-[var(--color-text-primary)]">
+                        <input type="checkbox" id="has_special_needs" name="has_special_needs" checked={form.has_special_needs} onChange={handleChange} />
                         تفعيل أولوية ذوي الاحتياجات الخاصة
                       </label>
-                    </div>
+                    </FormField>
+                    <FormField label="نوع السكن الحالي" name="housing_type" required error={errors.housing_type?.[0]}>
+                      <select name="housing_type" value={form.housing_type} onChange={handleChange} className="ikram-control w-full" required>
+                        {HOUSING_TYPE_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                      </select>
+                    </FormField>
+                    {form.housing_type === "rent" && (
+                      <>
+                        <FormField label="مبلغ الإيجار الشهري (ريال)" name="monthly_rent_amount" required error={errors.monthly_rent_amount?.[0]} helperText="يتم خصم هذا المبلغ بالكامل من إجمالي الدخل الشهري.">
+                          <input name="monthly_rent_amount" type="number" min="0" value={form.monthly_rent_amount} onChange={handleChange} className="ikram-control w-full font-mono" placeholder="مثال: 1000" />
+                        </FormField>
+                        <FormField label="أو مبلغ الإيجار السنوي (ريال)" name="annual_rent_amount" helperText="إذا لم يتوفر إيجار شهري، يُقسم السنوي على 12.">
+                          <input name="annual_rent_amount" type="number" min="0" value={form.annual_rent_amount} onChange={handleChange} className="ikram-control w-full font-mono" placeholder="مثال: 12000" />
+                        </FormField>
+                      </>
+                    )}
                   </div>
-
-                  <div>
-                    <label className={cls.label}>نوع السكن الحالي *</label>
-                    <select name="housing_type" value={form.housing_type} onChange={handleChange} className={cls.select} required>
-                      {HOUSING_TYPE_OPTIONS.map((h) => (
-                        <option key={h.value} value={h.value}>{h.label}</option>
-                      ))}
-                    </select>
-                  </div>
-
                   {form.housing_type === "rent" && (
+                    <p className="mt-4 text-xs font-bold text-[var(--color-text-secondary)]">
+                      الإيجار السنوي: {(parseFloat(form.annual_rent_amount) || (parseFloat(form.monthly_rent_amount) ? Math.round(parseFloat(form.monthly_rent_amount) * 12) : 0)).toLocaleString()} ريال — الإيجار الشهري المحتسب: {(parseFloat(form.monthly_rent_amount) || (parseFloat(form.annual_rent_amount) ? Math.round((parseFloat(form.annual_rent_amount) / 12) * 100) / 100 : 0)).toLocaleString()} ريال
+                    </p>
+                  )}
+                </SectionCard>
+                <SectionCard title="قائمة المعالين والتابعين" actions={<SecondaryButton type="button" onClick={addDependent}>إضافة تابع</SecondaryButton>}>
+                  {dependents.length === 0 ? (
+                    <EmptyState title="لا يوجد تابعون" description="أضف الأبناء أو التابعين في المنزل عند الحاجة." />
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-right text-xs">
+                        <thead className="bg-[var(--color-bg-soft)]">
+                          <tr>
+                            <th className="p-2.5">#</th>
+                            <th className="p-2.5">الاسم</th>
+                            <th className="p-2.5">صلة القرابة</th>
+                            <th className="p-2.5">تاريخ الميلاد</th>
+                            <th className="p-2.5"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dependents.map((dep, index) => (
+                            <tr key={index}>
+                              <td className="p-2.5 font-mono text-[var(--color-text-muted)]">{index + 1}</td>
+                              <td className="p-2.5"><input aria-label={`اسم التابع ${index + 1}`} value={dep.name} onChange={(e) => updateDependent(index, "name", e.target.value)} className="ikram-control w-full" placeholder="اسم التابع" /></td>
+                              <td className="p-2.5">
+                                <select aria-label={`صلة قرابة التابع ${index + 1}`} value={dep.relationship} onChange={(e) => updateDependent(index, "relationship", e.target.value)} className="ikram-control w-full">
+                                  <option value="">اختر</option>
+                                  {RELATIONSHIP_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+                                </select>
+                              </td>
+                              <td className="p-2.5"><input aria-label={`ميلاد التابع ${index + 1}`} type="date" value={dep.date_of_birth} onChange={(e) => updateDependent(index, "date_of_birth", e.target.value)} className="ikram-control w-full font-mono" /></td>
+                              <td className="p-2.5"><SecondaryButton type="button" onClick={() => removeDependent(index)}>إزالة</SecondaryButton></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </SectionCard>
+              </>
+            )}
+
+            {step === 3 && (
+              <SectionCard title="البيانات المالية">
+                <p className="mb-3 text-xs font-bold text-[var(--color-text-primary)]">حدد مصادر الدخل المتوفرة للأسرة</p>
+                <div className="mb-5 flex flex-wrap gap-2">
+                  {incomeOptions.map((option) => (
+                    <SecondaryButton key={option.value} type="button" onClick={() => toggleIncome(option.value)} aria-pressed={form.income_sources.includes(option.value)}>
+                      {option.label}
+                    </SecondaryButton>
+                  ))}
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {form.income_sources.includes("salary") && (
+                    <FormField label="الراتب الشهري الفعلي (ريال)" name="monthly_salary">
+                      <input name="monthly_salary" type="number" min="0" value={form.monthly_salary} onChange={handleChange} className="ikram-control w-full font-mono" placeholder="0" />
+                    </FormField>
+                  )}
+                  {form.income_sources.includes("social_security") && (
+                    <FormField label="مبلغ الضمان الاجتماعي (ريال)" name="social_security_amount">
+                      <input name="social_security_amount" type="number" min="0" value={form.social_security_amount} onChange={handleChange} className="ikram-control w-full font-mono" placeholder="0" />
+                    </FormField>
+                  )}
+                  {form.income_sources.includes("retirement") && (
+                    <FormField label="المعاش التقاعدي (ريال)" name="retirement_pension">
+                      <input name="retirement_pension" type="number" min="0" value={form.retirement_pension} onChange={handleChange} className="ikram-control w-full font-mono" placeholder="0" />
+                    </FormField>
+                  )}
+                  {form.income_sources.includes("citizen_account") && (
+                    <FormField label="مبلغ حساب المواطن (ريال)" name="citizen_account_amount">
+                      <input name="citizen_account_amount" type="number" min="0" value={form.citizen_account_amount} onChange={handleChange} className="ikram-control w-full font-mono" placeholder="0" />
+                    </FormField>
+                  )}
+                  {form.income_sources.includes("family_support") && (
+                    <FormField label="دعم الأسرة والأقارب (ريال)" name="family_support">
+                      <input name="family_support" type="number" min="0" value={form.family_support} onChange={handleChange} className="ikram-control w-full font-mono" placeholder="0" />
+                    </FormField>
+                  )}
+                </div>
+                {!calcResult && <p className="mt-4 text-xs font-bold text-[var(--color-text-primary)]">أدخل الجنسية أولاً. القيمة الفارغة ليست سعودياً.</p>}
+                {calcResult && (
+                  <div className="mt-5 space-y-4">
+                    <p className="text-sm font-bold text-[var(--color-text-primary)]">معادلة الاحتساب والتصنيف الآلي</p>
+                    <p className="text-xs text-[var(--color-text-secondary)]">{calcResult.formulaText}</p>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <KpiCard title="إجمالي الدخل الشهري" value={`${calcResult.totalGrossIncome.toLocaleString()} ريال`} />
+                      <KpiCard title="الإيجار الشهري" value={`${calcResult.monthlyRent.toLocaleString()} ريال`} />
+                      <KpiCard title="صافي الدخل بعد الإيجار" value={`${calcResult.eligibleIncome.toLocaleString()} ريال`} />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs text-[var(--color-text-muted)]">التصنيف المحسوب آلياً</p>
+                        <StatusBadge tone="success" label={calcResult.categoryLabel} />
+                        <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">{calcResult.reason}</p>
+                        {classification === "resident" && calcResult.needLevelLabel && <StatusBadge tone="warning" label={`مستوى الاحتياج: ${calcResult.needLevelLabel}`} />}
+                      </div>
+                      {classification === "citizen" && (
+                        <SecondaryButton type="button" onClick={() => setForm((current) => ({ ...current, manual_override: !current.manual_override }))}>
+                          {form.manual_override ? "إلغاء التعديل اليدوي" : "تعديل يدوي للتصنيف"}
+                        </SecondaryButton>
+                      )}
+                    </div>
+                    {classification === "citizen" && form.manual_override && (
+                      <div className="grid gap-4">
+                        <FormField label="اختر التصنيف اليدوي البديل" name="priority">
+                          <select name="priority" value={form.priority || calcResult.category} onChange={handleChange} className="ikram-control w-full">
+                            <option value="first_class">الدرجة الأولى (الأشد حاجة)</option>
+                            <option value="second_class">الدرجة الثانية (الدخل المتوسط)</option>
+                          </select>
+                        </FormField>
+                        <FormField label="سبب التعديل اليدوي" name="category_override_reason">
+                          <input type="text" name="category_override_reason" value={form.category_override_reason} onChange={handleChange} required={form.manual_override} placeholder="اكتب مبرر تغيير التصنيف الآلي..." className="ikram-control w-full" />
+                        </FormField>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </SectionCard>
+            )}
+
+            {step === 4 && (
+              <SectionCard title="الوثائق" description={classification === "citizen" ? "المستندات الإلزامية للمواطن: صورة الهوية الوطنية، العنوان الوطني، وعقد الإيجار أو فاتورة الكهرباء عند السكن بالإيجار." : classification === "resident" ? "المستندات الإلزامية للمقيم: صورة الإقامة، العنوان الوطني، وعقد الإيجار عند السكن بالإيجار. مشهد الراتب اختياري." : "أدخل الجنسية أولاً. القيمة الفارغة لا تُعامل كسعودي."}>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {classification === "citizen" && (
                     <>
-                      <div>
-                        <label className={cls.label}>مبلغ الإيجار الشهري (ريال) *</label>
-                        <input
-                          name="monthly_rent_amount"
-                          type="number"
-                          min="0"
-                          value={form.monthly_rent_amount}
-                          onChange={handleChange}
-                          className={cls.input + " font-mono border-amber-300"}
-                          placeholder="مثال: 1000"
-                        />
-                        <span className={cls.helper}>يتم خصم هذا المبلغ بالكامل من إجمالي الدخل الشهري.</span>
-                        <Err f="monthly_rent_amount" />
-                      </div>
-
-                      <div>
-                        <label className={cls.label}>أو مبلغ الإيجار السنوي (ريال)</label>
-                        <input
-                          name="annual_rent_amount"
-                          type="number"
-                          min="0"
-                          value={form.annual_rent_amount}
-                          onChange={handleChange}
-                          className={cls.input + " font-mono"}
-                          placeholder="مثال: 12000"
-                        />
-                        <span className={cls.helper}>إذا لم يتوفر إيجار شهري، يُقسم السنوي على 12.</span>
-                      </div>
-
-                      <div className="col-span-full bg-[var(--color-bg-soft)] p-3 rounded-xl border border-[var(--color-border)] text-xs flex items-center justify-between font-bold text-amber-900">
-                        <span>احتساب خصم السكن:</span>
-                        <span className="font-mono">
-                          الإيجار السنوي: {(parseFloat(form.annual_rent_amount) || (parseFloat(form.monthly_rent_amount) ? Math.round(parseFloat(form.monthly_rent_amount) * 12) : 0)).toLocaleString()} ريال ← الإيجار الشهري المحتسب: {(parseFloat(form.monthly_rent_amount) || (parseFloat(form.annual_rent_amount) ? Math.round((parseFloat(form.annual_rent_amount) / 12) * 100) / 100 : 0)).toLocaleString()} ريال
-                        </span>
-                      </div>
+                      <FileUpload name="national_id_image" label="صورة الهوية الوطنية" required onChange={handleFile} error={errors.national_id_image?.[0]} />
+                      <FileUpload name="national_address_image" label="صورة العنوان الوطني" required onChange={handleFile} error={errors.national_address_image?.[0]} />
+                      {form.housing_type === "rent" && <FileUpload name="rental_contract_image" label="عقد الإيجار أو فاتورة الكهرباء" required onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" error={errors.rental_contract_image?.[0]} />}
+                      {form.income_sources.includes("salary") && <FileUpload name="salary_certificate" label="مشهد إثبات الراتب" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />}
+                      {form.income_sources.includes("social_security") && <FileUpload name="social_security_image" label="مشهد الضمان الاجتماعي" onChange={handleFile} />}
+                      {form.income_sources.includes("citizen_account") && <FileUpload name="citizen_account_image" label="إثبات حساب المواطن" onChange={handleFile} />}
+                      {form.income_sources.includes("retirement") && <FileUpload name="pension_certificate_image" label="شهادة المعاش التقاعدي" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />}
+                    </>
+                  )}
+                  {classification === "resident" && (
+                    <>
+                      <FileUpload name="residence_id_image" label="صورة هوية مقيم" required onChange={handleFile} error={errors.residence_id_image?.[0]} />
+                      <FileUpload name="national_address_image" label="صورة العنوان الوطني" required onChange={handleFile} error={errors.national_address_image?.[0]} />
+                      {form.housing_type === "rent" && <FileUpload name="rental_contract_image" label="عقد الإيجار أو فاتورة الكهرباء" required onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" error={errors.rental_contract_image?.[0]} />}
+                      {form.income_sources.includes("salary") && <FileUpload name="salary_certificate" label="مشهد الراتب" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />}
                     </>
                   )}
                 </div>
-              </div>
-
-              {/* Dependents Table */}
-              <div className={cls.section}>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className={cls.h2 + " mb-0"}>👶 قائمة المعالين والتابعين للأسرة</h2>
-                  <button type="button" onClick={addDependent} className="bg-[var(--color-bg-soft)] text-[var(--color-brand-gold)] border border-[var(--color-border)] text-xs px-3 py-1.5 rounded-xl font-bold hover:bg-[var(--color-bg-soft)]">
-                    + إضافة تابع
-                  </button>
-                </div>
-                {dependents.length === 0 ? (
-                  <p className="text-[var(--color-text-muted)] text-xs text-center py-4">اضغط "+ إضافة تابع" لإضافة الأبناء أو التابعين بالمنزل.</p>
-                ) : (
-                  <div className="overflow-x-auto border border-[var(--color-border)] rounded-xl">
-                    <table className="w-full text-xs text-right">
-                      <thead className="bg-[var(--color-bg-soft)]">
-                        <tr>
-                          <th className="p-2.5">#</th>
-                          <th className="p-2.5">الاسم</th>
-                          <th className="p-2.5">صلة القرابة</th>
-                          <th className="p-2.5">تاريخ الميلاد</th>
-                          <th className="p-2.5"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[var(--color-border)]">
-                        {dependents.map((dep, i) => (
-                          <tr key={i}>
-                            <td className="p-2.5 text-[var(--color-text-muted)] font-mono">{i + 1}</td>
-                            <td className="p-2.5">
-                              <input value={dep.name} onChange={(e) => updateDependent(i, "name", e.target.value)} className={cls.input + " py-1"} placeholder="اسم التابع" />
-                            </td>
-                            <td className="p-2.5">
-                              <select value={dep.relationship} onChange={(e) => updateDependent(i, "relationship", e.target.value)} className={cls.select + " py-1"}>
-                                <option value="">-- اختر --</option>
-                                {RELATIONSHIP_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-                              </select>
-                            </td>
-                            <td className="p-2.5">
-                              <input type="date" value={dep.date_of_birth} onChange={(e) => updateDependent(i, "date_of_birth", e.target.value)} className={cls.input + " py-1 font-mono"} />
-                            </td>
-                            <td className="p-2.5">
-                              <button type="button" onClick={() => removeDependent(i)} className="text-[#C24B3F] font-bold hover:underline">إزالة</button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* ══════════ STEP 3: البيانات المالية واحتساب الدخل ══════════ */}
-          {step === 3 && (
-            <div className={cls.section}>
-              <h2 className={cls.h2}>💰 البيانات المالية واقتطاع الإيجار والتصنيف الآلي</h2>
-
-              {/* Note: Banking Information Completely Excluded as per Prompt Mandate */}
-
-              <div className="mb-5">
-                <label className={cls.label}>حدد مصادر الدخل المتوفرة للأسرة:</label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {(classification === "citizen" ? CITIZEN_INCOME_OPTIONS : classification === "resident" ? RESIDENT_INCOME_OPTIONS : []).map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => toggleIncome(opt.value)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                        form.income_sources.includes(opt.value)
-                          ? "bg-[var(--color-brand-green)] text-white border-[var(--color-brand-green)] shadow-xs"
-                          : "bg-white text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-brand-gold)]"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4 mb-6">
-                {form.income_sources.includes("salary") && (
-                  <div>
-                    <label className={cls.label}>الراتب الشهري الفعلي (ريال)</label>
-                    <input name="monthly_salary" type="number" min="0" value={form.monthly_salary} onChange={handleChange} className={cls.input + " font-mono"} placeholder="0" />
-                  </div>
-                )}
-                {form.income_sources.includes("social_security") && (
-                  <div>
-                    <label className={cls.label}>مبلغ الضمان الاجتماعي (ريال)</label>
-                    <input name="social_security_amount" type="number" min="0" value={form.social_security_amount} onChange={handleChange} className={cls.input + " font-mono"} placeholder="0" />
-                  </div>
-                )}
-                {form.income_sources.includes("retirement") && (
-                  <div>
-                    <label className={cls.label}>المعاش التقاعدي (ريال)</label>
-                    <input name="retirement_pension" type="number" min="0" value={form.retirement_pension} onChange={handleChange} className={cls.input + " font-mono"} placeholder="0" />
-                  </div>
-                )}
-                {form.income_sources.includes("citizen_account") && (
-                  <div>
-                    <label className={cls.label}>مبلغ حساب المواطن (ريال)</label>
-                    <input name="citizen_account_amount" type="number" min="0" value={form.citizen_account_amount} onChange={handleChange} className={cls.input + " font-mono"} placeholder="0" />
-                  </div>
-                )}
-                {form.income_sources.includes("family_support") && (
-                  <div>
-                    <label className={cls.label}>دعم الأسرة والأقارب (ريال)</label>
-                    <input name="family_support" type="number" min="0" value={form.family_support} onChange={handleChange} className={cls.input + " font-mono"} placeholder="0" />
-                  </div>
-                )}
-              </div>
-
-              {!calcResult && <p className="text-xs font-bold text-[var(--color-text-primary)]">أدخل الجنسية أولاً. القيمة الفارغة ليست سعودياً.</p>}
-              {calcResult && <div className="p-4 bg-[var(--color-bg-soft)] rounded-2xl border-2 border-[var(--color-brand-gold)] space-y-3">
-                <div className="flex items-center gap-2 font-extrabold text-sm text-[var(--color-text-primary)]">
-                  <Calculator className="w-5 h-5 text-[var(--color-brand-gold)]" />
-                  <span>معادلة الاحتساب والتصنيف الآلي:</span>
-                </div>
-
-                <div className="bg-white p-3 rounded-xl border border-[var(--color-border)] font-mono text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                  <p className="font-bold text-[var(--color-brand-green)] mb-1">📐 المعادلة الحسابية:</p>
-                  <p>{calcResult.formulaText}</p>
-                </div>
-
-                <div className="grid sm:grid-cols-3 gap-3 pt-1">
-                  <div className="bg-white p-3 rounded-xl border border-[var(--color-border)]">
-                    <span className="text-[11px] text-[var(--color-text-muted)] block font-bold">إجمالي الدخل الشهري</span>
-                    <strong className="text-sm font-mono text-[var(--color-text-primary)]">{calcResult.totalGrossIncome.toLocaleString()} ريال</strong>
-                  </div>
-
-                  <div className="bg-white p-3 rounded-xl border border-[var(--color-border)]">
-                    <span className="text-[11px] text-[var(--color-text-muted)] block font-bold">الإيجار الشهري</span>
-                    <strong className="text-sm font-mono text-[#C24B3F]">{calcResult.monthlyRent.toLocaleString()} ريال</strong>
-                  </div>
-
-                  <div className="bg-white p-3 rounded-xl border border-[var(--color-brand-green)]">
-                    <span className="text-[11px] text-[var(--color-brand-green)] font-bold block">صافي الدخل بعد الإيجار</span>
-                    <strong className="text-sm font-mono text-[var(--color-brand-green)]">{calcResult.eligibleIncome.toLocaleString()} ريال</strong>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-white rounded-xl border border-[var(--color-border)] flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="text-xs text-[var(--color-text-muted)] block">التصنيف المحسوب آلياً:</span>
-                    <span className="text-sm font-extrabold text-[var(--color-brand-green)]">{calcResult.categoryLabel}</span>
-                    <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{calcResult.reason}</p>
-                    {classification === "resident" && calcResult?.needLevelLabel && (
-                      <div className="mt-2 inline-flex items-center gap-1.5 bg-[var(--color-bg-soft)] border border-amber-300 text-amber-900 text-xs px-2.5 py-1 rounded-lg font-bold">
-                        <span>مستوى الاحتياج:</span>
-                        <span>{calcResult.needLevelLabel}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Manual Override Control - Citizens Only */}
-                  {classification === "citizen" && (
-                    <div className="text-left">
-                      <button
-                        type="button"
-                        onClick={() => setForm((f) => ({ ...f, manual_override: !f.manual_override }))}
-                        className="text-xs text-[var(--color-brand-green)] font-bold hover:underline"
-                      >
-                        {form.manual_override ? "إلغاء التعديل اليدوي" : "⚙️ تعديل يدوي للتصنيف (صلاحية خاصة)"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {classification === "citizen" && form.manual_override && (
-                  <div className="p-3 bg-[var(--color-bg-soft)] rounded-xl border border-[var(--color-border)] space-y-2">
-                    <label className={cls.label}>اختر التصنيف اليدوي البديل:</label>
-                    <select
-                      name="priority"
-                      value={form.priority || calcResult.category}
-                      onChange={handleChange}
-                      className={cls.select}
-                    >
-                      <option value="first_class">الدرجة الأولى (الأشد حاجة)</option>
-                      <option value="second_class">الدرجة الثانية (الدخل المتوسط)</option>
-                    </select>
-
-                    <label className={cls.label}>سبب التعديل اليدوي (مطلوب لأغراض الحوكمة والتدقيق):</label>
-                    <input
-                      type="text"
-                      name="category_override_reason"
-                      value={form.category_override_reason}
-                      onChange={handleChange}
-                      required={form.manual_override}
-                      placeholder="اكتب مبرر تغيير التصنيف الآلي..."
-                      className={cls.input}
-                    />
-                  </div>
-                )}
-              </div>}
-            </div>
-          )}
-
-          {/* ══════════ STEP 4: الوثائق المرفقة ══════════ */}
-          {step === 4 && (
-            <div className={cls.section}>
-              <h2 className={cls.h2}>📂 رفع الوثائق والمستندات الرسمية المرفقة</h2>
-              <p className="text-xs text-[var(--color-text-muted)] mb-4 font-semibold">
-                {classification === "citizen"
-                  ? "المستندات الإلزامية للمواطن: صورة الهوية الوطنية، العنوان الوطني، وعقد الإيجار/فاتورة الكهرباء."
-                  : classification === "resident"
-                    ? "المستندات الإلزامية للمقيم: صورة الإقامة، العنوان الوطني، وعقد الإيجار (مشهد الراتب اختياري للمقيمين)."
-                    : "أدخل الجنسية أولاً. القيمة الفارغة لا تُعامل كسعودي."}
-              </p>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                {classification === "citizen" ? (
-                  <>
-                    <FileUpload name="national_id_image" label="1. صورة الهوية الوطنية *" required onChange={handleFile} />
-                    <FileUpload name="national_address_image" label="2. صورة العنوان الوطني *" required onChange={handleFile} />
-                    {form.housing_type === "rent" && (
-                      <FileUpload name="rental_contract_image" label="3. عقد الإيجار أو فاتورة الكهرباء *" required onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
-                    )}
-                    {form.income_sources.includes("salary") && (
-                      <FileUpload name="salary_certificate" label="4. مشهد إثبات الراتب" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
-                    )}
-                    {form.income_sources.includes("social_security") && (
-                      <FileUpload name="social_security_image" label="5. مشهد الضمان الاجتماعي" onChange={handleFile} />
-                    )}
-                    {form.income_sources.includes("citizen_account") && (
-                      <FileUpload name="citizen_account_image" label="6. إثبات حساب المواطن" onChange={handleFile} />
-                    )}
-                    {form.income_sources.includes("retirement") && (
-                      <FileUpload name="pension_certificate_image" label="7. شهادة المعاش التقاعدي" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
-                    )}
-                  </>
-                ) : classification === "resident" ? (
-                  <>
-                    <FileUpload name="residence_id_image" label="1. صورة هوية مقيم (الإقامة) *" required onChange={handleFile} />
-                    <FileUpload name="national_address_image" label="2. صورة العنوان الوطني *" required onChange={handleFile} />
-                    {form.housing_type === "rent" && (
-                      <FileUpload name="rental_contract_image" label="3. عقد الإيجار أو فاتورة الكهرباء *" required onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
-                    )}
-                    {form.income_sources.includes("salary") && (
-                      <FileUpload name="salary_certificate" label="4. مشهد الراتب (اختياري للمقيم)" onChange={handleFile} accept=".pdf,.jpg,.jpeg,.png" />
-                    )}
-                  </>
-                ) : null}
-              </div>
-            </div>
-          )}
-
-          {/* ══════════ STEP 5: مراجعة وتأكيد الحفظ ══════════ */}
-          {step === 5 && (
-            <div className={cls.section}>
-              <h2 className={cls.h2}>🔎 مراجعة البيانات وتأكيد التوثيق والتصنيف النهائي</h2>
-
-              {calcResult && <div className="bg-[var(--color-bg-soft)] p-4 rounded-2xl border-2 border-[var(--color-brand-gold)] mb-5 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <span className="text-xs text-[var(--color-text-muted)] font-bold block mb-1">التصنيف النهائي للمستفيد:</span>
-                  <span className="px-4 py-1 rounded-full text-xs font-extrabold bg-[var(--color-brand-green)] text-white">
-                    {form.manual_override ? `تعديل يدوي: ${form.priority === 'first_class' ? 'درجة أولى' : 'درجة ثانية'}` : calcResult.categoryLabel}
-                  </span>
-                  <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{calcResult.reason}</p>
-                </div>
-                <div className="text-left font-mono">
-                  <span className="text-xs text-[var(--color-text-muted)] font-bold block mb-0.5">الدخل الشهري المحتسب:</span>
-                  <span className="text-lg font-extrabold text-[var(--color-brand-green)]">
-                    {calcResult.eligibleIncome.toLocaleString()} ريال
-                  </span>
-                  <span className="text-[10px] text-[var(--color-text-muted)] block">(بعد اقتطاع {calcResult.monthlyRent} ريال إيجار)</span>
-                </div>
-              </div>}
-
-              {/* Summary Lists */}
-              <div className="space-y-4 text-xs">
-                <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-xl border border-[var(--color-border)]">
-                  <h3 className="font-bold text-[var(--color-text-primary)] mb-2 flex items-center gap-1.5">
-                    <UserCheck className="w-4 h-4 text-[var(--color-brand-gold)]" />
-                    <span>البيانات الأساسية</span>
-                  </h3>
-                  <div className="grid md:grid-cols-3 gap-2">
-                    <div><strong>الاسم:</strong> {form.full_name}</div>
-                    <div><strong>الهوية:</strong> <span className="font-mono">{form.national_id}</span></div>
-                    <div><strong>الجوال:</strong> <span className="font-mono">{form.phone}</span></div>
-                    <div><strong>المدينة:</strong> {form.city}</div>
-                    <div><strong>الحي:</strong> {form.district}</div>
-                    <div><strong>نوع السكن:</strong> {form.housing_type === 'rent' ? 'إيجار' : form.housing_type === 'charitable_housing' ? 'سكن خيري' : 'ملك'}</div>
-                  </div>
-                </div>
-
-                <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-xl border border-[var(--color-border)]">
-                  <h3 className="font-bold text-[var(--color-text-primary)] mb-2 flex items-center gap-1.5">
-                    <Users className="w-4 h-4 text-[var(--color-brand-green)]" />
-                    <span>الأسرة والمعالون ({dependents.length} أفراد)</span>
-                  </h3>
-                  <p><strong>الحالة الاجتماعية:</strong> {form.family_status || '—'} | <strong>أفراد الأسرة:</strong> {form.family_members_count}</p>
-                </div>
-
-                <div className="bg-[var(--color-bg-soft)] p-3.5 rounded-xl border border-[var(--color-border)]">
-                  <h3 className="font-bold text-[var(--color-text-primary)] mb-2 flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-[var(--color-brand-green)]" />
-                    <span>المستندات المرفقة ({Object.keys(files).length})</span>
-                  </h3>
-                  <ul className="list-disc list-inside space-y-0.5 text-green-700 font-bold">
-                    {Object.entries(files).map(([k, f]) => (
-                      <li key={k}>{f.name}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === STEPS.length && <label className="flex items-center gap-3 p-4"><input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} />راجعت بيانات المستفيد والأسرة والمستندات وأؤكد حفظها</label>}
-          {/* Navigation buttons */}
-          <div className="flex justify-between items-center mt-6 pt-4 border-t border-[var(--color-border)]">
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={() => setStep((s) => Math.max(1, s - 1))}
-              disabled={step === 1}
-            >
-              ← السابق
-            </Button>
-
-            {step < STEPS.length ? (
-              <Button
-                type="button"
-                variant="gold"
-                size="md"
-                onClick={handleNextStep}
-              >
-                التالي →
-              </Button>
-            ) : (
-              <Button
-                type="submit"
-                variant="secondary"
-                size="md"
-                disabled={idStatus === "taken" || !reviewed || saving}
-                loading={saving}
-                icon={Save}
-              >
-                حفظ وتصنيف المستفيد
-              </Button>
+              </SectionCard>
             )}
-          </div>
-        </form>
+
+            {step === 5 && (
+              <>
+                <SectionCard title="ملخص التسجيل">
+                  <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <Fact label="اسم المستفيد" value={form.full_name} />
+                    <Fact label="نوع المستفيد" value={classification === "citizen" ? "مواطن" : classification === "resident" ? "مقيم" : "غير محدد"} />
+                    <Fact label="المدينة" value={form.city} />
+                    <Fact label="الحي" value={form.district} />
+                    <Fact label="الحالة الأسرية" value={displayLabel("family", form.family_status)} />
+                  </dl>
+                </SectionCard>
+                <SectionCard title="البيانات الأساسية" actions={<SecondaryButton type="button" onClick={() => setStep(1)}>تعديل</SecondaryButton>}>
+                  <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <Fact label="الاسم" value={form.full_name} />
+                    <Fact label="رقم الهوية" value={form.national_id} />
+                    <Fact label="الجوال" value={form.phone} />
+                    <Fact label="المدينة" value={form.city} />
+                    <Fact label="الحي" value={form.district} />
+                    <Fact label="نوع السكن" value={displayLabel("housing", form.housing_type)} />
+                  </dl>
+                </SectionCard>
+                <SectionCard title="الأسرة والتابعون" actions={<SecondaryButton type="button" onClick={() => setStep(2)}>تعديل</SecondaryButton>}>
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    <Fact label="الحالة الأسرية" value={displayLabel("family", form.family_status)} />
+                    <Fact label="أفراد الأسرة" value={form.family_members_count} />
+                    <Fact label="عدد التابعين" value={dependents.length} />
+                  </dl>
+                  {dependents.length === 0 ? <EmptyState title="لا يوجد تابعون" description="لم تُضف بيانات تابعين في هذا التسجيل." /> : dependents.map((dep, index) => (
+                    <p key={index} className="mt-2 text-sm text-[var(--color-text-primary)]">{dep.name || "تابع بدون اسم"} — {dep.relationship || "غير محدد"}</p>
+                  ))}
+                </SectionCard>
+                <SectionCard title="البيانات المالية" actions={<SecondaryButton type="button" onClick={() => setStep(3)}>تعديل</SecondaryButton>}>
+                  {calcResult ? (
+                    <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <Fact label="مصادر الدخل" value={form.income_sources.map((source) => incomeOptions.find((option) => option.value === source)?.label).filter(Boolean).join("، ") || "غير محدد"} />
+                      <Fact label="إجمالي الدخل" value={`${calcResult.totalGrossIncome.toLocaleString()} ريال`} />
+                      <Fact label="صافي الدخل بعد الإيجار" value={`${calcResult.eligibleIncome.toLocaleString()} ريال`} />
+                      <Fact label="التصنيف" value={form.manual_override ? (form.priority === "first_class" ? "درجة أولى" : "درجة ثانية") : calcResult.categoryLabel} />
+                    </dl>
+                  ) : <EmptyState title="لا توجد بيانات مالية" description="أدخل الجنسية حتى يُحتسب التصنيف." />}
+                </SectionCard>
+                <SectionCard title="الوثائق" actions={<SecondaryButton type="button" onClick={() => setStep(4)}>تعديل</SecondaryButton>}>
+                  {Object.keys(files).length === 0 ? <EmptyState title="لا توجد وثائق مختارة" description="أرفق المستندات المطلوبة قبل التأكيد." /> : (
+                    <ul className="space-y-1 text-sm text-[var(--color-text-primary)]">
+                      {Object.entries(files).map(([key, file]) => <li key={key}>{DOCUMENT_LABELS[key] || "مرفق"}: {file.name}</li>)}
+                    </ul>
+                  )}
+                </SectionCard>
+              </>
+            )}
+
+            {step === 6 && (
+              <SectionCard title="تأكيد التسجيل" description="هذا الإجراء ينشئ سجل المستفيد ويحفظه بشكل نهائي بعد المراجعة. لن يُعتمد المستفيد قبل هذا التأكيد.">
+                <label className="flex items-start gap-3 text-sm font-bold text-[var(--color-text-primary)]">
+                  <input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} />
+                  راجعت بيانات المستفيد والأسرة والمستندات وأؤكد حفظها
+                </label>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <PrimaryButton type="submit" disabled={idStatus === "taken" || !reviewed || saving} loading={saving} icon={Save}>تأكيد وحفظ المستفيد</PrimaryButton>
+                  <SecondaryButton type="button" onClick={() => setStep(1)}>العودة للتعديل</SecondaryButton>
+                </div>
+              </SectionCard>
+            )}
+
+            {step < STEPS.length && (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <SecondaryButton type="button" onClick={() => setStep((current) => Math.max(1, current - 1))} disabled={step === 1}>السابق</SecondaryButton>
+                <PrimaryButton type="button" onClick={handleNextStep}>التالي</PrimaryButton>
+              </div>
+            )}
+          </form>
+        </PageShell>
       </div>
     </MainLayout>
   );
 }
 
-function FileUpload({ name, label, onChange, accept = "image/*", required = false }) {
-  const [fileName, setFileName] = useState(null);
+function Fact({ label, value }) {
+  return (
+    <div>
+      <dt className="text-xs text-[var(--color-text-muted)]">{label}</dt>
+      <dd className="text-sm font-bold text-[var(--color-text-primary)]">{value || "غير محدد"}</dd>
+    </div>
+  );
+}
 
+function FileUpload({ name, label, onChange, accept = "image/*", required = false, error }) {
+  const [fileName, setFileName] = useState(null);
   const handleChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -987,20 +742,12 @@ function FileUpload({ name, label, onChange, accept = "image/*", required = fals
       onChange(e);
     }
   };
-
   return (
-    <div className="border border-dashed border-[var(--color-border)] rounded-xl p-3.5 hover:border-[var(--color-brand-gold)] transition-colors bg-white">
-      <label className="block text-xs font-bold text-[var(--color-text-primary)] mb-2">
-        {label} {required && <span className="text-[#C24B3F]">*</span>}
-      </label>
-      <input
-        type="file"
-        name={name}
-        accept={accept}
-        onChange={handleChange}
-        className="block w-full text-xs text-[var(--color-text-muted)] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-[var(--color-bg-soft)] file:text-[var(--color-brand-gold)] file:font-bold cursor-pointer"
-      />
-      {fileName && <p className="text-[11px] text-[var(--color-brand-green)] font-bold mt-2">✓ تم اختيار: {fileName}</p>}
+    <div>
+      <FormField label={label} name={name} required={required} error={error}>
+        <input id={name} type="file" name={name} accept={accept} onChange={handleChange} className="ikram-control w-full" />
+      </FormField>
+      {fileName && <p className="text-[11px] font-bold text-[var(--color-text-secondary)]">تم اختيار: {fileName}</p>}
     </div>
   );
 }

@@ -50,6 +50,7 @@ class PermissionSeparationTest extends TestCase
         $beneficiaryId = $this->postJson('/api/beneficiaries', $this->beneficiaryPayload('1000000103'))
             ->assertCreated()
             ->json('data.id');
+        \Tests\Support\EligibleSupport::approve(Beneficiary::findOrFail($beneficiaryId), $admin);
         $stock = InventoryItem::create([
             'name' => 'TEST_AUTH stock',
             'unit' => 'kg',

@@ -18,6 +18,7 @@
         tr { page-break-inside: avoid; }
         h2, h3, .pdf-section { page-break-after: avoid; }
         .wrap { overflow-wrap: anywhere; word-wrap: break-word; }
+        .content { padding: 0; }
         .pdf-sign { page-break-inside: avoid; width: 100%; margin-top: 4mm; }
         .pdf-sign td { border: 0; text-align: center; vertical-align: top; }
         .pdf-value, .value { font-size: 16pt; color: #1F4D3A; font-weight: bold; }

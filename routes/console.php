@@ -18,6 +18,7 @@ Artisan::command('notifications:inventory', function () {
     $this->info('Inventory alerts evaluated.');
 })->purpose('Persist deduplicated low-stock and expiry alerts');
 Schedule::command('notifications:inventory')->hourly()->withoutOverlapping()->onOneServer();
+Schedule::command('notifications:prune')->daily()->withoutOverlapping()->onOneServer();
 
 // Durable outbox recovers dispatch failures; jobs contain only message IDs.
 Artisan::command('communications:drain {--since= : Approved UTC cutoff for production recovery}', function () {

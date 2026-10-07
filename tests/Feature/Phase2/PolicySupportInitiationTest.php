@@ -22,8 +22,10 @@ class PolicySupportInitiationTest extends TestCase
 
     public function test_eligible_non_archived_beneficiary_creates_a_draft_without_receipt_or_stock(): void
     {
-        Sanctum::actingAs($this->operator());
+        $operator = $this->operator();
+        Sanctum::actingAs($operator);
         $beneficiary = $this->beneficiary('EKRAM-E2E-TEST eligible beneficiary', '1900000101');
+        $this->qualify($beneficiary, $operator);
         $stock = $this->stock();
         $beforeMovements = InventoryMovement::count();
 
@@ -74,6 +76,55 @@ class PolicySupportInitiationTest extends TestCase
         $this->assertSame($distributions, SupportDistribution::count());
         $this->assertSame($receipts, SupportReceipt::count());
         $this->assertDatabaseMissing('support_distributions', ['beneficiary_id' => $beneficiary->id]);
+    }
+
+    public function test_support_without_policy_evaluation_is_rejected_without_side_effects(): void
+    {
+        Sanctum::actingAs($this->operator());
+        $beneficiary = $this->beneficiary('EKRAM-E2E-TEST unevaluated beneficiary', '1900000104');
+        $stock = $this->stock();
+
+        $response = $this->postJson('/api/support/distributions', $this->draftPayload($beneficiary, $stock));
+
+        $response->assertUnprocessable();
+        $response->assertJsonPath('errors.beneficiary_id.0', 'لا يمكن تقديم الدعم قبل إكمال تقييم سياسة المستفيد.');
+        $this->assertSame(0, SupportDistribution::count());
+        $this->assertSame(0, InventoryMovement::count());
+        $stock->refresh();
+        $this->assertEquals(0, (float) $stock->reserved_quantity);
+    }
+
+    public function test_support_with_ineligible_evaluation_is_rejected_without_side_effects(): void
+    {
+        $operator = $this->operator();
+        Sanctum::actingAs($operator);
+        $beneficiary = $this->beneficiary('EKRAM-E2E-TEST ineligible beneficiary', '1900000105');
+        $this->qualify($beneficiary, $operator, 'ineligible');
+        $stock = $this->stock();
+
+        $response = $this->postJson('/api/support/distributions', $this->draftPayload($beneficiary, $stock));
+
+        $response->assertUnprocessable();
+        $response->assertJsonPath('errors.beneficiary_id.0', 'المستفيد غير مؤهل للدعم وفق آخر تقييم سياسة صالح.');
+        $this->assertSame(0, SupportDistribution::count());
+        $this->assertSame(0, InventoryMovement::count());
+    }
+
+    public function test_support_with_incomplete_review_is_rejected_without_side_effects(): void
+    {
+        $operator = $this->operator();
+        Sanctum::actingAs($operator);
+        $beneficiary = $this->beneficiary('EKRAM-E2E-TEST pending review beneficiary', '1900000106');
+        $this->qualify($beneficiary, $operator, 'eligible', false);
+        $stock = $this->stock();
+
+        $response = $this->postJson('/api/support/distributions', $this->draftPayload($beneficiary, $stock));
+
+        $response->assertUnprocessable();
+        $response->assertJsonPath('errors.beneficiary_id.0', 'لا يمكن تقديم الدعم قبل استكمال مراجعة السياسة.');
+        $this->assertSame(0, SupportDistribution::count());
+        $this->assertSame(0, InventoryMovement::count());
+        $this->assertSame(0, SupportReceipt::count());
         $stock->refresh();
         $this->assertEquals(20, (float) $stock->current_quantity);
         $this->assertEquals(0, (float) $stock->reserved_quantity);
@@ -146,6 +197,43 @@ class PolicySupportInitiationTest extends TestCase
             'current_quantity' => 20,
             'reserved_quantity' => 0,
             'min_threshold' => 1,
+        ]);
+    }
+
+    private function qualify(Beneficiary $beneficiary, User $actor, string $eligibility = 'eligible', bool $approved = true): void
+    {
+        $version = \App\Models\BeneficiaryPolicyVersion::create([
+            'policy_name' => 'EKRAM-E2E-TEST policy '.Str::lower(Str::random(4)),
+            'policy_scope' => 'citizen_beneficiaries',
+            'version' => Str::upper(Str::random(6)),
+            'status' => 'published',
+            'effective_from' => now()->toDateString(),
+            'configuration' => [],
+            'published_by' => $actor->id,
+            'published_at' => now(),
+        ]);
+        $evaluation = BeneficiaryPolicyEvaluation::create([
+            'beneficiary_id' => $beneficiary->id,
+            'policy_version_id' => $version->id,
+            'evaluation_status' => 'completed',
+            'evaluated_at' => now(),
+            'evaluated_by' => $actor->id,
+            'eligibility_decision' => $eligibility,
+            'input_snapshot' => [],
+            'financial_snapshot' => ['net_income_per_capita' => 100],
+            'scoring_snapshot' => ['outcome' => 'financially_qualified', 'components' => [], 'total_score' => 0],
+        ]);
+        if (! $approved) {
+            return;
+        }
+        \App\Models\PolicyDecision::create([
+            'evaluation_id' => $evaluation->id,
+            'policy_version_id' => $version->id,
+            'decision' => 'approved',
+            'decided_by' => $actor->id,
+            'decided_at' => now(),
+            'stable_reason_code' => 'COMPLETE',
+            'human_readable_reason' => 'EKRAM-E2E-TEST approval',
         ]);
     }
 

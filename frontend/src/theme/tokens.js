@@ -61,7 +61,26 @@ export const tokens = {
   fonts: {
     family: '"IBM Plex Sans Arabic", Tahoma, "Segoe UI", sans-serif',
     mono: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    weight: { body: 400, label: 700, title: 800 },
   },
+  type: {
+    display: '1.75rem',
+    title: '1.375rem',
+    section: '1.05rem',
+    body: '1rem',
+    table: '0.875rem',
+    label: '0.75rem',
+  },
+  spacing: { 1: '0.25rem', 2: '0.5rem', 3: '0.75rem', 4: '1rem', 5: '1.25rem', 6: '1.5rem', page: '1.25rem' },
+  radius: { sm: '0.375rem', control: '0.5rem', panel: '0.75rem' },
+  shadow: {
+    rest: '0 1px 2px rgb(28 25 21 / 0.04)',
+    overlay: '0 8px 24px rgb(20 53 44 / 0.08)',
+    dialog: '0 16px 40px rgb(20 53 44 / 0.16)',
+  },
+  controlHeight: '2.75rem',
+  tableRowMin: '2.75rem',
+  focus: '0 0 0 3px rgb(166 132 61 / 0.45)',
   roles: {
     supervisor: {
       badgeBg: 'bg-amber-100 text-amber-900 border-amber-300',

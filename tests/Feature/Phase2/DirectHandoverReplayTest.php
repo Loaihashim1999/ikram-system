@@ -51,6 +51,7 @@ class DirectHandoverReplayTest extends TestCase
         Sanctum::actingAs($operator);
 
         $beneficiary = $this->beneficiary();
+        \Tests\Support\EligibleSupport::approve($beneficiary, $operator);
         $stock = InventoryItem::create([
             'name' => 'EKRAM-E2E-TEST handover stock',
             'unit' => 'kg',

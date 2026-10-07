@@ -61,6 +61,7 @@ class BeneficiaryLifecycleTest extends TestCase
     public function test_archived_beneficiary_cannot_receive_new_support_but_history_remains(): void
     {
         $b = PolicyEScenario::beneficiary(['beneficiary_type' => 'resident']);
+        \Tests\Support\EligibleSupport::approve($b, \Illuminate\Support\Facades\Auth::user());
         $stock = InventoryItem::create(['name' => 'EKRAM-E2E-TEST stock', 'unit' => 'kg', 'current_quantity' => 20]);
         $payload = ['recipient_type' => 'beneficiary', 'beneficiary_id' => $b->id, 'fulfillment_method' => 'delivery',
             'items' => [['inventory_item_id' => $stock->id, 'requested_quantity' => '1']]];

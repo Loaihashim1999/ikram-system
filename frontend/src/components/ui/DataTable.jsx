@@ -123,7 +123,7 @@ export default function DataTable({
             ) : error ? (
               <tr>
                 <td colSpan={columns.length} className="py-12 px-4 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2 text-red-600">
+                  <div className="flex flex-col items-center justify-center gap-2 text-[var(--color-danger)]">
                     <AlertCircle size={36} />
                     <span className="text-sm font-bold text-[var(--color-text-primary)]">{error}</span>
                     {onRetry && (

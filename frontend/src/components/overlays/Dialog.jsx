@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import Scrim from './Scrim';
 
@@ -42,9 +43,9 @@ export default function Dialog({
 
   if (!isOpen) return null;
 
-  return (
-    <Scrim isOpen={isOpen} onClose={onClose} zIndex="z-50">
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none" dir="rtl">
+  return createPortal(
+    <Scrim isOpen={isOpen} onClose={onClose} zIndex="z-[60]">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none" dir="rtl">
         {/* Dialog Surface */}
         <div
           className={`ikram-dialog pointer-events-auto relative w-full ${maxWidth} overflow-hidden flex flex-col max-h-[min(90vh,100dvh)] transition-all transform duration-200 scale-100 opacity-100`}
@@ -91,6 +92,7 @@ export default function Dialog({
           )}
         </div>
       </div>
-    </Scrim>
+    </Scrim>,
+    document.body,
   );
 }

@@ -1,15 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../api/axios';
-import Button from '../../components/ui/Button';
-import PageHeader from '../../components/ui/PageHeader';
+import MainLayout from '../../components/layout/MainLayout';
+import PageShell from '../../components/ui/PageShell';
+import SectionCard from '../../components/ui/SectionCard';
+import FormField from '../../components/ui/FormField';
+import { PrimaryButton, SecondaryButton, DangerButton } from '../../components/ui/Button';
+import StatusBadge from '../../components/ui/StatusBadge';
+import KpiCard from '../../components/ui/KpiCard';
+import DataTable from '../../components/ui/DataTable';
+import ErrorState from '../../components/ui/ErrorState';
+import EmptyState from '../../components/ui/EmptyState';
+import LoadingState from '../../components/ui/LoadingState';
+import { displayLabel, displayReason, policyBreakdown } from '../../utils/displayVocabulary';
 
-const statuses = { verified: 'موثقة', rejected: 'مرفوضة', under_review: 'قيد المراجعة', missing: 'مفقودة', not_applicable: 'غير مطلوبة', draft: 'مسودة', submitted: 'مقدمة للمراجعة', reviewed: 'تمت المراجعة', pending: 'قرار معلق', approved: 'تم الاعتماد' };
-const eligibilityLabels = { eligible: 'لائق', ineligible: 'غير لائق', review_required: 'يتطلب مراجعة', not_applicable: 'غير منطبق' };
-const text = (value) => value === null || value === undefined ? 'غير متوفر' : String(value);
-const status = (value) => statuses[value] || text(value);
-const fieldClass = 'ikram-control mt-1';
-const sectionClass = 'ikram-panel space-y-3 p-4 sm:p-5';
+const text = (value) => value === null || value === undefined || value === '' ? 'غير متوفر' : String(value);
+const reasons = (payload) => Object.values(payload?.errors || {}).flat().map((item) => displayReason(String(item))).join(' — ');
 
 export default function PolicyDReviewPage() {
   const { evaluationId } = useParams();
@@ -23,68 +29,189 @@ export default function PolicyDReviewPage() {
   const [recommendation, setRecommendation] = useState('');
   const [reason, setReason] = useState({ code: '', description: '' });
   const load = useCallback(async () => {
-    const response = await api.get(base + '/review');
+    const response = await api.get(`${base}/review`);
     const next = response.data.data;
     setData(next);
-    const a = next.social_assessment;
-    setDraft(a ? { assessment_date: a.assessment_date?.slice(0, 10), housing_condition: a.housing_condition, service_area_result: a.service_area_result, landlord_relationship_result: a.landlord_relationship_result, affected_children_count: a.household_findings?.affected_children_count ?? '', controlled_notes: a.controlled_notes ?? '' } : {});
-    setRecommendation(a?.structured_recommendation || '');
+    const assessment = next.social_assessment;
+    setDraft(assessment ? { assessment_date: assessment.assessment_date?.slice(0, 10), housing_condition: assessment.housing_condition, service_area_result: assessment.service_area_result, landlord_relationship_result: assessment.landlord_relationship_result, affected_children_count: assessment.household_findings?.affected_children_count ?? '', controlled_notes: assessment.controlled_notes ?? '' } : {});
+    setRecommendation(assessment?.structured_recommendation || '');
   }, [base]);
-  useEffect(() => { let active = true; api.get(base + '/review').then(({ data: response }) => { if (active) { const next = response.data; setData(next); const a = next.social_assessment; setDraft(a ? { ...a, assessment_date: a.assessment_date?.slice(0, 10), affected_children_count: a.household_findings?.affected_children_count ?? '' } : {}); setRecommendation(a?.structured_recommendation || ''); } }).catch(() => { if (active) setError('تعذر تحميل المراجعة أو ليس لديك صلاحية الوصول.'); }); return () => { active = false; }; }, [base]);
+  useEffect(() => {
+    let active = true;
+    setData(null);
+    api.get(`${base}/review`).then(({ data: response }) => {
+      if (!active) return;
+      const next = response.data;
+      setData(next);
+      const assessment = next.social_assessment;
+      setDraft(assessment ? { assessment_date: assessment.assessment_date?.slice(0, 10), housing_condition: assessment.housing_condition, service_area_result: assessment.service_area_result, landlord_relationship_result: assessment.landlord_relationship_result, affected_children_count: assessment.household_findings?.affected_children_count ?? '', controlled_notes: assessment.controlled_notes ?? '' } : {});
+      setRecommendation(assessment?.structured_recommendation || '');
+    }).catch(() => { if (active) setError('تعذر تحميل المراجعة أو ليس لديك صلاحية الوصول.'); });
+    return () => { active = false; };
+  }, [base]);
   const run = async (method, suffix, body) => {
     setBusy(true); setError('');
     try { await api[method](base + suffix, body); await load(); }
-    catch (e) { setError(Object.values(e.response?.data?.errors || {}).flat().join(' — ') || e.response?.data?.message || 'تعذر حفظ الإجراء.'); }
+    catch (exception) { setError(reasons(exception.response?.data) || exception.response?.data?.message || 'تعذر حفظ الإجراء.'); }
     finally { setBusy(false); }
   };
-  if (!data || data.evaluation.id !== evaluationId) return <main dir="rtl" className="ikram-page"><p role={error ? 'alert' : 'status'} className="ikram-panel p-5 text-sm">{error || 'جارٍ تحميل المراجعة...'}</p></main>;
-  const { evaluation: e, capabilities: can, social_assessment: a } = data;
+  if (!data || data.evaluation.id !== evaluationId) {
+    return <MainLayout><div dir="rtl">{error ? <ErrorState title="تعذر تحميل المراجعة" description={error} /> : <LoadingState message="جارٍ تحميل المراجعة..." />}</div></MainLayout>;
+  }
+  const evaluation = data.evaluation;
+  const can = data.capabilities || {};
+  const assessment = data.social_assessment;
   const editable = data.current_state === 'pending';
-  const button = (label, action, disabled = false) => <Button variant="outline" size="sm" className="m-1" onClick={action} disabled={busy || disabled}>{label}</Button>;
-  const select = (label, key, options) => <label className="block text-sm font-bold text-[var(--color-text-secondary)]">{label}<select className={fieldClass} aria-label={label} value={draft[key] || ''} disabled={!can.social_assessment || !editable || (a && a.status !== 'draft')} onChange={(event) => setDraft({ ...draft, [key]: event.target.value })}><option value="">اختر</option>{options.map(([value, title]) => <option key={value} value={value}>{title}</option>)}</select></label>;
-  return <main dir="rtl" className="ikram-page ikram-record max-w-5xl p-6">
-    <PageHeader title="مراجعة سياسة المستفيد (POLICY-D)" subtitle="مراجعة الأدلة والتقييم الاجتماعي والقرار مع الحفاظ على نتيجة التقييم التاريخية" breadcrumbs={[{ label: 'المستفيدون', to: '/beneficiaries' }, { label: 'مراجعة السياسة' }]} actions={<Button as={Link} to={`/beneficiaries/${data.beneficiary?.id}`} variant="outline">العودة إلى المستفيد</Button>} />
-    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
-    <section className={sectionClass} aria-label="نتائج التقييم">
-      <h2>{data.beneficiary?.full_name}</h2><p>التقييم: {e.id}</p><p>إصدار السياسة: {data.policy_version.version}</p>
-      <p>أهلية السياسة: <span data-testid="eligibility-decision">{eligibilityLabels[e.eligibility_decision] || text(e.eligibility_decision)}</span></p>
-      <p>صافي دخل الفرد: <span data-testid="financial-result">{text(e.financial_snapshot?.net_income_per_capita)}</span></p>
-      <p>فئة الدخل: <span data-testid="income-category">{text(e.income_category)}</span></p>
-      <p>النقاط: <span data-testid="policy-score">{text(e.policy_score)}</span></p>
-      <p>فئة النقاط: <span data-testid="score-category">{text(e.score_category)}</span></p>
-      <p>النتيجة التاريخية: {text(e.scoring_snapshot?.outcome)}</p>
-      <p>هذه نتائج التقييم المحفوظة؛ مراجعة الأدلة لا تعيد احتسابها.</p>
-    </section>
-    <section aria-label="الوثائق" className={sectionClass}><h2>حالة الوثائق المطلوبة</h2>
-      {data.documents.map((d) => <div key={d.code} data-testid={`document-${d.code}`} className="border-b py-3">
-        <p>{d.label} — <strong>{status(d.status)}</strong> {d.required && '(مطلوبة)'}</p>
-        {d.verification?.evidence_reference && <p>مرجع الدليل: {d.verification.evidence_reference}</p>}
-        {can.verify_documents && editable && d.applicable && <div>
-          <label>مرجع الدليل<input aria-label={`مرجع ${d.code}`} className={fieldClass} value={docInput[d.code]?.reference || ''} onChange={(event) => setDocInput({ ...docInput, [d.code]: { ...docInput[d.code], reference: event.target.value } })} /></label>
-          <label>سبب رفض الوثيقة<input aria-label={`سبب رفض ${d.code}`} className={fieldClass} value={docInput[d.code]?.rejection || ''} onChange={(event) => setDocInput({ ...docInput, [d.code]: { ...docInput[d.code], rejection: event.target.value } })} /></label>
-          {['verified', 'rejected', 'under_review'].map((state) => <Button key={state} variant="outline" size="sm" className="m-1" disabled={busy} onClick={() => run('post', `/documents/${d.code}`, { status: state, evidence_reference: docInput[d.code]?.reference || '', rejection_reason: docInput[d.code]?.rejection || null })}>{state === 'verified' ? 'توثيق' : state === 'rejected' ? 'رفض الوثيقة' : 'قيد المراجعة'}</Button>)}
-        </div>}
-      </div>)}
-    </section>
-    <section className={sectionClass} aria-label="الدليل الطبي"><h2>دليل الإعاقة الطبي</h2>
-      <p>الحالة: {status(data.medical_evidence?.verification_status)}</p><p>النسبة الموثقة: {text(data.medical_evidence?.verified_disability_percentage)}</p>
-      {can.verify_documents && editable && <><label>نسبة الإعاقة<input aria-label="نسبة الإعاقة" type="number" min="0" max="100" step="0.01" className={fieldClass} value={medical.percentage ?? ''} onChange={(event) => setMedical({ ...medical, percentage: event.target.value })} /></label><label>مرجع الدليل الطبي<input aria-label="مرجع الدليل الطبي" className={fieldClass} value={medical.reference || ''} onChange={(event) => setMedical({ ...medical, reference: event.target.value })} /></label>{button('توثيق الدليل الطبي', () => run('post', '/medical-evidence', { verification_status: 'verified', verified_disability_percentage: medical.percentage, evidence_reference: medical.reference }))}</>}
-    </section>
-    <section className={sectionClass} aria-label="التقييم الاجتماعي"><h2>التقييم الاجتماعي</h2><p data-testid="assessment-state">{a ? status(a.status) : 'لا يوجد تقييم اجتماعي'}</p>
-      {select('حالة المسكن', 'housing_condition', [['poor', 'فقير'], ['average', 'متوسط'], ['good', 'جيد']])}
-      {select('منطقة الخدمة', 'service_area_result', [['verified_inside', 'داخل'], ['verified_outside', 'خارج'], ['review_required', 'يتطلب مراجعة']])}
-      {select('علاقة المؤجر', 'landlord_relationship_result', [['no_prohibited_relationship', 'لا علاقة محظورة'], ['prohibited_relationship', 'علاقة محظورة'], ['review_required', 'يتطلب مراجعة']])}
-      <label>الأطفال المتأثرون<input aria-label="الأطفال المتأثرون" className={fieldClass} type="number" min="0" value={draft.affected_children_count ?? ''} disabled={!can.social_assessment || !editable || (a && a.status !== 'draft')} onChange={(event) => setDraft({ ...draft, affected_children_count: event.target.value })} /></label>
-      {can.social_assessment && editable && (!a || a.status === 'draft') && <><label>تاريخ التقييم<input aria-label="تاريخ التقييم" type="date" className={fieldClass} value={draft.assessment_date || ''} onChange={(event) => setDraft({ ...draft, assessment_date: event.target.value })} /></label>
-        {button('حفظ المسودة', () => run('put', '/social-assessment', { assessment_date: draft.assessment_date, housing_condition: draft.housing_condition, service_area_result: draft.service_area_result, landlord_relationship_result: draft.landlord_relationship_result, household_findings: { affected_children_count: draft.affected_children_count === '' || draft.affected_children_count === undefined ? null : Number(draft.affected_children_count) }, controlled_notes: draft.controlled_notes || null }))}
-        {a && button('تقديم التقييم', () => run('post', '/social-assessment/submit', {}))}</>}
-      <p>التوصية: {text(a?.structured_recommendation)}</p>
-      {can.review && editable && a?.status === 'submitted' && <><label>توصية المراجعة<select aria-label="توصية المراجعة" className={fieldClass} value={recommendation} onChange={(event) => setRecommendation(event.target.value)}><option value="">اختر</option><option value="approve">اعتماد</option><option value="reject">رفض</option><option value="pending_review">مراجعة إضافية</option></select></label>{button('إتمام المراجعة', () => run('post', '/social-assessment/review', { structured_recommendation: recommendation }))}</>}
-    </section>
-    <section className={sectionClass}><h2>أسباب المراجعة وموانع الاعتماد</h2><ul data-testid="approval-blockers">{data.approval_blockers.map((r) => <li key={r}>{r}</li>)}</ul></section>
-    <section className={sectionClass}><h2>القرار وسجل القرارات</h2><p data-testid="decision-state">{status(data.current_state)}</p>
-      {can.decide && editable && <><label>رمز السبب الثابت<input aria-label="رمز السبب الثابت" className={fieldClass} value={reason.code} onChange={(event) => setReason({ ...reason, code: event.target.value })} /></label><label>شرح القرار<input aria-label="شرح القرار" className={fieldClass} value={reason.description} onChange={(event) => setReason({ ...reason, description: event.target.value })} /></label>{button('اعتماد القرار', () => run('post', '/approve', { reason_code: reason.code, reason_text: reason.description }))}{button('رفض القرار', () => run('post', '/reject', { reason_code: reason.code, reason_text: reason.description }))}</>}
-      <ul data-testid="decision-history">{data.decision_history.map((d) => <li key={d.id}>{status(d.decision)} — {d.stable_reason_code} — {d.human_readable_reason} — {d.decided_at}</li>)}</ul>
-    </section>
-  </main>;
+  const blockers = data.approval_blockers || [];
+  const breakdown = data.score_breakdown?.length ? data.score_breakdown : policyBreakdown(evaluation.scoring_snapshot);
+  const socialLocked = !can.social_assessment || !editable || (assessment && assessment.status !== 'draft');
+  const columns = [
+    { key: 'label', header: 'البند', render: (row) => row.label || displayLabel('policyDimension', row.rule_id) },
+    { key: 'value', header: 'القيمة', render: (row) => text(row.value) },
+    { key: 'condition', header: 'الشرط', render: (row) => text(row.condition) },
+    { key: 'awarded_points', header: 'النقاط', render: (row) => text(row.awarded_points) },
+    { key: 'max_points', header: 'الحد الأعلى', render: (row) => text(row.max_points) },
+    { key: 'reason', header: 'السبب', render: (row) => row.reason ? displayReason(row.reason) : '—' },
+  ];
+  const documents = [
+    { key: 'label', header: 'اسم الوثيقة', render: (row) => row.label },
+    { key: 'status', header: 'الحالة', render: (row) => <StatusBadge tone="info" label={displayLabel('documentStatus', row.status)} /> },
+    { key: 'reference', header: 'مرجع الدليل', render: (row) => row.verification?.evidence_reference || '—' },
+    { key: 'notes', header: 'الملاحظات', render: (row) => row.verification?.rejection_reason || (row.required ? 'مطلوبة' : '—') },
+  ];
+  return (
+    <MainLayout>
+      <div dir="rtl">
+        <PageShell
+          title="مراجعة سياسة المستفيد"
+          description="مراجعة الأدلة والتقييم الاجتماعي والقرار مع الحفاظ على نتيجة التقييم التاريخية."
+          breadcrumbs={[{ label: 'المستفيدون', href: '/beneficiaries' }, { label: data.beneficiary?.full_name || 'المستفيد', href: `/beneficiaries/${data.beneficiary?.id}` }, { label: 'مراجعة السياسة' }]}
+          secondaryActions={<SecondaryButton as={Link} to={`/beneficiaries/${data.beneficiary?.id}`}>العودة إلى المستفيد</SecondaryButton>}
+        >
+          {error && <ErrorState title="تعذر حفظ الإجراء" description={error} />}
+          <SectionCard title="ملخص المستفيد">
+            <p className="text-sm font-bold text-[var(--color-text-primary)]">{data.beneficiary?.full_name}</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">إصدار السياسة: {data.policy_version?.version || 'غير متوفر'}</p>
+          </SectionCard>
+          <SectionCard title="ملخص نتيجة السياسة">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <KpiCard title="صافي دخل الفرد" value={text(evaluation.financial_snapshot?.net_income_per_capita)} />
+              <KpiCard title="مجموع النقاط" value={text(evaluation.policy_score)} />
+              <KpiCard title="الفئة" value={displayLabel('scoreCategory', evaluation.score_category)} />
+              <KpiCard title="نتيجة الاستحقاق" value={displayLabel('status', evaluation.eligibility_decision)} />
+              <KpiCard title="حالة المراجعة" value={displayLabel('documentStatus', data.current_state)} />
+            </div>
+            <p data-testid="financial-result" className="sr-only">{text(evaluation.financial_snapshot?.net_income_per_capita)}</p>
+            <p data-testid="income-category" className="sr-only">{displayLabel('financialCategory', evaluation.income_category)}</p>
+            <p data-testid="policy-score" className="sr-only">{text(evaluation.policy_score)}</p>
+            <p data-testid="score-category" className="sr-only">{displayLabel('scoreCategory', evaluation.score_category)}</p>
+            <p data-testid="eligibility-decision" className="sr-only">{displayLabel('status', evaluation.eligibility_decision)}</p>
+            <p className="mt-3 text-xs text-[var(--color-text-muted)]">هذه نتائج التقييم المحفوظة؛ مراجعة الأدلة لا تعيد احتسابها.</p>
+          </SectionCard>
+          <SectionCard title="تفصيل النقاط">
+            <DataTable columns={columns} data={breakdown} rowKey="rule_id" emptyMessage="لا يوجد تفصيل محفوظ" emptySubMessage="يُعرض التفصيل من لقطة التقييم فقط." />
+          </SectionCard>
+          <SectionCard title="الوثائق المطلوبة">
+            <DataTable columns={documents} data={data.documents || []} rowKey="code" emptyMessage="لا توجد وثائق مطلوبة" emptySubMessage="لا توجد قواعد وثائق على هذا التقييم." />
+            {(data.documents || []).map((document) => (
+              <div key={document.code} data-testid={`document-${document.code}`} className="mt-3 space-y-2">
+                {can.verify_documents && editable && document.applicable && (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <FormField label={`مرجع ${document.label}`} name={`${document.code}-reference`}>
+                      <input aria-label={`مرجع ${document.code}`} className="ikram-control w-full" value={docInput[document.code]?.reference || ''} onChange={(event) => setDocInput({ ...docInput, [document.code]: { ...docInput[document.code], reference: event.target.value } })} />
+                    </FormField>
+                    <FormField label="سبب الرفض" name={`${document.code}-rejection`}>
+                      <input aria-label={`سبب رفض ${document.code}`} className="ikram-control w-full" value={docInput[document.code]?.rejection || ''} onChange={(event) => setDocInput({ ...docInput, [document.code]: { ...docInput[document.code], rejection: event.target.value } })} />
+                    </FormField>
+                    <div className="flex flex-wrap gap-2 md:col-span-2">
+                      <PrimaryButton type="button" disabled={busy} onClick={() => run('post', `/documents/${document.code}`, { status: 'verified', evidence_reference: docInput[document.code]?.reference || '', rejection_reason: docInput[document.code]?.rejection || null })}>توثيق</PrimaryButton>
+                      <DangerButton type="button" disabled={busy} onClick={() => run('post', `/documents/${document.code}`, { status: 'rejected', evidence_reference: docInput[document.code]?.reference || '', rejection_reason: docInput[document.code]?.rejection || null })}>رفض الوثيقة</DangerButton>
+                      <SecondaryButton type="button" disabled={busy} onClick={() => run('post', `/documents/${document.code}`, { status: 'under_review', evidence_reference: docInput[document.code]?.reference || '', rejection_reason: docInput[document.code]?.rejection || null })}>قيد المراجعة</SecondaryButton>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </SectionCard>
+          <SectionCard title="الدليل الطبي / الإعاقة">
+            {data.medical_evidence ? (
+              <div className="space-y-3">
+                <StatusBadge tone="info" label={displayLabel('documentStatus', data.medical_evidence.verification_status)} />
+                <p className="text-sm">النسبة الموثقة: {text(data.medical_evidence.verified_disability_percentage)}</p>
+              </div>
+            ) : <EmptyState title="لا يوجد دليل طبي" description="لا ينطبق دليل إعاقة محفوظ على هذا التقييم." />}
+            {can.verify_documents && editable && (
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <FormField label="نسبة الإعاقة" name="disability-percentage">
+                  <input aria-label="نسبة الإعاقة" type="number" min="0" max="100" step="0.01" className="ikram-control w-full" value={medical.percentage ?? ''} onChange={(event) => setMedical({ ...medical, percentage: event.target.value })} />
+                </FormField>
+                <FormField label="مرجع الدليل الطبي" name="medical-reference">
+                  <input aria-label="مرجع الدليل الطبي" className="ikram-control w-full" value={medical.reference || ''} onChange={(event) => setMedical({ ...medical, reference: event.target.value })} />
+                </FormField>
+                <PrimaryButton type="button" disabled={busy} onClick={() => run('post', '/medical-evidence', { verification_status: 'verified', verified_disability_percentage: medical.percentage, evidence_reference: medical.reference })}>توثيق الدليل الطبي</PrimaryButton>
+              </div>
+            )}
+          </SectionCard>
+          <SectionCard title="التقييم الاجتماعي">
+            <p data-testid="assessment-state">{assessment ? displayLabel('documentStatus', assessment.status) : 'لا يوجد تقييم اجتماعي'}</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <FormField label="حالة المسكن" name="housing_condition">
+                <select aria-label="حالة المسكن" className="ikram-control w-full" value={draft.housing_condition || ''} disabled={socialLocked} onChange={(event) => setDraft({ ...draft, housing_condition: event.target.value })}><option value="">اختر</option><option value="poor">فقير</option><option value="average">متوسط</option><option value="good">جيد</option></select>
+              </FormField>
+              <FormField label="منطقة الخدمة" name="service_area_result">
+                <select aria-label="منطقة الخدمة" className="ikram-control w-full" value={draft.service_area_result || ''} disabled={socialLocked} onChange={(event) => setDraft({ ...draft, service_area_result: event.target.value })}><option value="">اختر</option><option value="verified_inside">داخل</option><option value="verified_outside">خارج</option><option value="review_required">يتطلب مراجعة</option></select>
+              </FormField>
+              <FormField label="علاقة المؤجر" name="landlord_relationship_result">
+                <select aria-label="علاقة المؤجر" className="ikram-control w-full" value={draft.landlord_relationship_result || ''} disabled={socialLocked} onChange={(event) => setDraft({ ...draft, landlord_relationship_result: event.target.value })}><option value="">اختر</option><option value="no_prohibited_relationship">لا علاقة محظورة</option><option value="prohibited_relationship">علاقة محظورة</option><option value="review_required">يتطلب مراجعة</option></select>
+              </FormField>
+              <FormField label="الأطفال المتأثرون" name="affected_children_count">
+                <input aria-label="الأطفال المتأثرون" className="ikram-control w-full" type="number" min="0" value={draft.affected_children_count ?? ''} disabled={socialLocked} onChange={(event) => setDraft({ ...draft, affected_children_count: event.target.value })} />
+              </FormField>
+              {can.social_assessment && editable && (!assessment || assessment.status === 'draft') && (
+                <FormField label="تاريخ التقييم" name="assessment_date">
+                  <input aria-label="تاريخ التقييم" type="date" className="ikram-control w-full" value={draft.assessment_date || ''} onChange={(event) => setDraft({ ...draft, assessment_date: event.target.value })} />
+                </FormField>
+              )}
+            </div>
+            <p className="mt-3 text-sm">التوصية: {assessment?.structured_recommendation === 'reject' ? 'رفض' : displayLabel('documentStatus', assessment?.structured_recommendation)}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {can.social_assessment && editable && (!assessment || assessment.status === 'draft') && <SecondaryButton type="button" disabled={busy} onClick={() => run('put', '/social-assessment', { assessment_date: draft.assessment_date, housing_condition: draft.housing_condition, service_area_result: draft.service_area_result, landlord_relationship_result: draft.landlord_relationship_result, household_findings: { affected_children_count: draft.affected_children_count === '' || draft.affected_children_count === undefined ? null : Number(draft.affected_children_count) }, controlled_notes: draft.controlled_notes || null })}>حفظ المسودة</SecondaryButton>}
+              {can.social_assessment && editable && assessment && (!assessment || assessment.status === 'draft') && <PrimaryButton type="button" disabled={busy} onClick={() => run('post', '/social-assessment/submit', {})}>تقديم التقييم</PrimaryButton>}
+            </div>
+            {can.review && editable && assessment?.status === 'submitted' && (
+              <div className="mt-3 flex flex-wrap items-end gap-3">
+                <FormField label="توصية المراجعة" name="structured_recommendation">
+                  <select aria-label="توصية المراجعة" className="ikram-control w-full" value={recommendation} onChange={(event) => setRecommendation(event.target.value)}><option value="">اختر</option><option value="approve">اعتماد</option><option value="reject">رفض</option><option value="pending_review">مراجعة إضافية</option></select>
+                </FormField>
+                <SecondaryButton type="button" disabled={busy} onClick={() => run('post', '/social-assessment/review', { structured_recommendation: recommendation })}>إتمام المراجعة</SecondaryButton>
+              </div>
+            )}
+          </SectionCard>
+          <SectionCard title="موانع الاعتماد">
+            <ul data-testid="approval-blockers">{blockers.map((item) => <li key={item}>{displayReason(item)}</li>)}</ul>
+            {blockers.length === 0 && <EmptyState title="لا توجد موانع" description="لا تمنع اللقطة الحالية اعتماد القرار." />}
+          </SectionCard>
+          <SectionCard title="القرار النهائي">
+            <p data-testid="decision-state">{displayLabel('documentStatus', data.current_state)}</p>
+            {can.decide && editable && (
+              <div className="mt-3 grid gap-3">
+                <FormField label="رمز السبب" name="reason_code" helperText="يُحفظ الرمز للسجل، ويظهر للمستخدم الشرح العربي.">
+                  <input aria-label="رمز السبب الثابت" className="ikram-control w-full" value={reason.code} onChange={(event) => setReason({ ...reason, code: event.target.value })} />
+                </FormField>
+                <FormField label="شرح القرار" name="reason_text">
+                  <input aria-label="شرح القرار" className="ikram-control w-full" value={reason.description} onChange={(event) => setReason({ ...reason, description: event.target.value })} />
+                </FormField>
+                <div className="flex flex-wrap gap-2">
+                  <PrimaryButton type="button" disabled={busy || blockers.length > 0} onClick={() => run('post', '/approve', { reason_code: reason.code, reason_text: reason.description })}>اعتماد القرار</PrimaryButton>
+                  <DangerButton type="button" disabled={busy} onClick={() => run('post', '/reject', { reason_code: reason.code, reason_text: reason.description })}>رفض القرار</DangerButton>
+                </div>
+                {blockers.length > 0 && <p className="text-xs text-[var(--color-text-secondary)]">يبقى الاعتماد موقوفاً حتى تكتمل المراجعات الإلزامية. الخادم هو مرجع الرفض.</p>}
+              </div>
+            )}
+            <ul data-testid="decision-history">{(data.decision_history || []).map((item) => <li key={item.id}>{displayLabel('documentStatus', item.decision)} — {item.human_readable_reason} — {item.decided_at}</li>)}</ul>
+          </SectionCard>
+        </PageShell>
+      </div>
+    </MainLayout>
+  );
 }

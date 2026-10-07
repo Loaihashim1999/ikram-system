@@ -4,7 +4,7 @@ export default function PageSection({ title, description, icon: Icon, actions, c
       {(title || description || actions) && (
         <div className="ikram-panel-header">
           <div className="flex min-w-0 items-start gap-2.5">
-            {Icon && <span className="mt-0.5 rounded-lg bg-[#EBF4EA] p-2 text-[var(--color-brand-green)]"><Icon className="h-4 w-4" /></span>}
+            {Icon && <span className="mt-0.5 rounded-lg bg-[var(--status-success-bg)] p-2 text-[var(--color-brand-green)]"><Icon className="h-4 w-4" /></span>}
             <div className="min-w-0">
               {title && <h2 className="ikram-section-title">{title}</h2>}
               {description && <p className="ikram-section-description">{description}</p>}

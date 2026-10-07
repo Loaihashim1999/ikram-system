@@ -6,6 +6,7 @@ import Button from "../../components/ui/Button";
 import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
+import SearchField from "../../components/ui/SearchField";
 import {
   getDailyInventory,
   createDailyInventoryItem,
@@ -20,7 +21,6 @@ import {
   ArrowUpDown,
   History,
   AlertTriangle,
-  Search,
   Edit,
   Trash2,
   Clock,
@@ -415,17 +415,13 @@ export default function DailyInventoryPage({ embedded = false }) {
           <div className="space-y-4">
             {/* Search and Filters */}
             <div className="bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center gap-3">
-              <div className="relative flex-1 w-full">
-                <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && fetchItems()}
-                  placeholder="ابحث باسم الصنف، المورد، رقم التشغيلة..."
-                  className="w-full pl-3 pr-10 py-2 bg-white border border-[var(--color-border)] rounded-lg text-xs focus:outline-none focus:border-[var(--color-brand-green)]"
-                />
-              </div>
+              <SearchField
+                label="بحث الأصناف"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && fetchItems()}
+                placeholder="ابحث باسم الصنف، المورد، رقم التشغيلة..."
+              />
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <select

@@ -177,7 +177,7 @@ class SystemAuditTest extends TestCase
         $inspectionReport = app(GovernanceReportService::class)->build($request);
         $this->assertSame(73.3, $inspectionReport['completion']);
         $this->assertSame(22, $inspectionReport['received_operations']);
-        $this->assertSame(22, array_sum(array_column($inspectionReport['timeline'], 'receipts')));
+        $this->assertSame(0, array_sum(array_column($inspectionReport['timeline'], 'distributions')));
         $this->assertCount(7, $inspectionReport['indicators']);
         $pdf = $this->get('/api/reports/comprehensive/pdf?start_date='.$inspectionStart.'&end_date='.$date)->assertOk();
         $this->assertStringStartsWith('%PDF', $pdf->getContent());
@@ -190,7 +190,7 @@ class SystemAuditTest extends TestCase
         $this->assertStringStartsWith('PK', $bytes);
         file_put_contents(storage_path('app/reports/inspection-governance.xlsx'), $bytes);
         $workbook = IOFactory::load(storage_path('app/reports/inspection-governance.xlsx'));
-        $this->assertSame(51, $workbook->getSheetByName('beneficiaries_snapshot')->getHighestRow());
+        $this->assertSame(51, $workbook->getSheetByName('المستفيدون')->getHighestRow());
         $record = Beneficiary::first();
         $record->update(['district' => 'TEST_PERSISTENCE']);
         $this->assertSame('TEST_PERSISTENCE', $record->fresh()->district);

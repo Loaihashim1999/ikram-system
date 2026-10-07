@@ -125,7 +125,7 @@ class GovernanceReportsFinalizationTest extends TestCase
         $path = storage_path('framework/testing/governance-final.xlsx');
         file_put_contents($path, $response->streamedContent());
         $book = IOFactory::load($path);
-        $sheet = $book->getSheetByName('beneficiaries_snapshot');
+        $sheet = $book->getSheetByName('المستفيدون');
         $this->assertSame(13, $sheet->getHighestRow());
         $names = [];
         for ($row = 2; $row <= $sheet->getHighestRow(); $row++) {

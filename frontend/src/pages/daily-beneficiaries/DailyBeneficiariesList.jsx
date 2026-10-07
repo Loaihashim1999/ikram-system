@@ -8,6 +8,7 @@ import Button from "../../components/ui/Button";
 import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
+import SearchField from "../../components/ui/SearchField";
 import {
   getDailyBeneficiaries,
   deleteDailyBeneficiary,
@@ -18,7 +19,6 @@ import {
 import {
   UserPlus,
   FileSpreadsheet,
-  Search,
   Eye,
   Edit,
   Trash2,
@@ -314,16 +314,12 @@ export default function DailyBeneficiariesList({ embedded = false }) {
         {/* Filter Card */}
         <div className="ikram-panel p-4">
           <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row items-center gap-3">
-              <div className="relative flex-1 w-full">
-                <Search className="w-5 h-5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="ابحث بالاسم الرباعي، رقم الهوية/الإقامة، أو رقم الجوال..."
-                  className="ikram-control pl-4 pr-11"
-                />
-              </div>
+              <SearchField
+                label="بحث المستفيدين اليوميين"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="ابحث بالاسم الرباعي، رقم الهوية/الإقامة، أو رقم الجوال..."
+              />
 
               <div className="flex items-center gap-2 w-full md:w-auto">
                 <button
@@ -335,15 +331,15 @@ export default function DailyBeneficiariesList({ embedded = false }) {
 
                 <button
                   type="button"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium transition-colors ${
-                    showFilters || selectedDistrict !== "all" || selectedStatus !== "all" || selectedType !== "all" || nationalityMissing || nationality.trim()
+                  aria-label="فتح المرشحات"
+                  onClick={() => setShowFilters(true)}
+                  className={`flex items-center gap-2 px-3 py-2.5 border rounded-lg text-sm font-medium transition-colors ${
+                    selectedDistrict !== "all" || selectedStatus !== "all" || selectedType !== "all" || nationalityMissing || nationality.trim()
                       ? "bg-[var(--color-bg-soft)] border-[var(--color-brand-gold)] text-[#8C6C26]"
                       : "bg-white border-[var(--color-border)] text-slate-700 hover:bg-slate-50"
                   }`}
                 >
                   <Filter className="w-4 h-4" />
-                  <span>تصفية</span>
                 </button>
 
                 <button
@@ -358,8 +354,8 @@ export default function DailyBeneficiariesList({ embedded = false }) {
             </form>
 
             {/* Expanded Filters Drawer */}
-            {showFilters && (
-              <div className="mt-4 p-4 bg-white border border-[var(--color-border)] rounded-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-200">
+            <Dialog isOpen={showFilters} onClose={() => setShowFilters(false)} title="تصفية النتائج" footer={<Button type="button" variant="primary" onClick={() => setShowFilters(false)}>تطبيق</Button>}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5">التصنيف</label>
                   <select
@@ -447,7 +443,7 @@ export default function DailyBeneficiariesList({ embedded = false }) {
                   />
                 </div>
               </div>
-            )}
+            </Dialog>
           </div>
 
         {/* Data Table */}

@@ -645,6 +645,8 @@ class DeliveryCommunicationTest extends TestCase
         $beta = InventoryItem::create(['name' => 'TEST_ONLY_ITEM_BETA', 'unit' => 'kg', 'current_quantity' => 20, 'min_threshold' => 1]);
         $firstBeneficiary = Beneficiary::create(['full_name' => 'TEST PERSON ONE', 'national_id' => '7222222221', 'phone' => '0501111111', 'beneficiary_type' => 'citizen', 'status' => 'active']);
         $secondBeneficiary = Beneficiary::create(['full_name' => 'TEST PERSON TWO', 'national_id' => '7222222222', 'phone' => '0502222222', 'beneficiary_type' => 'citizen', 'status' => 'active']);
+        \Tests\Support\EligibleSupport::approve($firstBeneficiary, $this->admin);
+        \Tests\Support\EligibleSupport::approve($secondBeneficiary, $this->admin);
         $service = app(SupportDistributionService::class);
         $alphaSupport = $service->create(['recipient_type' => 'beneficiary', 'beneficiary_id' => $firstBeneficiary->id, 'fulfillment_method' => 'pickup', 'pickup_location_id' => $this->location->id, 'items' => [['inventory_item_id' => $alpha->id, 'requested_quantity' => '1.00']]], $this->admin->id);
         $betaSupport = $service->create(['recipient_type' => 'beneficiary', 'beneficiary_id' => $secondBeneficiary->id, 'fulfillment_method' => 'pickup', 'pickup_location_id' => $this->location->id, 'items' => [['inventory_item_id' => $beta->id, 'requested_quantity' => '1.00']]], $this->admin->id);
@@ -657,6 +659,22 @@ class DeliveryCommunicationTest extends TestCase
         $denied = User::create(['username' => 'TEST_ITEM_DENIED', 'full_name' => 'TEST Denied Search', 'password' => 'test-password', 'role' => 'staff', 'is_active' => true, 'permissions' => ['support' => ['view' => false]]]);
         Sanctum::actingAs($denied);
         $this->getJson('/api/support/distributions?q=TEST_ONLY_ITEM_ALPHA')->assertForbidden();
+    }
+
+    public function test_phase8_driver_create_and_edit_persist_canonical_phone(): void
+    {
+        $created = $this->postJson('/api/support/drivers', [
+            'full_name' => 'TEST PHASE8 Driver', 'phone' => '966501234567', 'is_active' => true,
+        ])->assertCreated()->assertJsonPath('data.phone', '966501234567');
+        $id = $created->json('data.id');
+        $this->assertSame('966501234567', Driver::findOrFail($id)->phone);
+        $this->patchJson('/api/support/drivers/'.$id, [
+            'full_name' => 'TEST PHASE8 Updated', 'phone' => '0507654321',
+        ])->assertOk()->assertJsonPath('data.phone', '966507654321');
+        $driver = Driver::findOrFail($id);
+        $this->assertSame('TEST PHASE8 Updated', $driver->full_name);
+        $this->assertSame('966507654321', $driver->phone);
+        $this->getJson('/api/support/drivers')->assertOk()->assertJsonPath('data.0.id', $id);
     }
 
     public function test_driver_management_metrics_and_deactivation_preserve_history(): void
@@ -774,6 +792,7 @@ class DeliveryCommunicationTest extends TestCase
         $beneficiary = Beneficiary::create(['full_name' => 'TEST BEFORE DELIVERY', 'national_id' => '7111111111',
             'phone' => '0501234567', 'beneficiary_type' => 'citizen', 'status' => 'active',
             'city' => 'TEST CITY', 'district' => 'TEST DISTRICT', 'street' => 'TEST DELIVERY ADDRESS']);
+        \Tests\Support\EligibleSupport::approve($beneficiary, $this->admin);
         $service = app(SupportDistributionService::class);
         $support = $service->create(['recipient_type' => 'beneficiary', 'beneficiary_id' => $beneficiary->id,
             'fulfillment_method' => 'delivery', 'items' => [['inventory_item_id' => $this->stock->id, 'requested_quantity' => '2.50']]], $this->admin->id);

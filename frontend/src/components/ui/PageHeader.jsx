@@ -1,7 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
 import StatusBadge from './StatusBadge';
+import Breadcrumbs from './Breadcrumbs';
 
 /**
  * Standardized PageHeader component for all pages:
@@ -28,25 +26,7 @@ export default function PageHeader({
       {/* Right side: Breadcrumbs, Title, and Description */}
       <div className="min-w-0 space-y-1">
         {/* Breadcrumbs */}
-        {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav aria-label="مسار الصفحة" className="flex items-center gap-1 text-xs text-[var(--color-text-muted)] mb-1">
-            <Link to="/dashboard" className="hover:text-[var(--color-brand-green)] transition-colors">
-              الرئيسية
-            </Link>
-            {breadcrumbs.map((crumb, idx) => (
-              <React.Fragment key={idx}>
-                <ChevronLeft className="w-3.5 h-3.5 text-[var(--color-text-muted)] shrink-0" aria-hidden="true" />
-                {crumb.to ? (
-                  <Link to={crumb.to} className="hover:text-[var(--color-brand-green)] transition-colors">
-                    {crumb.label}
-                  </Link>
-                ) : (
-                  <span className="text-[var(--color-text-primary)] font-semibold">{crumb.label}</span>
-                )}
-              </React.Fragment>
-            ))}
-          </nav>
-        )}
+        <Breadcrumbs items={breadcrumbs} />
 
         {/* Title & Badge */}
         <div className="flex flex-wrap items-center gap-2.5">

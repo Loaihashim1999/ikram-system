@@ -14,9 +14,11 @@ use App\Models\InventoryMovement;
 use App\Models\NeighborhoodRep;
 use App\Models\Staff;
 use App\Models\StaffDistribution;
+use App\Models\SupportDistribution;
 use App\Models\User;
 use App\Services\GovernanceReportService;
 use App\Services\InventoryExpiryPolicy;
+use App\Services\OperationalMetricsService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -110,20 +112,16 @@ class AnalyticsController extends Controller
         // ══════════════════════════════════════════════════════════════════════
         // 1. تحليلات المستفيدين العامين (Beneficiaries Analytics)
         // ══════════════════════════════════════════════════════════════════════
+        $operationalMetrics = app(OperationalMetricsService::class)->summarize($startDate, $endDate);
         $totalBeneficiaries = Beneficiary::count();
         $activeBeneficiaries = Beneficiary::where('status', 'approved')->orWhere('status', 'active')->count();
         $inactiveBeneficiaries = Beneficiary::where('status', 'rejected')->orWhere('status', 'inactive')->count();
 
-        // المستفيدون الذين استلموا مساعدات في هذه الفترة
-        $servedBeneficiaryIds = Distribution::whereBetween('scheduled_at', [$startDate, $endDate])
+        $legacyServedBeneficiaryIds = Distribution::whereBetween('scheduled_at', [$startDate, $endDate])
             ->whereIn('status', ['delivered', 'received', 'completed'])
             ->pluck('beneficiary_id')
             ->unique();
-        $beneficiariesReceivedCount = $servedBeneficiaryIds->count();
-        $beneficiariesNotReceivedCount = max(0, $totalBeneficiaries - $beneficiariesReceivedCount);
-
-        // عدد السلال الموزعة للمستفيدين العامين
-        $basketsDistributedGeneral = Distribution::whereBetween('scheduled_at', [$startDate, $endDate])
+        $legacyBasketsDistributed = Distribution::whereBetween('scheduled_at', [$startDate, $endDate])
             ->whereIn('status', ['delivered', 'received', 'completed'])
             ->count();
 
@@ -167,7 +165,6 @@ class AnalyticsController extends Controller
         $dailyReceivingTransactionsCount = (clone $dailyTxQuery)->count();
         $dailyBasketsDistributed = (clone $dailyTxQuery)->sum('quantity');
         $dailyBeneficiariesReceivedCount = (clone $dailyTxQuery)->distinct('daily_beneficiary_id')->count('daily_beneficiary_id');
-        $dailyBeneficiariesNotReceivedCount = max(0, $totalDailyBeneficiaries - $dailyBeneficiariesReceivedCount);
 
         // توزيع المستفيدين اليوميين حسب السلال
         $dailyByBasketType = (clone $dailyTxQuery)
@@ -187,7 +184,6 @@ class AnalyticsController extends Controller
         $totalStaff = Staff::count();
         $staffDistQuery = StaffDistribution::whereBetween('created_at', [$startDate, $endDate]);
         $staffReceivedCount = (clone $staffDistQuery)->distinct('staff_id')->count('staff_id');
-        $staffNotReceivedCount = max(0, $totalStaff - $staffReceivedCount);
         $basketsDistributedToStaff = (clone $staffDistQuery)->count();
 
         // ══════════════════════════════════════════════════════════════════════
@@ -370,8 +366,8 @@ class AnalyticsController extends Controller
         // 8. مؤشرات الإجماليات الموحدة (Grand Summary KPIs)
         // ══════════════════════════════════════════════════════════════════════
         $grandTotalBeneficiaries = $totalBeneficiaries + $totalDailyBeneficiaries;
-        $grandTotalServed = $beneficiariesReceivedCount + $dailyBeneficiariesReceivedCount;
-        $grandTotalBaskets = $basketsDistributedGeneral + $dailyBasketsDistributed + $basketsDistributedToStaff;
+        $grandTotalServed = $operationalMetrics['unique_completed_beneficiaries'];
+        $grandTotalBaskets = $legacyBasketsDistributed + $dailyBasketsDistributed + $basketsDistributedToStaff;
 
         // ══════════════════════════════════════════════════════════════════════
         // 9. بيانات الرسوم البيانية للوحة الحوكمة (Governance Dashboard Charts)
@@ -403,9 +399,7 @@ class AnalyticsController extends Controller
             $mEnd = $tCursor->copy()->endOfMonth()->min($endDate);
 
             $regCount = Beneficiary::whereBetween('created_at', [$mStart, $mEnd])->count();
-            $distCount = Distribution::whereBetween('scheduled_at', [$mStart, $mEnd])
-                ->whereIn('status', ['delivered', 'received', 'completed'])
-                ->count();
+            $distCount = SupportDistribution::where('status', 'completed')->whereBetween('completed_at', [$mStart, $mEnd])->count();
 
             $lineChartTimeline[] = [
                 'period' => $tCursor->translatedFormat('M Y'),
@@ -418,13 +412,8 @@ class AnalyticsController extends Controller
         // ج) المخطط القمعي: مسار مراحل الاستحقاق والتسليم (Funnel Chart)
         $totalRegistered = max(1, $totalBeneficiaries);
         $approvedCount = $activeBeneficiaries;
-        $scheduledCount = Distribution::whereBetween('scheduled_at', [$startDate, $endDate])
-            ->distinct('beneficiary_id')
-            ->count('beneficiary_id');
-        if ($scheduledCount === 0 && $beneficiariesReceivedCount > 0) {
-            $scheduledCount = $beneficiariesReceivedCount;
-        }
-        $deliveredCount = $beneficiariesReceivedCount;
+        $scheduledCount = $operationalMetrics['total_due'];
+        $deliveredCount = $operationalMetrics['completed_by_cutoff'];
 
         $funnelStages = [
             [
@@ -490,6 +479,12 @@ class AnalyticsController extends Controller
                     'secondary_data' => $pieChartData['by_family_type'],
                 ],
             ],
+            'operational_metrics' => $operationalMetrics,
+            'legacy_distributions' => [
+                'label' => 'سجل السلال القديم',
+                'served_people' => $legacyServedBeneficiaryIds->count(),
+                'baskets' => $legacyBasketsDistributed,
+            ],
             'kpis' => [
                 'grand_total_beneficiaries' => $grandTotalBeneficiaries,
                 'grand_total_served' => $grandTotalServed,
@@ -502,9 +497,9 @@ class AnalyticsController extends Controller
                 'total' => $totalBeneficiaries,
                 'active' => $activeBeneficiaries,
                 'inactive' => $inactiveBeneficiaries,
-                'received_count' => $beneficiariesReceivedCount,
-                'not_received_count' => $beneficiariesNotReceivedCount,
-                'baskets_distributed' => $basketsDistributedGeneral,
+                'received_count' => $operationalMetrics['unique_completed_beneficiaries'],
+                'not_received_count' => $operationalMetrics['unique_not_completed_beneficiaries'],
+                'baskets_distributed' => $legacyBasketsDistributed,
                 'families_count' => $familiesCount,
                 'individuals_count' => $individualsCount,
                 'registered_in_period' => $registeredInPeriod,
@@ -514,7 +509,6 @@ class AnalyticsController extends Controller
                 'total' => $totalDailyBeneficiaries,
                 'active' => $activeDailyBeneficiaries,
                 'received_count' => $dailyBeneficiariesReceivedCount,
-                'not_received_count' => $dailyBeneficiariesNotReceivedCount,
                 'baskets_distributed' => intval($dailyBasketsDistributed),
                 'transactions_count' => $dailyReceivingTransactionsCount,
                 'registered_in_period' => $dailyRegisteredInPeriod,
@@ -524,7 +518,6 @@ class AnalyticsController extends Controller
             'staff' => [
                 'total' => $totalStaff,
                 'received_count' => $staffReceivedCount,
-                'not_received_count' => $staffNotReceivedCount,
                 'baskets_distributed' => intval($basketsDistributedToStaff),
             ],
             'organizations' => [

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 const started = new Date();
 let stage='fixture';
-const port=18555;
+const port=18000 + Math.floor(Math.random() * 1000);
 const base=`http://127.0.0.1:${port}`;
 const root = process.cwd();
 const database = path.join(root, 'storage/app/reports', `qa-isolated-${randomUUID()}.sqlite`);
@@ -29,7 +29,7 @@ try {
  const fixtureCheck=await (await fetch(base+'/__qa-fixture-check')).json();
  if(!fixtureCheck.safe || fixtureCheck.users<1) throw new Error('Spawned server is not using the isolated fixture database');
  const loginResponse=await fetch(base+'/api/login',{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},body:JSON.stringify(credentials.admin)});
- if(!loginResponse.ok) throw new Error(`Fixture login failed (${loginResponse.status})`);
+ if(!loginResponse.ok) throw new Error(`Fixture login failed (${loginResponse.status}): ${await loginResponse.text()}`);
  const loginPayload=await loginResponse.json();
  fixtureAuth.token=loginPayload.data.token; fixtureAuth.user=loginPayload.data.user;
  const authProbe=await fetch(base+'/api/me',{headers:{authorization:`Bearer ${fixtureAuth.token}`}});

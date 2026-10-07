@@ -11,7 +11,8 @@ import FilterableTableHeader from "../../components/common/FilterableTableHeader
 import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import Toast from "../../components/ui/Toast";
-import { Eye, Edit, Trash2, RefreshCw, FileText, Send, UserPlus, FileSpreadsheet, Upload, Download, Plus, Search } from "lucide-react";
+import SearchField from "../../components/ui/SearchField";
+import { Eye, Edit, Trash2, RefreshCw, FileText, Send, UserPlus, FileSpreadsheet, Upload, Download, Plus } from "lucide-react";
 import { exportArrayToExcel } from "../../utils/excelExport";
 
 const statusLabels = {
@@ -416,16 +417,12 @@ export default function StaffListPage() {
 
         {/* Global Search Bar */}
         <div className="ikram-panel p-4">
-          <div className="relative max-w-md w-full">
-            <Search className="w-4 h-4 text-[var(--color-text-muted)] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="بحث باسم الموظف، رقم الهوية، رقم الجوال، أو المسمى الوظيفي..."
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-              className="w-full h-10 pr-9 pl-3 bg-[var(--color-bg-soft)] border border-[var(--color-border)] rounded-xl text-xs sm:text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-gold)] focus:bg-white transition-all font-medium"
-            />
-          </div>
+          <SearchField
+            label="بحث الموظفين"
+            placeholder="بحث باسم الموظف، رقم الجوال، رقم الجواز أو أحرف الوطني..."
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+          />
         </div>
 
         {/* Main Staff Table */}
@@ -1098,11 +1095,11 @@ export default function StaffListPage() {
                 </span>
               </div>
 
-              <input
+              <SearchField
+                label="بحث الموظفين للدعم"
                 value={dispatchSearchQ}
                 onChange={(e) => setDispatchSearchQ(e.target.value)}
                 placeholder="بحث باسم الموظف، الهوية، الجوال، أو المسمى الوظيفي..."
-                className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-xs font-bold"
               />
 
               <div className="overflow-x-auto max-h-60 overflow-y-auto border border-[var(--color-border)] rounded-xl">

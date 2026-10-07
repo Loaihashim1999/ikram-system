@@ -25,6 +25,10 @@ export default function Tabs({
           return (
             <button
               key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              data-testid={tab.testId}
               onClick={() => onChange(tab.id)}
               className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${
                 isActive
@@ -53,6 +57,10 @@ export default function Tabs({
         return (
           <button
             key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            data-testid={tab.testId}
             onClick={() => onChange(tab.id)}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-150 ${
               isActive

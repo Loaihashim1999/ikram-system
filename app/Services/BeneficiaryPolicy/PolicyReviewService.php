@@ -103,6 +103,7 @@ final class PolicyReviewService
             'beneficiary' => $evaluation->beneficiary?->only(['id', 'full_name']),
             'policy_version' => $version->only(['id', 'version', 'policy_name', 'status']),
             'evaluation' => $evaluation->attributesToArray(),
+            'score_breakdown' => PolicyScoreBreakdown::fromSnapshot($evaluation->scoring_snapshot),
             'documents' => $documents, 'medical_evidence' => $medical,
             'social_assessment' => $assessment, 'review_reasons' => $reasons,
             'unresolved_reasons' => $unresolved, 'approval_blockers' => array_values(array_unique($blockers)),

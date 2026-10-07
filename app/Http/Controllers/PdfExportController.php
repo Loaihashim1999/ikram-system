@@ -3,19 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\Beneficiary;
+use App\Models\Driver;
+use App\Models\DriverAssignment;
 use App\Models\BeneficiaryPolicyEvaluation;
 use App\Models\DailyInventoryMovement;
 use App\Models\DailyReceivingTransaction;
 use App\Models\Distribution;
-use App\Models\DriverAssignment;
+use App\Models\InventoryItem;
 use App\Models\NeighborhoodRep;
 use App\Models\PolicyDecision;
 use App\Models\Staff;
 use App\Models\SupportDistribution;
 use App\Models\SupportReceipt;
 use App\Models\User;
+use App\Services\Communications\SaudiPhoneNumber;
 use App\Services\GovernanceReportService;
 use App\Support\AssociationIdentity;
+use App\Support\Documents\DocumentLabels;
 use App\Support\Pdf\AssociationFrame;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -320,7 +324,7 @@ class PdfExportController extends Controller
     {
         $report = app(GovernanceReportService::class)->build($request);
         $html = view('pdf.weekly_comprehensive_report', compact('report'))->render();
-        $mpdf = $this->createMpdf('L');
+        $mpdf = AssociationFrame::open('L', true);
         $this->writeDocument($mpdf, $html, 'L');
 
         return $this->pdfResponse($mpdf, 'governance-report.pdf');
@@ -330,39 +334,43 @@ class PdfExportController extends Controller
     {
         $report = app(GovernanceReportService::class)->build($request);
         $workbook = new Spreadsheet;
-        $cover = $workbook->getActiveSheet()->setTitle('Report');
+        $cover = $workbook->getActiveSheet()->setTitle('الغلاف');
         $cover->fromArray([
             [AssociationIdentity::name()],
             ['تقرير الحوكمة'],
-            ['From', $report['analytics']['period']['start_date']],
-            ['To', $report['analytics']['period']['end_date']],
-            ['Generated', $report['generated_at']],
-            ['Scope', 'snapshot = current records; period = selected dates'],
-            ['Privacy', 'Credentials, banking and document paths excluded'],
+            ['من تاريخ', $report['analytics']['period']['start_date']],
+            ['إلى تاريخ', $report['analytics']['period']['end_date']],
+            ['تاريخ الإنشاء', $report['generated_at']],
+            ['النطاق', 'اللقطة تصف السجلات الحالية، والفترة تصف التواريخ المحددة'],
+            ['الخصوصية', 'لا يتضمن الملف كلمات المرور أو البيانات البنكية أو مسارات الوثائق'],
         ]);
         $report['datasets'] = ['analysis_indicators' => $report['indicators'], 'monthly_trend' => $report['timeline']] + $report['datasets'];
         foreach ($report['datasets'] as $name => $rows) {
-            $sheet = $workbook->createSheet()->setTitle(substr($name, 0, 31));
+            $sheet = $workbook->createSheet()->setTitle($this->governanceSheetTitle($name));
             $sheet->setRightToLeft(true);
             if (! $rows) {
-                $sheet->setCellValue('A1', 'No matching records');
+                $sheet->setCellValue('A1', 'لا توجد سجلات مطابقة');
 
                 continue;
             }
             $headers = array_keys(reset($rows));
-            $sheet->fromArray($headers, null, 'A1');
+            $sheet->fromArray(array_map(fn ($header) => DocumentLabels::heading((string) $header), $headers), null, 'A1');
             $rowNumber = 2;
             foreach ($rows as $row) {
                 foreach (array_values($row) as $col => $value) {
                     $coordinate = [$col + 1, $rowNumber];
                     $header = $headers[$col];
                     $numericColumns = ['family_members_count', 'monthly_salary', 'total_income', 'monthly_rent', 'net_income', 'policy_score', 'total_received_count', 'quantity', 'current_quantity', 'reserved_quantity', 'min_threshold'];
-                    if (is_int($value) || is_float($value) || ($value !== null && is_numeric($value) && in_array($header, $numericColumns, true))) {
+                    $textColumns = ['phone', 'national_id', 'id', 'recipient_reference'];
+                    if (in_array($header, $textColumns, true)) {
+                        $sheet->setCellValueExplicit($coordinate, $value === null ? '' : (string) $value, DataType::TYPE_STRING);
+                    } elseif (is_int($value) || is_float($value) || ($value !== null && is_numeric($value) && in_array($header, $numericColumns, true))) {
                         $sheet->setCellValueExplicit($coordinate, (float) $value, DataType::TYPE_NUMERIC);
                     } elseif (is_bool($value)) {
                         $sheet->setCellValueExplicit($coordinate, $value, DataType::TYPE_BOOL);
                     } else {
-                        $text = is_scalar($value) || $value === null ? (string) $value : json_encode($value, JSON_UNESCAPED_UNICODE);
+                        $raw = is_scalar($value) || $value === null ? trim((string) $value) : json_encode($value, JSON_UNESCAPED_UNICODE);
+                        $text = preg_match('/^[0-9a-f-]{32,}$/i', $raw) ? $raw : (preg_match('/\s/u', $raw) ? DocumentLabels::prose($raw) : DocumentLabels::text($raw));
                         // Prevent spreadsheet formula injection while preserving the displayed text.
                         if (preg_match('/^[=+\-@]/u', ltrim($text))) {
                             $text = "'".$text;
@@ -383,5 +391,106 @@ class PdfExportController extends Controller
         return response()->streamDownload(function () use ($workbook) {
             (new Xlsx($workbook))->save('php://output');
         }, 'governance-data.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Cache-Control' => 'private, no-store']);
+    }
+
+    public function exportPolicyEvaluation(string $id)
+    {
+        $evaluation = BeneficiaryPolicyEvaluation::with(['policyVersion', 'beneficiary'])->findOrFail($id);
+        abort_unless($evaluation->evaluation_status === BeneficiaryPolicyEvaluation::STATUS_COMPLETED, 409, 'وثيقة السياسة متاحة بعد اكتمال التقييم.');
+        $beneficiary = $evaluation->beneficiary;
+        $decision = PolicyDecision::where('evaluation_id', $evaluation->id)->latest('decided_at')->latest('id')->first();
+        $mpdf = $this->createMpdf();
+        $this->writeDocument($mpdf, view('pdf.policy_evaluation', compact('evaluation', 'beneficiary', 'decision'))->render());
+
+        return $this->pdfResponse($mpdf, 'policy-evaluation.pdf', 'attachment');
+    }
+
+    public function exportInventoryReport()
+    {
+        $items = InventoryItem::query()->orderBy('name')->get();
+        $mpdf = $this->createMpdf();
+        $this->writeDocument($mpdf, view('pdf.inventory_report', ['items' => $items, 'generatedAt' => now()])->render());
+
+        return $this->pdfResponse($mpdf, 'inventory-report.pdf', 'attachment');
+    }
+
+    public function exportDriverReport()
+    {
+        $mpdf = $this->createMpdf();
+        $this->writeDocument($mpdf, view('pdf.driver_report', ['drivers' => $this->driverRows(), 'generatedAt' => now()])->render());
+
+        return $this->pdfResponse($mpdf, 'driver-report.pdf', 'attachment');
+    }
+
+    public function exportDriverExcel()
+    {
+        $phones = app(SaudiPhoneNumber::class);
+        $workbook = new Spreadsheet;
+        $sheet = $workbook->getActiveSheet()->setTitle('السائقون');
+        $sheet->setRightToLeft(true);
+        $headers = ['اسم السائق', 'رقم الهاتف', 'الحالة', 'إجمالي المهام', 'جاري التوصيل', 'تم التوصيل', 'متبقي', 'آخر نشاط'];
+        $sheet->fromArray($headers, null, 'A1');
+        $rowNumber = 2;
+        foreach ($this->driverRows() as $driver) {
+            $values = [$driver['name'], $driver['phone_display'], $driver['status_label'], $driver['assigned'], $driver['in_delivery'], $driver['completed'], $driver['remaining'], $driver['last_activity']];
+            foreach ($values as $column => $value) {
+                if ($column === 1) {
+                    $value = $phones->display($driver['phone_stored']);
+                }
+                $sheet->setCellValueExplicit([$column + 1, $rowNumber], $value === null ? '' : (is_int($value) ? $value : (string) $value), $column > 2 && $column < 7 ? DataType::TYPE_NUMERIC : DataType::TYPE_STRING);
+            }
+            $rowNumber++;
+        }
+        $sheet->freezePane('A2');
+
+        return response()->streamDownload(function () use ($workbook) {
+            (new Xlsx($workbook))->save('php://output');
+        }, 'drivers.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Cache-Control' => 'private, no-store']);
+    }
+
+    private function governanceSheetTitle(string $name): string
+    {
+        $titles = [
+            'analysis_indicators' => 'المؤشرات', 'monthly_trend' => 'الاتجاه الشهري',
+            'beneficiaries_snapshot' => 'المستفيدون', 'registrations_period' => 'تسجيلات الفترة',
+            'daily_beneficiaries' => 'اليوميون', 'policy_evaluations' => 'تقييمات السياسة',
+            'policy_decisions' => 'قرارات السياسة', 'support_distributions' => 'عمليات الدعم',
+            'scheduled_period' => 'المجدول', 'received_period' => 'الاستلام',
+            'daily_activity_period' => 'النشاط اليومي', 'main_stock_snapshot' => 'المخزون العام',
+            'daily_stock_snapshot' => 'المخزون اليومي', 'main_movements_period' => 'حركات العام',
+            'daily_movements_period' => 'حركات اليومي', 'organizations_snapshot' => 'الجهات',
+            'staff_snapshot' => 'الموظفون', 'nationality_analysis' => 'تحليل الجنسية',
+        ];
+
+        return $titles[$name] ?? 'بيانات';
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function driverRows(): array
+    {
+        $phones = app(SaudiPhoneNumber::class);
+        $counts = SupportDistribution::where('fulfillment_method', 'delivery')->whereNotNull('driver_id')
+            ->selectRaw('driver_id, status, COUNT(*) AS total')->groupBy('driver_id', 'status')->get()->groupBy('driver_id');
+        $activity = DriverAssignment::selectRaw('driver_id, MAX(last_used_at) AS last_activity_at')->groupBy('driver_id')->pluck('last_activity_at', 'driver_id');
+
+        return Driver::orderBy('full_name')->get()->map(function (Driver $driver) use ($counts, $activity, $phones) {
+            $states = ($counts->get($driver->id) ?? collect())->pluck('total', 'status');
+            $assigned = (int) $states->sum();
+            $completed = (int) ($states['completed'] ?? 0);
+
+            return [
+                'name' => $driver->full_name,
+                'phone_stored' => $driver->phone,
+                'phone_display' => $phones->display($driver->phone),
+                'status_label' => $driver->is_active ? 'نشط' : 'معطّل',
+                'assigned' => $assigned,
+                'in_delivery' => (int) ($states['in_delivery'] ?? 0),
+                'completed' => $completed,
+                'remaining' => $assigned - $completed - (int) ($states['cancelled'] ?? 0),
+                'last_activity' => $activity[$driver->id] ?? '—',
+            ];
+        })->all();
     }
 }

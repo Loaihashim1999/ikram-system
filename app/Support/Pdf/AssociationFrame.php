@@ -13,10 +13,22 @@ final class AssociationFrame
 {
     private static string $orientation = 'P';
 
-    public static function open(string $orientation = 'P'): Mpdf
+    public static function open(string $orientation = 'P', bool $compact = false): Mpdf
     {
         self::$orientation = $orientation === 'L' ? 'L' : 'P';
         $metrics = self::metrics($orientation);
+        $headerHeight = $metrics['header'];
+        $footerHeight = $metrics['footer'];
+        $headerWidth = $metrics['page_width'];
+        $footerWidth = $metrics['page_width'];
+        if ($compact) {
+            $headerCap = $orientation === 'L' ? 36.0 : 42.0;
+            $footerCap = $orientation === 'L' ? 15.0 : 16.0;
+            $headerHeight = min($headerHeight, $headerCap);
+            $footerHeight = min($footerHeight, $footerCap);
+            $headerWidth = round($metrics['page_width'] * $headerHeight / $metrics['header'], 2);
+            $footerWidth = round($metrics['page_width'] * $footerHeight / $metrics['footer'], 2);
+        }
         $tempDir = storage_path('app/mpdf');
         if (! is_dir($tempDir)) {
             mkdir($tempDir, 0750, true);
@@ -26,8 +38,8 @@ final class AssociationFrame
             'mode' => 'utf-8',
             'format' => 'A4',
             'orientation' => $orientation,
-            'margin_top' => $metrics['header'] + 4,
-            'margin_bottom' => $metrics['footer'] + 10,
+            'margin_top' => $headerHeight + ($compact ? 4 : 4),
+            'margin_bottom' => $footerHeight + ($compact ? 7 : 10),
             'margin_left' => 14,
             'margin_right' => 14,
             'margin_header' => 1,
@@ -39,10 +51,9 @@ final class AssociationFrame
             'tempDir' => $tempDir,
         ]);
 
-        $width = self::millimetres($metrics['page_width']);
-        $header = '<div style="margin-left:-14mm;width:'.$width.'"><img src="'.$metrics['header_path'].'" style="width:'.$width.';height:'.self::millimetres($metrics['header']).'" alt=""></div>';
-        $footer = '<div style="text-align:center;font-family:xbriyaz;font-size:8pt;color:#3A342C">صفحة {PAGENO} من {nbpg}</div>'
-            .'<div style="margin-left:-14mm;width:'.$width.'"><img src="'.$metrics['footer_path'].'" style="width:'.$width.';height:'.self::millimetres($metrics['footer']).'" alt=""></div>';
+        $header = self::band($metrics['header_path'], $metrics['page_width'], $headerWidth, $headerHeight);
+        $footer = '<div style="text-align:center;font-family:xbriyaz;font-size:8pt;color:#3A342C;line-height:1.05;margin:0">صفحة {PAGENO} من {nbpg}</div>'
+            .self::band($metrics['footer_path'], $metrics['page_width'], $footerWidth, $footerHeight);
 
         foreach (['O', 'E'] as $side) {
             $mpdf->SetHTMLHeader($header, $side, $side === 'O');
@@ -54,19 +65,9 @@ final class AssociationFrame
 
     public static function frameMarkup(?string $orientation = null): string
     {
-        $orientation = $orientation === 'L' || ($orientation === null && self::$orientation === 'L') ? 'L' : 'P';
-        $metrics = self::metrics($orientation);
-        $pageHeight = $orientation === 'L' ? 210.0 : 297.0;
-        $marginTop = $metrics['header'] + 4;
-        $marginBottom = $metrics['footer'] + 10;
-        // mPDF position:fixed is relative to the body content box, which already
-        // starts below the header margin. Do not add the header height again.
-        $top = -2;
-        $left = -4;
-        $width = $metrics['page_width'] - 20;
-        $height = max(20, $pageHeight - $marginTop - $marginBottom - 4);
-
-        return '<div style="position:fixed;left:'.$left.'mm;top:'.$top.'mm;width:'.$width.'mm;height:'.$height.'mm;border:0.6mm solid #1F4D3A;">&nbsp;</div>';
+        // The content border lives in the letterhead stylesheet.
+        // A full-page fixed box overflowed mPDF and created a blank trailing page.
+        return '';
     }
 
     /**
@@ -101,6 +102,15 @@ final class AssociationFrame
         }
 
         return round($pageWidthMm * $size[1] / $size[0], 2);
+    }
+
+    private static function band(string $path, float $pageWidth, float $bandWidth, float $bandHeight): string
+    {
+        $offset = (($pageWidth - $bandWidth) / 2) - 14;
+        $width = self::millimetres($bandWidth);
+        $height = self::millimetres($bandHeight);
+
+        return '<div style="margin-left:'.self::millimetres($offset).';width:'.$width.'"><img src="'.$path.'" style="width:'.$width.';height:'.$height.'" alt=""></div>';
     }
 
     private static function millimetres(float $value): string

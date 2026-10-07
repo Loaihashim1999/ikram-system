@@ -12,8 +12,13 @@ describe('Persistent Notification Center', () => {
   let read;
   beforeEach(() => {
     read = false; vi.clearAllMocks();
-    api.get.mockImplementation(async (url) => ({ data: url === '/settings' ? { data: {} } : url.includes('unread-count') ? { unread_count: read ? 0 : 1 } : {
-      data: [{ id: 'n1', message_body: 'تنبيه المخزون', category: 'warehouse_expiry', read_at: read ? '2026-09-13' : null, created_at: '2026-09-13', related_record_id: 'ITEM-123', action_url: '/daily-beneficiaries/inventory' }], last_page: 1 } }));
+    api.get.mockImplementation(async (url, config) => {
+      if (String(url).includes('unread-count')) return { data: { unread_count: read ? 0 : 1 } };
+      const category = config?.params?.category;
+      const row = { id: 'n1', message_body: 'تنبيه المخزون', category: 'warehouse_expiry', read_at: read ? '2026-09-13' : null, created_at: '2026-09-13', related_record_id: 'ITEM-123', action_url: '/daily-beneficiaries/inventory' };
+      const data = category && category !== 'warehouse_expiry' ? [] : [row];
+      return { data: { data, last_page: 1, total: data.length, current_page: 1, per_page: 20, unread_count: read ? 0 : 1 } };
+    });
     api.post.mockImplementation(async () => { read = true; return { data: { success: true } }; });
   });
   it('loads server records, filters tabs and persists mark all read', async () => {
@@ -21,9 +26,9 @@ describe('Persistent Notification Center', () => {
     fireEvent.click(screen.getByRole('button', { name: /مركز الإشعارات والتنبيهات/ }));
     await waitFor(() => expect(screen.getAllByText('تنبيه المخزون').length).toBeGreaterThan(0));
     fireEvent.click(screen.getByText('الأمان'));
-    expect(screen.getByText('لا توجد إشعارات مطابقة')).toBeInTheDocument();
+    expect(await screen.findByText('لا توجد إشعارات مطابقة')).toBeInTheDocument();
     fireEvent.click(screen.getByText('المستودع والصلاحية'));
-    expect(screen.getAllByText('تنبيه المخزون').length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('تنبيه المخزون')).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByTitle('تحديد الكل كمقروء'));
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/notifications/mark-all-read'));
     await waitFor(() => expect(screen.getByText('جميع الإشعارات مقروءة')).toBeInTheDocument());

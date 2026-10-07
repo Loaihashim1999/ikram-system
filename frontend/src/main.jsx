@@ -19,7 +19,15 @@ if (import.meta.env.VITE_SENTRY_ENABLED !== 'false' && !/^\/(driver-access)/.tes
 
 installDocumentDownloads();
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+if (import.meta.env.DEV && window.location.pathname === '/design-preview') {
+  import('./pages/design/DesignPreview.jsx').then(({ default: DesignPreview }) => {
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <React.StrictMode>
+        <DesignPreview />
+      </React.StrictMode>,
+    );
+  });
+} else ReactDOM.createRoot(document.getElementById('root')).render(
   window.location.pathname === '/driver-access' ? <DriverAccessPage /> : <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>

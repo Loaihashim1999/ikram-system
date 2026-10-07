@@ -56,6 +56,7 @@ export default function Sidebar({ isOpen, onClose }) {
       { path: '/representatives', label: 'إدارة الجهات المستفيدة', icon: Building2 },
       { path: '/receiver', label: 'الاستلام المباشر', icon: Truck },
       { path: '/delivery', label: 'إدارة وتوصيل المنازل', icon: Truck },
+      { path: '/admin/drivers', label: 'إدارة السائقين', icon: Truck },
       { path: '/governance', label: 'الحوكمة والمؤشرات', icon: ShieldCheck },
       { path: '/audit', label: 'سجل التدقيق والوثائق', icon: ScrollText },
       {
@@ -63,7 +64,6 @@ export default function Sidebar({ isOpen, onClose }) {
         icon: Settings,
         children: [
           { path: '/admin/users', label: 'إدارة الحسابات والصلاحيات', icon: Shield },
-          { path: '/admin/drivers', label: 'دليل السائقين', icon: Truck },
           { path: '/admin/settings', label: 'إعدادات النظام المالية', icon: Settings },
         ],
       },

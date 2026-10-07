@@ -5,11 +5,14 @@ import { canViewRepresentatives } from "../../utils/modulePermissions";
 import api from "../../api/axios";
 import MainLayout from "../../components/layout/MainLayout";
 import PageHeader from "../../components/ui/PageHeader";
-import Button from "../../components/ui/Button";
+import Button, { PrimaryButton, SecondaryButton } from "../../components/ui/Button";
+import FormField from "../../components/ui/FormField";
+import FileUpload from "../../components/ui/FileUpload";
 import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
 import HistoricalDistributionReferenceCard from "../../components/common/HistoricalDistributionReferenceCard";
 import FilterableTableHeader from "../../components/common/FilterableTableHeader";
 import Scrim from "../../components/overlays/Scrim";
+import Dialog from "../../components/overlays/Dialog";
 import ConfirmDialog from "../../components/overlays/ConfirmDialog";
 import ReceiptHistoryTimeline from "../../components/common/ReceiptHistoryTimeline";
 import {
@@ -18,6 +21,7 @@ import {
   Building2, CheckCircle2, Package, Award
 } from "lucide-react";
 import { exportArrayToExcel } from "../../utils/excelExport";
+import SearchField from "../../components/ui/SearchField";
 import SmartExcelImport from "../../components/common/SmartExcelImport";
 
 export default function NeighborhoodRepsPage() {
@@ -73,6 +77,8 @@ function NeighborhoodRepsContent() {
     status: "active",
   });
   const [files, setFiles] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [formBeneficiaries, setFormBeneficiaries] = useState([]);
   const [newBenRow, setNewBenRow] = useState({
     name: "", phone: "", national_id: "", date_of_birth: "",
@@ -123,6 +129,7 @@ function NeighborhoodRepsContent() {
     setFormBeneficiaries([]);
     setNewBenRow({ name: "", phone: "", national_id: "", date_of_birth: "", beneficiary_type: "citizen", family_members_count: 1 });
     setFiles({});
+    setFieldErrors({});
     setShowAddModal(true);
   };
 
@@ -142,6 +149,7 @@ function NeighborhoodRepsContent() {
       status: r.status || "active",
     });
     setFiles({});
+    setFieldErrors({});
     setFormBeneficiaries([]);
     setNewBenRow({ name: "", phone: "", national_id: "", date_of_birth: "", beneficiary_type: "citizen", family_members_count: 1 });
     setShowAddModal(true);
@@ -226,8 +234,13 @@ function NeighborhoodRepsContent() {
     reader.readAsText(file, "UTF-8");
   };
 
+  const localizeFieldError = (message) => (/[\u0600-\u06FF]/.test(String(message || '')) ? String(message) : 'تحقق من صحة هذا الحقل.');
+
   const handleSaveRep = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setFieldErrors({});
     const fd = new FormData();
     // Support backend fields while maintaining full organizational schema
     fd.append("full_name", form.organization_name);
@@ -261,7 +274,14 @@ function NeighborhoodRepsContent() {
       setShowAddModal(false);
       loadData();
     } catch (err) {
-      alert(err.response?.data?.message || "تعذر حفظ بيانات الجهة المستفيدة.");
+      const errors = err.response?.data?.errors;
+      if (errors && typeof errors === 'object') {
+        setFieldErrors(Object.fromEntries(Object.entries(errors).map(([key, value]) => [key, localizeFieldError(Array.isArray(value) ? value[0] : value)])));
+      } else {
+        setFieldErrors({ form: 'تعذر حفظ بيانات الجهة المستفيدة.' });
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -471,14 +491,12 @@ function NeighborhoodRepsContent() {
 
         {/* Search and Filters Bar */}
         <div className="flex flex-wrap items-center gap-3 mb-6 bg-white p-4 rounded-2xl border border-border-light shadow-sm">
-          <div className="flex-1 min-w-[260px]">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="بحث باسم الجهة، رقم الترخيص، اسم المسؤول، الجوال، أو الحي..."
-              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-xs text-right bg-surface-subtle shadow-sm focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
+          <SearchField
+            label="بحث الجهات"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="بحث باسم الجهة، رقم الترخيص، اسم المسؤول، الجوال، أو الحي..."
+          />
 
           <div className="w-44">
             <select
@@ -618,6 +636,7 @@ function NeighborhoodRepsContent() {
                       <button
                         onClick={() => handleOpenEditModal(r)}
                         className="bg-[var(--color-bg-soft)] hover:bg-amber-100 text-amber-700 border border-[var(--color-border)] p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        aria-label="تعديل بيانات الجهة المستفيدة"
                         title="تعديل بيانات الجهة المستفيدة"
                       >
                         <Edit3 className="w-4 h-4" />
@@ -1042,150 +1061,76 @@ function NeighborhoodRepsContent() {
         )}
 
         {/* ─── 3. Modal: Add / Edit Rep (تسجيل / تعديل بيانات الجهة المستفيدة) ─── */}
-        {showAddModal && (
-          <Scrim isOpen={showAddModal} onClose={() => setShowAddModal(false)}>
-            <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl overflow-hidden p-6 border border-primary-100 max-h-[90vh] overflow-y-auto" dir="rtl" onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 className="font-bold text-lg text-primary-900 flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-primary-600" />
-                  <span>{editingRep ? "✏️ تعديل بيانات الجهة المستفيدة" : "➕ تسجيل جهة مستفيدة جديدة"}</span>
-                </h3>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="p-1 hover:bg-[var(--color-bg-soft)] rounded-full text-[var(--color-text-muted)] cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSaveRep} className="space-y-4 text-xs">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">اسم الجهة المستفيدة *</label>
-                    <input
-                      required
-                      value={form.organization_name}
-                      onChange={(e) => setForm({ ...form, organization_name: e.target.value })}
-                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-bold"
-                      placeholder="مثال: جمعية البر والتقوى، جامع الإحسان..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">نوع الجهة *</label>
-                    <select
-                      value={form.organization_type}
-                      onChange={(e) => setForm({ ...form, organization_type: e.target.value })}
-                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right bg-white font-bold"
-                    >
-                      {organizationTypes.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
+        <Dialog
+          isOpen={showAddModal}
+          onClose={() => { if (!saving) setShowAddModal(false); }}
+          title={editingRep ? "تعديل بيانات الجهة المستفيدة" : "إضافة جهة مستفيدة"}
+          subtitle="أدخل بيانات الجهة ومعلومات الشخص المسؤول والمرفقات المطلوبة."
+          maxWidth="max-w-3xl"
+          footer={(
+            <>
+              <SecondaryButton type="button" onClick={() => setShowAddModal(false)} disabled={saving}>إلغاء</SecondaryButton>
+              <PrimaryButton type="submit" form="organization-form" loading={saving}>{editingRep ? "حفظ" : "إضافة الجهة"}</PrimaryButton>
+            </>
+          )}
+        >
+              <form id="organization-form" onSubmit={handleSaveRep} className="organization-form space-y-5">
+                {fieldErrors.form && <p role="alert" className="rounded-xl border border-[var(--color-danger)] bg-[var(--color-bg-soft)] p-3 text-sm text-[var(--color-danger)]">{fieldErrors.form}</p>}
+                <section className="space-y-3" data-section="organization">
+                  <h3 className="text-sm font-bold text-[var(--color-brand-green)]">بيانات الجهة</h3>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  <FormField label="اسم الجهة المستفيدة" name="organization_name" required error={fieldErrors.organization_name || fieldErrors.full_name}>
+                    <input required value={form.organization_name} onChange={(e) => setForm({ ...form, organization_name: e.target.value })} className="ikram-control" placeholder="مثال: جمعية البر والتقوى" />
+                  </FormField>
+                  <FormField label="نوع الجهة" name="organization_type" required error={fieldErrors.organization_type}>
+                    <select value={form.organization_type} onChange={(e) => setForm({ ...form, organization_type: e.target.value })} className="ikram-control">
+                      {organizationTypes.map((type) => <option key={type} value={type}>{type}</option>)}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">رقم الترخيص / التسجيل</label>
-                    <input
-                      value={form.license_number}
-                      onChange={(e) => setForm({ ...form, license_number: e.target.value })}
-                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-mono"
-                      placeholder="مثال: 1024 / 7000123456"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">الشخص المفوض / المسؤول *</label>
-                    <input
-                      required
-                      value={form.contact_person}
-                      onChange={(e) => setForm({ ...form, contact_person: e.target.value })}
-                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-bold"
-                      placeholder="اسم المفوض الرسمي للتواصل والاستلام"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">رقم جوال المسؤول *</label>
-                    <input
-                      required
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-mono"
-                      placeholder="05xxxxxxxx"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">البريد الإلكتروني للجهة</label>
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right"
-                      placeholder="info@org.sa"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">المدينة *</label>
-                    <select
-                      value={form.city}
-                      onChange={(e) => setForm({ ...form, city: e.target.value })}
-                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right bg-white font-bold"
-                    >
-                      <option value="مكة المكرمة">مكة المكرمة</option>
-                      <option value="جدة">جدة</option>
-                      <option value="الرياض">الرياض</option>
-                      <option value="المدينة المنورة">المدينة المنورة</option>
-                      <option value="الطائف">الطائف</option>
+                  </FormField>
+                  <FormField label="رقم الترخيص / التسجيل" name="license_number" error={fieldErrors.license_number}>
+                    <input value={form.license_number} onChange={(e) => setForm({ ...form, license_number: e.target.value })} className="ikram-control" placeholder="مثال: 1024" />
+                  </FormField>
+                  <FormField label="المدينة" name="city" required error={fieldErrors.city}>
+                    <select value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="ikram-control">
+                      {["مكة المكرمة", "جدة", "الرياض", "المدينة المنورة", "الطائف"].map((city) => <option key={city} value={city}>{city}</option>)}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">اسم الحي السكني *</label>
-                    <input
-                      required
-                      value={form.district_name}
-                      onChange={(e) => setForm({ ...form, district_name: e.target.value })}
-                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-bold"
-                      placeholder="مثال: حي الشرائع مخطط 9"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">عدد المستفيدين التابعين للجهة</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={form.beneficiaries_count}
-                      onChange={(e) => setForm({ ...form, beneficiaries_count: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-[var(--color-text-secondary)] mb-1">الحالة</label>
-                    <select
-                      value={form.status}
-                      onChange={(e) => setForm({ ...form, status: e.target.value })}
-                      className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right bg-white font-bold"
-                    >
-                      <option value="active">نشط</option>
-                      <option value="suspended">موقوف</option>
-                    </select>
-                  </div>
+                  </FormField>
+                  <FormField label="اسم الحي السكني" name="district_name" required error={fieldErrors.district_name} className="lg:col-span-2">
+                    <input required value={form.district_name} onChange={(e) => setForm({ ...form, district_name: e.target.value })} className="ikram-control" placeholder="مثال: حي الشرائع" />
+                  </FormField>
                 </div>
-
-                <div>
-                  <label className="block font-bold text-[var(--color-text-secondary)] mb-1">العنوان الوطني</label>
-                  <input
-                    value={form.national_address}
-                    onChange={(e) => setForm({ ...form, national_address: e.target.value })}
-                    className="w-full rounded-xl border border-[var(--color-border)] p-2.5 text-right"
-                    placeholder="العنوان الوطني للجهة والمقر"
-                  />
-                </div>
+                <FormField label="العنوان الوطني" name="national_address" error={fieldErrors.national_address}>
+                  <input value={form.national_address} onChange={(e) => setForm({ ...form, national_address: e.target.value })} className="ikram-control" placeholder="العنوان الوطني للجهة والمقر" />
+                </FormField>
+                </section>
+                <section className="space-y-3" data-section="contact">
+                  <h3 className="text-sm font-bold text-[var(--color-brand-green)]">بيانات المسؤول</h3>
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    <FormField label="الشخص المفوض / المسؤول" name="contact_person" required error={fieldErrors.contact_person} className="lg:col-span-2">
+                      <input required value={form.contact_person} onChange={(e) => setForm({ ...form, contact_person: e.target.value })} className="ikram-control" placeholder="اسم المفوض الرسمي" />
+                    </FormField>
+                    <FormField label="رقم جوال المسؤول" name="phone" required error={fieldErrors.phone}>
+                      <input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="ikram-control" dir="ltr" placeholder="05xxxxxxxx" />
+                    </FormField>
+                    <FormField label="البريد الإلكتروني للجهة" name="email" error={fieldErrors.email}>
+                      <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="ikram-control" dir="ltr" placeholder="info@org.sa" />
+                    </FormField>
+                  </div>
+                </section>
+                <section className="space-y-3" data-section="status">
+                  <h3 className="text-sm font-bold text-[var(--color-brand-green)]">الحالة</h3>
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    <FormField label="عدد المستفيدين التابعين للجهة" name="beneficiaries_count" error={fieldErrors.beneficiaries_count}>
+                      <input type="number" min="0" value={form.beneficiaries_count} onChange={(e) => setForm({ ...form, beneficiaries_count: parseInt(e.target.value, 10) || 0 })} className="ikram-control" />
+                    </FormField>
+                    <FormField label="الحالة" name="status" error={fieldErrors.status}>
+                      <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="ikram-control">
+                        <option value="active">نشط</option>
+                        <option value="suspended">موقوف</option>
+                      </select>
+                    </FormField>
+                  </div>
+                </section>
 
                 {/* ─── قسم إدراج وتعديل الأسر التابعة للجهة ─── */}
                 <div className="border-t pt-4 bg-primary-50/40 p-4 rounded-2xl border border-primary-200 space-y-3">
@@ -1325,77 +1270,19 @@ function NeighborhoodRepsContent() {
                 </div>
 
                 {/* ─── قسم الوثائق المرفقة الأربعة ─── */}
-                <div className="border-t pt-4">
-                  <h4 className="font-extrabold text-primary-900 mb-3 text-xs flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-primary-600" />
-                    <span>مرفقات الوثائق والتراخيص الرسمية للجهة:</span>
-                  </h4>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {/* 1. License Doc */}
-                    <div className="bg-[var(--color-bg-soft)] p-3 rounded-2xl border border-[var(--color-border)]">
-                      <label className="block font-bold text-[var(--color-text-secondary)] mb-1">📜 صورة ترخيص / تسجيل الجهة</label>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(e) => setFiles({ ...files, id_document_image: e.target.files[0] })}
-                        className="w-full text-xs text-[var(--color-text-muted)]"
-                      />
-                    </div>
-
-                    {/* 2. Support Letter */}
-                    <div className="bg-[var(--color-bg-soft)] p-3 rounded-2xl border border-[var(--color-border)]">
-                      <label className="block font-bold text-[var(--color-text-secondary)] mb-1">📑 خطاب التفويض الرسمي للشخص المسؤول</label>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(e) => setFiles({ ...files, support_letter: e.target.files[0] })}
-                        className="w-full text-xs text-[var(--color-text-muted)]"
-                      />
-                    </div>
-
-                    {/* 3. National Address Doc */}
-                    <div className="bg-[var(--color-bg-soft)] p-3 rounded-2xl border border-[var(--color-border)]">
-                      <label className="block font-bold text-[var(--color-text-secondary)] mb-1">📍 مستند العنوان الوطني للجهة</label>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(e) => setFiles({ ...files, national_address_doc: e.target.files[0] })}
-                        className="w-full text-xs text-[var(--color-text-muted)]"
-                      />
-                    </div>
-
-                    {/* 4. Dependents IDs ZIP */}
-                    <div className="bg-purple-50 p-3 rounded-2xl border border-purple-200">
-                      <label className="block font-bold text-purple-900 mb-1">📦 إرفاق ملف مضغوط (ZIP) بهويات المستفيدين</label>
-                      <input
-                        type="file"
-                        accept=".zip,.rar,.7z,.pdf"
-                        onChange={(e) => setFiles({ ...files, dependents_ids_zip: e.target.files[0] })}
-                        className="w-full text-xs text-purple-700"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddModal(false)}
-                    className="px-4 py-2 rounded-xl bg-[var(--color-bg-soft)] text-[var(--color-text-muted)] font-bold cursor-pointer"
-                  >
-                    إلغاء
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 rounded-xl bg-primary-700 text-white font-bold hover:bg-primary-800 cursor-pointer shadow-md"
-                  >
-                    حفظ وتأكيد البيانات
-                  </button>
-                </div>
+                <section className="space-y-3" data-section="attachments">
+                  <h3 className="text-sm font-bold text-[var(--color-brand-green)]">المرفقات</h3>
+                  <FileUpload label="صورة ترخيص / تسجيل الجهة" hint="صورة أو PDF. الحد الحالي 5 ميغابايت." accept="image/*,.pdf" file={files.id_document_image} onChange={(file) => setFiles({ ...files, id_document_image: file })} onClear={() => setFiles({ ...files, id_document_image: null })} />
+                  {fieldErrors.id_document_image && <p className="text-xs text-[var(--color-danger)]">{fieldErrors.id_document_image}</p>}
+                  <FileUpload label="خطاب التفويض الرسمي للشخص المسؤول" hint="PDF أو صورة. الحد الحالي 5 ميغابايت." accept="image/*,.pdf" file={files.support_letter} onChange={(file) => setFiles({ ...files, support_letter: file })} onClear={() => setFiles({ ...files, support_letter: null })} />
+                  {fieldErrors.support_letter && <p className="text-xs text-[var(--color-danger)]">{fieldErrors.support_letter}</p>}
+                  <FileUpload label="مستند العنوان الوطني للجهة" hint="PDF أو صورة. الحد الحالي 5 ميغابايت." accept="image/*,.pdf" file={files.national_address_doc} onChange={(file) => setFiles({ ...files, national_address_doc: file })} onClear={() => setFiles({ ...files, national_address_doc: null })} />
+                  {fieldErrors.national_address_doc && <p className="text-xs text-[var(--color-danger)]">{fieldErrors.national_address_doc}</p>}
+                  <FileUpload label="رفع ملف مضغوط بملفات المستفيدين" hint="ZIP أو RAR أو 7z أو PDF. الحد الحالي 20 ميغابايت." accept=".zip,.rar,.7z,.pdf" file={files.dependents_ids_zip} onChange={(file) => setFiles({ ...files, dependents_ids_zip: file })} onClear={() => setFiles({ ...files, dependents_ids_zip: null })} />
+                  {fieldErrors.dependents_ids_zip && <p className="text-xs text-[var(--color-danger)]">{fieldErrors.dependents_ids_zip}</p>}
+                </section>
               </form>
-            </div>
-          </Scrim>
-        )}
+        </Dialog>
 
         {/* Dispatch Support Modal */}
         {showDispatchModal && selectedRep && (

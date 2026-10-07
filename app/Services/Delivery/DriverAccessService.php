@@ -213,6 +213,21 @@ class DriverAccessService
         });
     }
 
+    /** Queue the current capability URL without rotating the token or building a second link. */
+    public function sendCurrent(string $id, string $actor): void
+    {
+        DB::transaction(function () use ($id, $actor) {
+            $assignment = DriverAssignment::whereKey($id)->lockForUpdate()->firstOrFail();
+            $driver = Driver::whereKey($assignment->driver_id)->lockForUpdate()->firstOrFail();
+            abort_unless($driver->is_active && ! $assignment->completed_at && ! $assignment->revoked_at, 409, 'التكليف غير متاح للإرسال.');
+            abort_if($assignment->expires_at->lte(now()), 409, 'انتهت صلاحية رابط التكليف.');
+            $token = $assignment->capability_ciphertext;
+            abort_unless(is_string($token) && preg_match('/^[a-f0-9]{64}$/D', $token), 404, 'لا يوجد رابط محفوظ.');
+            $this->queueDriverNotice($assignment, $driver, $token, 'assignment:'.$id.':send:'.Str::uuid());
+            $this->audit($assignment, 'DRIVER_LINK_SENT', $actor);
+        });
+    }
+
     /** Return the current capability URL without rotating or logging it. */
     public function currentUrl(DriverAssignment $assignment): ?string
     {
@@ -232,9 +247,23 @@ class DriverAccessService
         return $url;
     }
 
+    public function publicBaseUrl(): string
+    {
+        $configured = rtrim((string) (config('app.public_url') ?: config('app.url')), '/');
+        $host = strtolower((string) parse_url($configured, PHP_URL_HOST));
+        $blocked = $host === ''
+            || str_ends_with($host, 'azurecontainerapps.io')
+            || in_array($host, ['localhost', '127.0.0.1'], true);
+        if (app()->environment('production') && $blocked) {
+            return 'https://systemben.ekramfb.org.sa';
+        }
+
+        return $configured;
+    }
+
     private function capabilityUrl(string $token): string
     {
-        return rtrim((string) config('app.url'), '/').'/driver-access#'.$token;
+        return $this->publicBaseUrl().'/driver-access#'.$token;
     }
 
     private function rememberCapability(DriverAssignment $assignment, string $token): void

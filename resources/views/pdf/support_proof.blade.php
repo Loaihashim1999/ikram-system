@@ -12,12 +12,9 @@
 @if(array_key_exists('schema_version', $proof))
 <tr><th>إصدار بيانات الإثبات</th><td class="pdf-muted">{{ $proof['schema_version'] }}</td></tr>
 @endif
-@if(array_key_exists('source', $proof))
-<tr><th>مصدر الإثبات</th><td class="pdf-muted">{{ $proof['source'] }}</td></tr>
-@endif
 <tr><th>المستلم</th><td>{{ $proof['recipient']['display_name'] }}</td></tr>
 @if(array_key_exists('type', $proof['recipient']))
-<tr><th>نوع المستلم</th><td>{{ $proof['recipient']['type'] ?: 'غير متوفر' }}</td></tr>
+<tr><th>نوع المستلم</th><td>{{ \App\Support\Documents\DocumentLabels::text($proof['recipient']['type']) ?: 'غير متوفر' }}</td></tr>
 @endif
 @if(array_key_exists('id', $proof['recipient']))
 <tr><th>معرف المستلم</th><td class="pdf-muted">{{ $proof['recipient']['id'] ?: 'غير متوفر' }}</td></tr>
@@ -50,11 +47,9 @@
 <tr><th>معرف الموظف</th><td class="pdf-muted">{{ $proof['employee']['id'] ?: 'غير متوفر' }}</td></tr>
 @endif
 <tr><th>{{ $proof['fulfillment_method'] === 'delivery' ? 'تاريخ ووقت التوصيل' : 'تاريخ ووقت الاستلام' }}</th><td>{{ $confirmedAt->format('Y-m-d H:i') }}</td></tr>
-<tr><th>طريقة التحقق</th><td>رمز استلام خاص بعملية الدعم</td></tr>
+<tr><th>طريقة التسليم</th><td>{{ \App\Support\Documents\DocumentLabels::text($proof['fulfillment_method']) }}</td></tr>
+<tr><th>طريقة التحقق</th><td>{{ \App\Support\Documents\DocumentLabels::text($proof['verification_method'] ?? 'receipt_code') }}</td></tr>
 <tr><th>الحالة النهائية</th><td>{{ $proof['fulfillment_method'] === 'delivery' ? 'تم التوصيل' : 'تم الاستلام' }}</td></tr>
-@if(array_key_exists('final_status', $proof))
-<tr><th>الحالة المسجلة</th><td>{{ $proof['final_status'] }}</td></tr>
-@endif
 </table>
 <table><thead><tr><th>نوع الدعم</th><th>الكمية</th><th>الوحدة</th><th>معرف الصنف</th></tr></thead><tbody>
 @foreach($proof['items'] as $item)

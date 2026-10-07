@@ -123,11 +123,11 @@ class NationalityReportAndPdfTest extends TestCase
         $excelResponse = $this->get('/api/reports/comprehensive/excel?start_date=2026-10-01&end_date=2026-10-05')->assertOk();
         file_put_contents($excel, $excelResponse->streamedContent());
         $workbook = IOFactory::load($excel);
-        $sheet = $workbook->getSheetByName('nationality_analysis');
+        $sheet = $workbook->getSheetByName('تحليل الجنسية');
         $this->assertNotNull($sheet, 'sheets: '.implode(',', $workbook->getSheetNames()));
         $exported = 0;
         foreach ($sheet->toArray() as $index => $row) {
-            if ($index === 0 || ($row[0] ?? null) !== 'registered') {
+            if ($index === 0 || ($row[0] ?? null) !== 'مسجل') {
                 continue;
             }
             $exported += (int) $row[3];
@@ -142,7 +142,7 @@ class NationalityReportAndPdfTest extends TestCase
         $this->assertStringContainsString('مصري', $html);
         $this->assertStringNotContainsString('fonts.googleapis', $html);
         $this->assertStringNotContainsString('11.jpeg', $html);
-        $this->assertDoesNotMatchRegularExpression('/https?:\/\//', $html);
+        $this->assertDoesNotMatchRegularExpression('/https?:\/\//', preg_replace('/xmlns="http:\/\/www\.w3\.org\/2000\/svg"/', '', $html));
 
         $proofHtml = view('pdf.support_proof', [
             'receipt' => $proof['receipt'],
@@ -152,15 +152,15 @@ class NationalityReportAndPdfTest extends TestCase
             'generatedAt' => Carbon::parse('2026-10-05 09:00:00'),
         ])->render();
         foreach ([
-            '1', 'confirmation', $proof['support']->id, 'beneficiary', $people['p1']->id,
+            '1', 'رمز الاستلام', $proof['support']->id, 'مستفيد', $people['p1']->id,
             'EKRAM-E2E-TEST SCOPE-MARKER', '0500001101', 'مكة', 'الصفا', 'EKRAM-E2E-TEST street',
             'EKRAM-E2E-TEST pickup', $this->admin->id, 'EKRAM-E2E-TEST report operator',
-            'completed', $proof['item']->id, 'EKRAM-E2E-TEST rice', '2.50', 'كيلو',
+            'تم الاستلام', $proof['item']->id, 'EKRAM-E2E-TEST rice', '2.50', 'كيلو',
         ] as $value) {
             $this->assertStringContainsString((string) $value, $proofHtml);
         }
         $this->assertStringContainsString('تم الاستلام', $proofHtml);
-        $this->assertStringContainsString('رمز استلام خاص بعملية الدعم', $proofHtml);
+        $this->assertStringContainsString('طريقة التحقق', $proofHtml);
         $this->assertStringNotContainsString('معرف السائق', $proofHtml);
         $this->assertDoesNotMatchRegularExpression('/رمز الاستلام:\s*[0-9]{4}/', $proofHtml);
 

@@ -17,12 +17,12 @@ export default function KpiCard({
   onClick,
 }) {
   const iconColorStyles = {
-    amber: 'bg-[#FEF3C7] text-[var(--color-brand-green)]',
-    green: 'bg-[#EBF4EA] text-[var(--color-brand-green)]',
+    amber: 'bg-[var(--status-warning-bg)] text-[var(--color-warning)]',
+    green: 'bg-[var(--status-success-bg)] text-[var(--color-success)]',
     gold: 'bg-[var(--color-bg-soft)] text-[var(--color-brand-gold)]',
-    blue: 'bg-sky-50 text-sky-600',
-    red: 'bg-red-50 text-red-600',
-    purple: 'bg-purple-50 text-purple-600',
+    blue: 'bg-[var(--status-info-bg)] text-[var(--color-info)]',
+    red: 'bg-[var(--status-danger-bg)] text-[var(--color-danger)]',
+    purple: 'bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)]',
   };
 
   return (

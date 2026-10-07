@@ -11,6 +11,7 @@ use App\Models\SupportDistribution;
 use App\Models\User;
 use App\Services\Communications\CommunicationService;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -148,5 +149,118 @@ class NotificationService
         }
 
         return 'delivery';
+    }
+
+    public static function visibleQuery(User $user): Builder
+    {
+        $query = Notification::query()->where('recipient_type', 'staff')->where('recipient_id', $user->id);
+        if ($user->role === 'admin') {
+            return $query;
+        }
+
+        $query->whereNotNull('event_type')->where('event_type', '!=', '');
+        $permissions = $user->permissions ?? [];
+        $daily = [
+            DailyInventoryItem::class,
+            DailyInventoryMovement::class,
+            DailyReceivingTransaction::class,
+        ];
+        $allowed = [
+            'support' => ($permissions['support']['view'] ?? false) === true && ($permissions['support']['notifications'] ?? false) === true,
+            'daily_beneficiaries' => self::moduleAllowed($user, 'daily_beneficiaries', ['assistant_admin', 'reception', 'staff', 'readonly']),
+            'warehouse' => self::moduleAllowed($user, 'warehouse', ['assistant_admin', 'warehouse', 'staff', 'readonly']),
+            'beneficiaries' => self::moduleAllowed($user, 'beneficiaries', ['assistant_admin', 'reception', 'staff', 'readonly']),
+            'delivery' => self::moduleAllowed($user, 'delivery', ['assistant_admin', 'staff', 'delivery_driver', 'driver']),
+        ];
+        if (! in_array(true, $allowed, true)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $outer) use ($allowed, $daily) {
+            if ($allowed['support']) {
+                $outer->orWhere('event_type', 'like', 'support_%');
+            }
+            if ($allowed['daily_beneficiaries']) {
+                $outer->orWhere(function (Builder $inner) use ($daily) {
+                    $inner->where('event_type', 'not like', 'support_%')->whereIn('related_record_type', $daily);
+                });
+            }
+            if ($allowed['warehouse']) {
+                $outer->orWhere(function (Builder $inner) use ($daily) {
+                    $inner->where('event_type', 'not like', 'support_%')
+                        ->whereNotIn('related_record_type', $daily)
+                        ->where(fn (Builder $match) => $match->where('event_type', 'like', 'stock%')->orWhere('event_type', 'like', 'warehouse%'));
+                });
+            }
+            if ($allowed['beneficiaries']) {
+                $outer->orWhere(function (Builder $inner) use ($daily) {
+                    $inner->where('event_type', 'like', 'beneficiary%')
+                        ->where('event_type', 'not like', 'support_%')
+                        ->whereNotIn('related_record_type', $daily)
+                        ->where('event_type', 'not like', 'stock%')
+                        ->where('event_type', 'not like', 'warehouse%');
+                });
+            }
+            if ($allowed['delivery']) {
+                $outer->orWhere(function (Builder $inner) use ($daily) {
+                    $inner->where('event_type', 'not like', 'support_%')
+                        ->where('event_type', 'not like', 'beneficiary%')
+                        ->where('event_type', 'not like', 'stock%')
+                        ->where('event_type', 'not like', 'warehouse%')
+                        ->whereNotIn('related_record_type', $daily);
+                });
+            }
+        });
+    }
+
+    public static function deleteMatching(Builder $query, int $chunk = 500): int
+    {
+        $deleted = 0;
+        do {
+            $ids = (clone $query)->orderBy('id')->limit($chunk)->pluck('id');
+            if ($ids->isEmpty()) {
+                break;
+            }
+            $removed = Notification::whereIn('id', $ids)->delete();
+            if ($removed < 1) {
+                break;
+            }
+            $deleted += $removed;
+        } while (true);
+
+        return $deleted;
+    }
+
+    public static function decorateTargets(iterable $notifications): void
+    {
+        $groups = [];
+        foreach ($notifications as $notification) {
+            $class = (string) $notification->related_record_type;
+            if (class_exists($class) && is_subclass_of($class, \Illuminate\Database\Eloquent\Model::class)) {
+                $groups[$class][] = (string) $notification->related_record_id;
+            }
+        }
+        $found = [];
+        foreach ($groups as $class => $ids) {
+            $found[$class] = $class::query()->whereIn((new $class)->getKeyName(), array_values(array_unique($ids)))->pluck((new $class)->getKeyName())->map(fn ($id) => (string) $id)->all();
+        }
+        foreach ($notifications as $notification) {
+            $class = (string) $notification->related_record_type;
+            if (! isset($groups[$class])) {
+                $notification->setAttribute('target_available', $class === 'System' && filled($notification->action_url));
+
+                continue;
+            }
+            $notification->setAttribute('target_available', in_array((string) $notification->related_record_id, $found[$class], true));
+        }
+    }
+
+    private static function moduleAllowed(User $user, string $module, array $roles): bool
+    {
+        $permissions = $user->permissions ?? [];
+
+        return in_array($user->role, $roles, true)
+            && ($permissions[$module]['view'] ?? false) === true
+            && ($permissions[$module]['notifications'] ?? false) === true;
     }
 }

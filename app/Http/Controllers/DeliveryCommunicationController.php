@@ -10,11 +10,13 @@ use App\Models\Setting;
 use App\Models\SupportDistribution;
 use App\Services\Communications\CommunicationService;
 use App\Services\Communications\MessageTemplates;
+use App\Services\Communications\SaudiPhoneNumber;
 use App\Services\Delivery\DriverAccessService;
 use App\Services\Delivery\ReceiptVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class DeliveryCommunicationController extends Controller
 {
@@ -39,7 +41,11 @@ class DeliveryCommunicationController extends Controller
         }
 
         return response()->json(['data' => $templates->content(), 'definitions' => $templates->definitions(),
-            'provider' => ['mode' => config('services.communications.provider', 'fake')]]);
+            'provider' => [
+                'mode' => config('services.communications.provider', 'fake'),
+                'sender_configured' => filled(config('services.taqnyat.sms.sender')),
+                'webhook' => 'disabled',
+            ]]);
     }
 
     public function preview(Request $request, MessageTemplates $templates)
@@ -90,7 +96,8 @@ class DeliveryCommunicationController extends Controller
     {
         abort_unless($request->user()->role === 'admin', 403);
         if ($request->isMethod('POST')) {
-            $data = $request->validate(['full_name' => 'required|string|max:150', 'phone' => ['required', 'regex:/^\+?[0-9]{9,15}$/D'], 'vehicle_info' => 'nullable|string|max:255', 'is_active' => 'sometimes|boolean']);
+            $data = $request->validate(['full_name' => 'required|string|max:150', 'phone' => 'required|string|max:20', 'vehicle_info' => 'nullable|string|max:255', 'is_active' => 'sometimes|boolean']);
+            $data['phone'] = $this->canonicalDriverPhone($data['phone']);
             $driver = DB::transaction(function () use ($request, $data) {
                 $driver = Driver::create($data);
                 AuditLog::create(['user_id' => $request->user()->id, 'action' => 'DRIVER_CREATED', 'target_table' => 'drivers', 'target_id' => $driver->id, 'details' => []]);
@@ -104,7 +111,8 @@ class DeliveryCommunicationController extends Controller
         $counts = SupportDistribution::where('fulfillment_method', 'delivery')->whereNotNull('driver_id')
             ->selectRaw('driver_id, status, COUNT(*) AS total')->groupBy('driver_id', 'status')->get()->groupBy('driver_id');
         $activity = DriverAssignment::selectRaw('driver_id, MAX(last_used_at) AS last_activity_at')->groupBy('driver_id')->pluck('last_activity_at', 'driver_id');
-        $drivers = Driver::orderBy('full_name')->get()->map(function ($driver) use ($counts, $activity) {
+        $openAssignments = DriverAssignment::query()->whereNull('completed_at')->whereNull('revoked_at')->where('expires_at', '>', now())->get(['id', 'driver_id'])->groupBy('driver_id');
+        $drivers = Driver::orderBy('full_name')->get()->map(function ($driver) use ($counts, $activity, $openAssignments) {
             $states = ($counts->get($driver->id) ?? collect())->pluck('total', 'status');
             $assigned = (int) $states->sum();
             $completed = (int) ($states['completed'] ?? 0);
@@ -113,9 +121,11 @@ class DeliveryCommunicationController extends Controller
                 'in_progress' => (int) ($states['in_delivery'] ?? 0), 'remaining' => $remaining,
                 'all_completed' => $assigned > 0 && $remaining === 0 && $completed === $assigned,
                 'last_activity_at' => $activity[$driver->id] ?? null]);
+            $open = $openAssignments->get($driver->id) ?? collect();
             foreach (['assigned_count' => $assigned, 'delivered_count' => $completed,
                 'in_progress_count' => (int) ($states['in_delivery'] ?? 0), 'remaining_count' => $remaining,
-                'all_completed' => $assigned > 0 && $completed === $assigned, 'last_activity' => $activity[$driver->id] ?? null] as $key => $value) {
+                'all_completed' => $assigned > 0 && $remaining === 0 && $completed === $assigned, 'last_activity' => $activity[$driver->id] ?? null,
+                'open_assignment_id' => $open->count() === 1 ? $open->first()->id : null] as $key => $value) {
                 $driver->setAttribute($key, $value);
             }
 
@@ -129,8 +139,11 @@ class DeliveryCommunicationController extends Controller
     {
         abort_unless($request->user()->role === 'admin', 403);
         $data = $request->validate(['full_name' => 'sometimes|required|string|max:150',
-            'phone' => ['sometimes', 'required', 'regex:/^\+?[0-9]{9,15}$/D'],
+            'phone' => 'sometimes|required|string|max:20',
             'vehicle_info' => 'nullable|string|max:255', 'is_active' => 'sometimes|boolean']);
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = $this->canonicalDriverPhone($data['phone']);
+        }
         $driver = DB::transaction(function () use ($request, $id, $data) {
             $driver = Driver::whereKey($id)->lockForUpdate()->firstOrFail();
             $driver->update($data);
@@ -197,6 +210,14 @@ class DeliveryCommunicationController extends Controller
         return response()->json($payload, $status)->header('Cache-Control', 'no-store')->header('Referrer-Policy', 'no-referrer');
     }
 
+    public function send(Request $request, string $id, DriverAccessService $service)
+    {
+        abort_unless($request->user()->role === 'admin', 403);
+        $service->sendCurrent($id, $request->user()->id);
+
+        return response()->json(['message' => 'تم تمرير الرابط الحالي إلى رسالة السائق.']);
+    }
+
     public function revoke(Request $request, string $id, DriverAccessService $service)
     {
         abort_unless($request->user()->role === 'admin', 403);
@@ -211,5 +232,14 @@ class DeliveryCommunicationController extends Controller
         $result = $service->access($request->header('X-Driver-Token', ''), $id, $code);
 
         return response()->json($result, $result['status'])->header('Cache-Control', 'no-store')->header('Referrer-Policy', 'no-referrer');
+    }
+
+    private function canonicalDriverPhone(string $phone): string
+    {
+        try {
+            return app(SaudiPhoneNumber::class)->normalize($phone);
+        } catch (ValidationException) {
+            throw ValidationException::withMessages(['phone' => 'رقم الجوال السعودي غير صالح.']);
+        }
     }
 }

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import api from './api/axios';
 import PagePermissionGuard from './components/common/PagePermissionGuard';
@@ -26,7 +26,6 @@ const AddStaffPage = lazy(() => import('./pages/staff/AddStaffPage'));
 const EditStaffPage = lazy(() => import('./pages/staff/EditStaffPage'));
 const StaffImportPage = lazy(() => import('./pages/staff/StaffImportPage'));
 const Warehouse = lazy(() => import('./pages/warehouse/Warehouse'));
-const SupportDeliveryPage = lazy(() => import('./pages/delivery/SupportDeliveryPage'));
 const DirectHandoverPage = lazy(() => import('./pages/delivery/DirectHandoverPage'));
 const HomeDeliveryPage = lazy(() => import('./pages/delivery/HomeDeliveryPage'));
 const SupportRequestPage = lazy(() => import('./pages/beneficiaries/SupportRequestPage'));
@@ -39,11 +38,13 @@ const PolicyApplicationRunsPage = lazy(() => import('./pages/admin/PolicyApplica
 const UsersPage = lazy(() => import('./pages/admin/Users'));
 const DriversDirectoryPage = lazy(() => import('./pages/admin/DriversDirectoryPage'));
 const AssistantAdminDashboard = lazy(() => import('./pages/admin/AssistantAdminDashboard'));
+const DriverVisualEvidence = lazy(() => import('./pages/design/DriverVisualEvidence'));
 
 function RouteFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-page)]" role="status" aria-label="جارٍ تحميل الصفحة">
+    <div className="min-h-screen flex flex-col gap-3 items-center justify-center bg-[var(--color-bg-page)]" role="status" aria-label="جارٍ تحميل الصفحة">
       <div className="w-12 h-12 border-4 border-[var(--color-brand-gold)] border-t-transparent rounded-full animate-spin" />
+      <p className="text-sm text-[var(--color-text-muted)]">جارٍ تحميل الصفحة…</p>
     </div>
   );
 }
@@ -56,10 +57,14 @@ function canImportBeneficiaries(user) {
   return hasModuleAction(user, 'beneficiaries', 'import');
 }
 
+function SupportDeliveryAlias() {
+  const { search } = useLocation();
+  return <Navigate to={`/receiver${search}`} replace />;
+}
+
 function Guard({ element, allowedRoles = [], canAccess }) {
   const { user: authenticatedUser } = useAuth();
-  const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const user = authenticatedUser || (storedUser.id ? storedUser : null);
+  const user = authenticatedUser;
   const role = user?.role;
   if (!user) return <Navigate to="/login" replace />;
   if (allowedRoles.length > 0 && !allowedRoles.includes(role) && role !== 'admin') {
@@ -73,21 +78,25 @@ function App() {
   const [setupRequired, setSetupRequired] = useState(null);
 
   useEffect(() => {
-    api.get('/setup-admin/status')
-      .then(({ data }) => setSetupRequired(Boolean(data.data?.setup_required)))
-      .catch(() => setSetupRequired(false));
+    let active = true;
+    const settle = (value) => { if (active) setSetupRequired(value); };
+    const timer = setTimeout(() => settle(false), 3000);
+    api.get('/setup-admin/status', { timeout: 3000 })
+      .then(({ data }) => settle(Boolean(data.data?.setup_required)))
+      .catch(() => settle(false))
+      .finally(() => clearTimeout(timer));
+    return () => { active = false; clearTimeout(timer); };
   }, []);
 
-  const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const user = authUser || (savedUser.id ? savedUser : null);
+  const user = authUser;
   const role = user?.role || 'admin';
 
+  if (import.meta.env.DEV && window.location.pathname.startsWith('/visual-evidence')) {
+    return <Suspense fallback={<RouteFallback />}><DriverVisualEvidence /></Suspense>;
+  }
+
   if (loading || setupRequired === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-page)]">
-        <div className="w-12 h-12 border-4 border-[var(--color-brand-gold)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <RouteFallback />;
   }
 
   // Determine initial landing page after login based on role
@@ -110,7 +119,7 @@ function App() {
       <Route path="/forgot-password" element={!user ? <ForgotPasswordPage /> : <Navigate to={getHomePath()} replace />} />
       {/* Email reset-link routes retired: recovery uses the SMS OTP wizard at /forgot-password. Legacy links fall through to /login. */}
 
-      <Route path="/support-delivery" element={<Guard canAccess={canViewSupport} element={<SupportDeliveryPage />} />} />
+      <Route path="/support-delivery" element={<SupportDeliveryAlias />} />
       <Route path="/support/request" element={<Guard canAccess={canViewSupport} element={<SupportRequestPage />} />} />
       <Route path="/beneficiaries/:id/support" element={<Guard canAccess={canViewSupport} element={<SupportRequestPage />} />} />
       {/* Dashboard */}
@@ -167,8 +176,8 @@ function App() {
       <Route path="/admin/beneficiary-policy/review/:evaluationId" element={<Guard element={<PolicyDReviewPage />} />} />
       <Route path="/admin/beneficiary-policy/versions/:versionId/application-runs" element={<Guard element={<PolicyApplicationRunsPage />} />} />
       {/* Admin Pages (Supervisor Only) */}
-      <Route path="/admin/users"            element={<Guard allowedRoles={['admin']} element={<UsersPage />} />} />
       <Route path="/admin/drivers"          element={<Guard allowedRoles={['admin']} element={<DriversDirectoryPage />} />} />
+      <Route path="/admin/users"            element={<Guard allowedRoles={['admin']} element={<UsersPage />} />} />
       <Route path="/admin/settings"         element={<Guard allowedRoles={['admin']} element={<SystemSettingsPage />} />} />
       <Route path="/assistant-admin"        element={<Guard allowedRoles={['admin', 'assistant_admin']} element={<AssistantAdminDashboard />} />} />
 

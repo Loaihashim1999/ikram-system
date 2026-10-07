@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Basket;
 use App\Models\Beneficiary;
+use App\Models\Driver;
+use App\Models\SupportDistribution;
+use App\Models\SupportReceipt;
 use App\Models\BeneficiaryPolicyEvaluation;
 use App\Models\BeneficiaryPolicyVersion;
 use App\Models\DailyBeneficiary;
@@ -135,7 +138,11 @@ class PdfFinalizationTest extends TestCase
         $process->run();
         $this->assertTrue($process->isSuccessful(), $process->getErrorOutput());
 
-        return $process->getOutput();
+        $text = $process->getOutput();
+        $text = preg_replace('/[\x{202A}-\x{202E}\x{200E}\x{200F}]/u', '', $text) ?? $text;
+        $text = str_replace("\u{E915}", 'ي', $text);
+
+        return class_exists(\Normalizer::class) ? (\Normalizer::normalize($text, \Normalizer::FORM_KC) ?: $text) : $text;
     }
 
     private function pageCount(string $path): int
@@ -146,6 +153,18 @@ class PdfFinalizationTest extends TestCase
         preg_match('/^Pages:\s+(\d+)/m', $process->getOutput(), $matches);
 
         return (int) ($matches[1] ?? 0);
+    }
+
+    private function assertNoBlankPage(string $path): void
+    {
+        $pages = $this->pageCount($path);
+        $this->assertGreaterThan(0, $pages);
+        for ($page = 1; $page <= $pages; $page++) {
+            $process = new Process(['pdftotext', '-f', (string) $page, '-l', (string) $page, '-enc', 'UTF-8', $path, '-']);
+            $process->run();
+            $text = trim((string) preg_replace('/صفحة\s+\d+\s+من\s+\d+/u', '', $process->getOutput()));
+            $this->assertGreaterThan(30, mb_strlen($text), 'Page '.$page.' has no document content.');
+        }
     }
 
     public function test_guest_unauthorized_and_cross_domain_access_are_denied(): void
@@ -231,6 +250,96 @@ class PdfFinalizationTest extends TestCase
         $this->assertStringContainsString('PDF_DECISION_OLD', $text);
         $this->assertStringNotContainsString('9,999.99', $text);
         unlink($path);
+    }
+
+    public function test_official_documents_are_localized_charted_and_have_no_blank_or_browser_page(): void
+    {
+        $this->beneficiary->update(['family_status' => 'poor']);
+        $version = BeneficiaryPolicyVersion::create([
+            'policy_name' => 'PDF chart policy', 'version' => 'PDF-CHART-V1',
+            'policy_scope' => 'citizen_beneficiaries', 'effective_from' => '2026-01-01', 'status' => 'retired',
+        ]);
+        $evaluation = BeneficiaryPolicyEvaluation::create([
+            'beneficiary_id' => $this->beneficiary->id, 'policy_version_id' => $version->id,
+            'evaluation_status' => 'completed', 'evaluated_at' => now()->subDays(3),
+            'gross_counted_income' => 100, 'monthly_rent' => 10, 'family_size' => 2,
+            'adjusted_net_household_income' => 80, 'net_income_per_capita' => 40,
+            'income_category' => 'B', 'policy_score' => 12, 'score_category' => 'A',
+            'scoring_snapshot' => ['breakdown' => [[
+                'rule_id' => 'income', 'label' => 'الدخل', 'value' => '100', 'condition' => 'حد الدخل',
+                'awarded_points' => 4, 'max_points' => 10, 'reason' => 'مطابق',
+            ]]],
+        ]);
+        Driver::create(['full_name' => 'سائق الوثيقة', 'phone' => '966574917155', 'is_active' => true]);
+        $support = SupportDistribution::create([
+            'recipient_type' => 'beneficiary', 'beneficiary_id' => $this->beneficiary->id,
+            'recipient_name' => 'اسم قديم', 'recipient_reference' => 'REF-1',
+            'fulfillment_method' => 'delivery', 'status' => 'completed',
+            'support_date' => now()->toDateString(), 'completed_at' => now(),
+        ]);
+        SupportReceipt::create([
+            'support_distribution_id' => $support->id, 'confirmed_by' => $this->admin->id, 'confirmed_at' => now(),
+            'proof_snapshot' => [
+                'task_reference' => $support->id, 'fulfillment_method' => 'delivery', 'verification_method' => 'receipt_code',
+                'final_status' => 'completed', 'source' => 'confirmation', 'confirmed_at' => now()->toIso8601String(),
+                'recipient' => ['display_name' => 'اسم اللقطة', 'phone' => '0501111000', 'full_address' => 'عنوان اللقطة', 'reference' => 'REF-1', 'type' => 'beneficiary'],
+                'driver' => ['name' => 'سائق اللقطة'], 'employee' => ['name' => 'موظف الوثيقة'],
+                'items' => [['name' => 'سلة الوثيقة', 'quantity' => 1, 'unit' => 'حبة']],
+            ],
+        ]);
+        $this->beneficiary->update(['phone' => '0509999888', 'full_name' => 'اسم بعد التعديل']);
+        Sanctum::actingAs($this->admin);
+
+        $card = $this->assertPdf($this->get('/api/documents/beneficiary/'.$this->beneficiary->id.'/pdf'), 'beneficiary-card-phase7.pdf');
+        $cardText = $this->pdfText($card);
+        $this->assertNoBlankPage($card);
+        $this->assertStringContainsString('فقير', $cardText);
+        $this->assertStringNotContainsString('poor', $cardText);
+        $this->assertStringContainsString('تفصيل النقاط', $cardText);
+        $this->assertStringContainsString('صفحة', $cardText);
+        $this->assertStringNotContainsString('azurecontainerapps.io', file_get_contents($card));
+        unlink($card);
+
+        $policy = $this->assertPdf($this->get('/api/documents/policy-evaluation/'.$evaluation->id.'/pdf'), 'policy-evaluation.pdf');
+        $this->assertStringContainsString('PDF-CHART-V1', $this->pdfText($policy));
+        $this->assertStringNotContainsString('9,999.99', $this->pdfText($policy));
+        unlink($policy);
+
+        $proof = $this->assertPdf($this->get('/api/support/distributions/'.$support->id.'/proof'), 'delivery-proof.pdf');
+        $proofText = $this->pdfText($proof);
+        $this->assertStringContainsString('اسم اللقطة', $proofText);
+        $this->assertStringContainsString('0501111000', $proofText);
+        $this->assertStringContainsString('توصيل للمنازل', $proofText);
+        $this->assertStringContainsString('رمز الاستلام', $proofText);
+        $this->assertStringNotContainsString('receipt_code', $proofText);
+        $this->assertStringNotContainsString('0509999888', $proofText);
+        unlink($proof);
+
+        $inventory = $this->assertPdf($this->get('/api/documents/inventory/pdf'), 'inventory.pdf');
+        $this->assertStringContainsString('GENERAL_ONLY_ITEM', $this->pdfText($inventory));
+        $this->assertStringContainsString('متوفر', $this->pdfText($inventory));
+        unlink($inventory);
+
+        $drivers = $this->assertPdf($this->get('/api/documents/drivers/pdf'), 'drivers.pdf');
+        $driverText = $this->pdfText($drivers);
+        $this->assertStringContainsString('سائق الوثيقة', $driverText);
+        $this->assertStringContainsString('0574917155', $driverText);
+        unlink($drivers);
+
+        $governance = $this->assertPdf($this->get('/api/reports/comprehensive/pdf'), 'governance-charts.pdf');
+        $governanceText = $this->pdfText($governance);
+        foreach (['الرسم العمودي', 'الرسم الزمني', 'رسم القمع', 'الرسم الدائري', 'تحليل الجنسية'] as $label) {
+            $this->assertStringContainsString($label, $governanceText);
+        }
+        $this->assertStringNotContainsString('الجنسية — لقطة حالية', $governanceText);
+        $this->assertStringNotContainsString('azurecontainerapps.io', file_get_contents($governance));
+        $governancePages = $this->pageCount($governance);
+        $this->assertGreaterThanOrEqual(4, $governancePages);
+        $this->assertLessThanOrEqual(7, $governancePages);
+        $this->assertNoBlankPage($governance);
+        unlink($governance);
+
+        $this->getJson('/api/documents/drivers/excel')->assertOk();
     }
 
     public function test_long_multipage_history_repeats_content_without_secrets(): void

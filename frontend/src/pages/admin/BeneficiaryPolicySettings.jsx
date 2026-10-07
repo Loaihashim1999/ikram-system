@@ -2,8 +2,20 @@ import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../api/axios';
 
-const STATUS_LABELS = { draft: 'مسودة', published: 'منشورة', retired: 'مؤرشفة' };
-const STATUS_COLORS = { draft: 'bg-[#FFF7E6] text-[#B45309] border-[#FCD34D]', published: 'bg-[#E6F4EC] text-[#2E7D32] border-[#A5D6A7]', retired: 'bg-[#F3F4F6] text-[var(--color-text-muted)] border-[#D1D5DB]' };
+import StatusBadge from '../../components/ui/StatusBadge';
+import { PrimaryButton, DangerButton } from '../../components/ui/Button';
+import ErrorState from '../../components/ui/ErrorState';
+
+const versionTiming = (version) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const from = String(version.effective_from || '').slice(0, 10);
+  const to = String(version.effective_to || '').slice(0, 10);
+  if (version.status === 'draft') return { label: 'مسودة', tone: 'neutral' };
+  if (version.status === 'retired') return { label: 'مؤرشفة', tone: 'neutral' };
+  if (from && from > today) return { label: `منشورة — يبدأ سريانها في ${from}`, tone: 'warning' };
+  if (to && to < today) return { label: 'منتهية', tone: 'danger' };
+  return { label: 'سارية حالياً', tone: 'success' };
+};
 const SCOPES = [
   { key: 'new_only', label: 'المستفيدون الجدد فقط' },
   { key: 'all_existing_and_new', label: 'جميع المستفيدين الحاليين والجدد' },
@@ -382,7 +394,7 @@ export default function BeneficiaryPolicySettings() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 pb-8">
-      <div className="bg-white p-6 rounded-2xl border border-[var(--color-border)] shadow-xs">
+      <div className="rounded-[var(--radius-panel)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
         <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3 mb-4">
           <h2 className="text-sm font-extrabold text-[var(--color-text-primary)]">🛡️ إصدارات سياسة المستفيدين</h2>
           <div className="flex items-center gap-2">
@@ -393,8 +405,8 @@ export default function BeneficiaryPolicySettings() {
           </div>
         </div>
 
-        {message && <div className="p-3 rounded-xl mb-4 bg-[#E6F4EC] text-[#2E7D32] border border-[#A5D6A7] text-xs font-bold">{message}</div>}
-        {error && <div className="p-3 rounded-xl mb-4 bg-[#FEE2E2] text-[#B91C1C] border border-[#FCA5A5] text-xs font-bold">{error}</div>}
+        {message && <StatusBadge tone="success" label={message} />}
+        {error && <ErrorState title="تعذر تنفيذ العملية" description={error} />}
 
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-right">
@@ -414,7 +426,7 @@ export default function BeneficiaryPolicySettings() {
                 <tr key={v.id} className="hover:bg-[var(--color-bg-soft)]">
                   <td className="p-2.5 font-bold text-[var(--color-text-primary)]">{v.policy_name}</td>
                   <td className="p-2.5">{v.version}</td>
-                  <td className="p-2.5"><span className={`px-2 py-0.5 rounded-full border text-[11px] font-bold ${STATUS_COLORS[v.status]}`}>{STATUS_LABELS[v.status] || v.status}</span></td>
+                  <td className="p-2.5"><StatusBadge tone={versionTiming(v).tone} label={versionTiming(v).label} /></td>
                   <td className="p-2.5">{v.effective_from || '—'}</td>
                   <td className="p-2.5">{v.effective_to || '—'}</td>
                   <td className="p-2.5">
@@ -424,10 +436,10 @@ export default function BeneficiaryPolicySettings() {
                         <button type="button" onClick={() => { setApprove({ board_approval_reference: '', board_approval_date: '' }); setModal({ mode: 'approve', version: v }); }} className="px-2 py-1 rounded-lg bg-[var(--color-brand-gold)] text-white text-[11px] font-bold">اعتماد</button>
                       )}
                       {v.status === 'draft' && v.approved_by && can('publish') && (
-                        <button type="button" onClick={() => act('publish', v.id)} disabled={busy} className="px-2 py-1 rounded-lg bg-[#2E7D32] text-white text-[11px] font-bold">نشر</button>
+                        <PrimaryButton type="button" onClick={() => act('publish', v.id)} disabled={busy}>نشر</PrimaryButton>
                       )}
                       {v.status === 'published' && can('retire') && (
-                        <button type="button" onClick={() => { setRetireReason(''); setModal({ mode: 'retire', version: v }); }} className="px-2 py-1 rounded-lg bg-[#C24B3F] text-white text-[11px] font-bold">أرشفة</button>
+                        <DangerButton type="button" onClick={() => { setRetireReason(''); setModal({ mode: 'retire', version: v }); }}>أرشفة</DangerButton>
                       )}
                       {can('edit_draft') && <button type="button" onClick={() => act('clone', v.id)} disabled={busy} title="إنشاء مسودة جديدة انطلاقاً من هذا الإصدار" className="px-2 py-1 rounded-lg border border-[var(--color-border)] text-[11px] font-bold">نسخ كمسودة</button>}
                       <Link to={`/admin/beneficiary-policy/versions/${v.id}/application-runs`} title="محاكاة وتطبيق نطاق السياسة على المستفيدين" className="px-2 py-1 rounded-lg border border-[var(--color-border)] text-[11px] font-bold">نطاق التطبيق</Link>
@@ -448,7 +460,7 @@ export default function BeneficiaryPolicySettings() {
       {/* Create / Edit draft modal */}
       {modal?.mode === 'create' || modal?.mode === 'edit' ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto p-4" onClick={() => setModal(null)}>
-          <div className="bg-white rounded-2xl p-6 mt-10 w-full max-w-4xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[var(--color-surface)] rounded-2xl p-6 mt-10 w-full max-w-4xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-extrabold text-[var(--color-text-primary)] border-b border-[var(--color-border)] pb-3 mb-4">{modal.mode === 'create' ? 'إنشاء مسودة سياسة جديدة' : `تعديل مسودة الإصدار ${form.version}`}</h3>
             <form onSubmit={submitDraft} className="space-y-4 text-right" dir="rtl">
               <div className="grid md:grid-cols-2 gap-4">
@@ -463,10 +475,10 @@ export default function BeneficiaryPolicySettings() {
               <div className="rounded-xl border border-[var(--color-border)] p-4">
                 <h4 className="text-xs font-extrabold text-[var(--color-text-primary)] mb-2">⚠️ أخطاء إعدادات POLICY-C (تُمنع الحفظ):</h4>
                 {policyErrors.length === 0 ? (
-                  <p className="text-[11px] text-[#2E7D32] font-bold">لا توجد أخطاء — الإعدادات صالحة.</p>
+                  <p className="text-[11px] text-[var(--color-brand-green)] font-bold">لا توجد أخطاء — الإعدادات صالحة.</p>
                 ) : (
                   <ul className="list-disc pr-5 space-y-1">
-                    {policyErrors.map((e, i) => <li key={i} className="text-[11px] text-[#B91C1C]">{e}</li>)}
+                    {policyErrors.map((e, i) => <li key={i} className="text-[11px] text-[var(--color-danger)]">{e}</li>)}
                   </ul>
                 )}
               </div>
@@ -542,8 +554,8 @@ export default function BeneficiaryPolicySettings() {
                   <Field label="الحد الأقصى للنقاط (max_score)">
                     <input type="number" min="0" value={form.scoring.max_score} onChange={(e) => onMaxScoreChange(e.target.value)} className={inputCls} />
                   </Field>
-                  <div className="md:col-span-2 rounded-xl bg-[#F0F7F0] border border-[#C8E6C9] p-3 text-xs">
-                    <span className="font-extrabold text-[#2E7D32]">أقصى نقاط قابلة للتحقيق: {scoringSummary.achievable} من {scoringSummary.maxScore}</span>
+                  <div className="md:col-span-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-soft)] p-3 text-xs">
+                    <span className="font-extrabold text-[var(--color-brand-green)]">أقصى نقاط قابلة للتحقيق: {scoringSummary.achievable} من {scoringSummary.maxScore}</span>
                     <span className="text-[var(--color-text-secondary)] mr-2">(الحد الأقصى حسب تصميم السياسة: 75 — إذا جمعت الحدود القصوى للأبعاد أكثر من 75 سيرفض النظام الحفظ)</span>
                   </div>
                 </div>
@@ -641,12 +653,12 @@ export default function BeneficiaryPolicySettings() {
                 </select>
               </div>
 
-              <div className="rounded-xl bg-[#FEF9E7] border border-[#FCD34D] p-3 text-[11px] text-[#92400E]">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-soft)] p-3 text-[11px] text-[var(--color-text-secondary)]">
                 ⚠️ جميع هذه التغييرات تؤثر على هذه المسودة فقط. الإصدار المنشور لا يتغير؛ أي تعديل يتطلب نسخ مسودة جديدة.
               </div>
 
               {policyErrors.length > 0 && (
-                <div className="rounded-xl bg-[#FEE2E2] border border-[#FCA5A5] p-3 text-[11px] text-[#B91C1C] font-bold">
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--status-danger-bg)] p-3 text-[11px] font-bold text-[var(--color-danger)]">
                   🚫 لا يمكن الحفظ حتى تُصحَّح أخطاء الإعدادات أعلاه ({policyErrors.length}).
                 </div>
               )}
@@ -665,7 +677,7 @@ export default function BeneficiaryPolicySettings() {
       {/* Approve modal */}
       {modal?.mode === 'approve' ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto p-4" onClick={() => setModal(null)}>
-          <div className="bg-white rounded-2xl p-6 mt-10 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[var(--color-surface)] rounded-2xl p-6 mt-10 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-extrabold text-[var(--color-text-primary)] border-b border-[var(--color-border)] pb-3 mb-4">اعتماد الإصدار {modal.version.version}</h3>
             <div className="space-y-3 text-right" dir="rtl">
               <Field label="مرجع قرار مجلس الإدارة *"><input value={approve.board_approval_reference} onChange={(e) => setApprove({ ...approve, board_approval_reference: e.target.value })} className={inputCls} placeholder="قرار رقم ..." /></Field>
@@ -682,14 +694,14 @@ export default function BeneficiaryPolicySettings() {
       {/* Retire modal */}
       {modal?.mode === 'retire' ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto p-4" onClick={() => setModal(null)}>
-          <div className="bg-white rounded-2xl p-6 mt-10 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-extrabold text-[#B91C1C] border-b border-[var(--color-border)] pb-3 mb-4">أرشفة الإصدار {modal.version.version}</h3>
+          <div className="bg-[var(--color-surface)] rounded-2xl p-6 mt-10 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-extrabold text-[var(--color-danger)] border-b border-[var(--color-border)] pb-3 mb-4">أرشفة الإصدار {modal.version.version}</h3>
             <div className="space-y-3 text-right" dir="rtl">
               <p className="text-xs text-[var(--color-text-muted)]">ستظل نسخة الإصدار محفوظة بشكل دائم مع كامل تقييماتها؛ لن يُحذف أي شيء.</p>
               <Field label="سبب الأرشفة *"><textarea value={retireReason} onChange={(e) => setRetireReason(e.target.value)} rows="2" className={inputCls} /></Field>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setModal(null)} className="px-4 py-2 rounded-xl border border-[var(--color-border)] text-xs font-bold">إلغاء</button>
-                <button type="button" disabled={busy || !retireReason.trim()} onClick={() => act('retire', modal.version.id, { change_reason: retireReason })} className="px-4 py-2 rounded-xl bg-[#C24B3F] text-white text-xs font-bold disabled:opacity-50">أرشفة</button>
+                <DangerButton type="button" disabled={busy || !retireReason.trim()} onClick={() => act('retire', modal.version.id, { change_reason: retireReason })}>أرشفة</DangerButton>
               </div>
             </div>
           </div>
@@ -699,7 +711,7 @@ export default function BeneficiaryPolicySettings() {
       {/* History drawer */}
       {historyOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto p-4" onClick={() => setHistoryOpen(false)}>
-          <div className="bg-white rounded-2xl p-6 mt-10 w-full max-w-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[var(--color-surface)] rounded-2xl p-6 mt-10 w-full max-w-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-extrabold text-[var(--color-text-primary)] border-b border-[var(--color-border)] pb-3 mb-4">سجل التغييرات</h3>
             <div className="space-y-2 text-right" dir="rtl">
               {history.length === 0 && <p className="text-xs text-[var(--color-text-muted)]">لا توجد أحداث مسجلة.</p>}
@@ -720,8 +732,8 @@ export default function BeneficiaryPolicySettings() {
   );
 }
 
-const inputCls = "w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-xs text-right bg-white focus:border-[var(--color-brand-gold)]";
-const smallCls = "w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-xs text-right bg-white focus:border-[var(--color-brand-gold)]";
+const inputCls = "w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-xs text-right bg-[var(--color-surface)] focus:border-[var(--color-brand-gold)]";
+const smallCls = "w-full rounded-lg border border-[var(--color-border)] px-2 py-1.5 text-xs text-right bg-[var(--color-surface)] focus:border-[var(--color-brand-gold)]";
 
 function Field({ label, children }) {
   return (

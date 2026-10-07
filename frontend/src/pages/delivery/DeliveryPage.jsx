@@ -10,6 +10,7 @@ import ReceiptCounterModal from "../../components/common/ReceiptCounterModal";
 import HistoricalDistributionReferenceCard from "../../components/common/HistoricalDistributionReferenceCard";
 import { Eye, Edit3, Trash2, RefreshCw, X, FileText, Users, Send, Package, CheckCircle2, XCircle, FileSpreadsheet } from "lucide-react";
 import { exportArrayToExcel } from "../../utils/excelExport";
+import SearchField from "../../components/ui/SearchField";
 
 const DISPATCH_STEPS = ["اختيار المستفيدين / الجهات المستفيدة", "اختيار السائق المعتمد", "اختيار سلة الدعم", "تحديد الموعد", "مراجعة وإرسال"];
 
@@ -375,11 +376,11 @@ export default function DeliveryPage() {
 
         {/* Global Search Input */}
         <div className="mb-4">
-          <input
+          <SearchField
+            label="بحث التوصيل"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="بحث عام بالاسم، رقم الهوية أو الإقامة، رقم الهاتف، الحي السكني..."
-            className="w-full max-w-lg rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-gold)] text-right bg-white shadow-sm font-bold"
           />
         </div>
 
@@ -896,11 +897,11 @@ export default function DeliveryPage() {
                   </div>
 
 
-                  <input
+                  <SearchField
+                    label="بحث سريع"
                     value={dispatchSearchQ}
                     onChange={(e) => setDispatchSearchQ(e.target.value)}
                     placeholder="بحث سريع بالاسم، الهوية، أو رقم الجوال..."
-                    className="w-full rounded-xl border border-[var(--color-border)] p-2 text-xs font-bold"
                   />
 
                   {recipientMode === "beneficiaries" ? (

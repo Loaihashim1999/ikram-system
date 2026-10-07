@@ -1,68 +1,78 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Bell, CheckCheck, Clock, X } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../api/axios';
 import Scrim from '../overlays/Scrim';
-import Dialog from '../overlays/Dialog';
-import {
-  Bell, CheckCheck, AlertTriangle, Info,
-  Package, ShieldAlert, CheckCircle2, Clock, X
-} from 'lucide-react';
+import EmptyState from '../ui/EmptyState';
+import ErrorState from '../ui/ErrorState';
+import LoadingState from '../ui/LoadingState';
+import StatusBadge from '../ui/StatusBadge';
+import ConfirmationDialog from '../ui/ConfirmationDialog';
+import { DangerButton, PrimaryButton, SecondaryButton } from '../ui/Button';
+import { hasModuleAction } from '../../utils/modulePermissions';
 
-export default function NotificationCenter({
-  isOpen: controlledIsOpen,
-  onClose: controlledOnClose,
-  showTrigger = false,
-}) {
+const categories = {
+  all: 'الكل',
+  warehouse_expiry: 'المستودع والصلاحية',
+  system_event: 'الأحداث والعمليات',
+  security: 'الأمان',
+};
+
+export default function NotificationCenter({ isOpen: controlledIsOpen, onClose: controlledOnClose, showTrigger = false }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isControlled = controlledIsOpen !== undefined;
   const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
   const onClose = isControlled ? controlledOnClose : () => setInternalIsOpen(false);
-
-  const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-    error,
-  } = useNotifications();
-
-  const [filterType, setFilterType] = useState('all'); // 'all' | 'warehouse_expiry' | 'system_event' | 'security'
+  const { notifications, unreadCount, meta, error, loading, markAsRead, markAllAsRead, loadList, removeNotifications } = useNotifications();
+  const [category, setCategory] = useState('all');
+  const [read, setRead] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [selected, setSelected] = useState([]);
   const [selectedNotif, setSelectedNotif] = useState(null);
+  const [pending, setPending] = useState(null);
+  const [actionError, setActionError] = useState('');
+  const canDelete = user?.role === 'admin' || hasModuleAction(user, 'notifications', 'delete');
+  const canPurge = user?.role === 'admin' || hasModuleAction(user, 'notifications', 'purge');
 
+  const paramsFor = (page = 1) => ({
+    page,
+    per_page: 20,
+    ...(category !== 'all' ? { category } : {}),
+    ...(read !== 'all' ? { read } : {}),
+    ...(dateFrom ? { date_from: dateFrom } : {}),
+    ...(dateTo ? { date_to: dateTo } : {}),
+  });
+
+  useEffect(() => {
+    if (isOpen) { setSelected([]); loadList(paramsFor(1)); }
+  }, [isOpen, category, read, dateFrom, dateTo]);
 
   const triggerBtn = (
-    <button
-      type="button"
-      onClick={() => setInternalIsOpen(!internalIsOpen)}
-      className="relative p-2.5 rounded-xl text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-soft)] hover:text-[var(--color-brand-gold)] transition-colors border border-[var(--color-border)] cursor-pointer"
-      title="مركز الإشعارات والتنبيهات"
-      aria-label="مركز الإشعارات والتنبيهات"
-    >
+    <button type="button" onClick={() => setInternalIsOpen(!internalIsOpen)} className="relative min-h-11 min-w-11 rounded-[var(--radius-control)] border border-[var(--color-border)] p-2.5 text-[var(--color-text-secondary)]" title="مركز الإشعارات والتنبيهات" aria-label="مركز الإشعارات والتنبيهات">
       <Bell size={18} />
-      {unreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-[var(--color-brand-green)] text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center shadow-xs border-2 border-white animate-pulse">
-          {unreadCount > 99 ? '99+' : unreadCount}
-        </span>
-      )}
+      {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-brand-green)] text-[10px] font-extrabold text-white">{unreadCount > 99 ? '99+' : unreadCount}</span>}
     </button>
   );
 
-  const filtered = notifications.filter((n) => {
-    if (filterType === 'all') return true;
-    return n.type === filterType;
-  });
-
-  const getIcon = (type) => {
-    switch (type) {
-      case 'warehouse_expiry':
-        return <Package className="w-4 h-4 text-[var(--color-brand-green)]" />;
-      case 'security':
-        return <ShieldAlert className="w-4 h-4 text-[#C24B3F]" />;
-      case 'system_event':
-        return <CheckCircle2 className="w-4 h-4 text-[var(--color-brand-green)]" />;
-      default:
-        return <Info className="w-4 h-4 text-[var(--color-brand-gold)]" />;
+  const confirmDelete = async () => {
+    const action = pending;
+    setPending(null);
+    if (!action) return;
+    setActionError('');
+    try {
+    if (action.type === 'one') await removeNotifications(() => api.delete(`/notifications/${action.id}`));
+    if (action.type === 'selected') await removeNotifications(() => api.post('/notifications/delete-selected', { ids: selected }));
+    if (action.type === 'read') await removeNotifications(() => api.post('/notifications/delete-read'));
+    if (action.type === 'purge') await removeNotifications(() => api.post('/notifications/purge', { days: action.days, include_unread: false }));
+    setSelected([]);
+    setSelectedNotif(null);
+    } catch {
+      setActionError('تعذر حذف الإشعارات. حاول مرة أخرى.');
     }
   };
 
@@ -71,188 +81,92 @@ export default function NotificationCenter({
       {(!isControlled || showTrigger) && triggerBtn}
       {isOpen && !selectedNotif && (
         <Scrim isOpen={isOpen} onClose={onClose} zIndex="z-[70]">
-
-        <div
-          className="fixed top-16 left-2 sm:left-6 z-[80] w-[calc(100%-1rem)] max-w-sm sm:max-w-md bg-white rounded-2xl shadow-2xl border border-[var(--color-border)] overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-150"
-          dir="rtl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-bg-soft)] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-[var(--color-bg-soft)] text-[var(--color-brand-gold)] rounded-xl">
-                <Bell size={18} />
-              </div>
+          <div className="ikram-panel fixed inset-x-2 top-2 bottom-2 z-[80] flex min-h-0 flex-col overflow-y-auto sm:inset-x-auto sm:bottom-auto sm:top-16 sm:left-2 sm:max-h-[calc(100dvh-5rem)] sm:w-[36rem] sm:max-w-[calc(100vw-1rem)]" dir="rtl" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="مركز الإشعارات والتنبيهات">
+            <div className="ikram-panel-header">
               <div>
-                <h3 className="font-extrabold text-sm text-[var(--color-text-primary)]">مركز الإشعارات والتنبيهات</h3>
-                <p className="text-[11px] text-[var(--color-text-muted)]">
-                  {unreadCount > 0 ? `لديك ${unreadCount} إشعار غير مقروء` : 'جميع الإشعارات مقروءة'}
-                </p>
+                <h3 className="ikram-section-title">مركز الإشعارات والتنبيهات</h3>
+                <p className="ikram-section-description">{unreadCount > 0 ? `لديك ${unreadCount} إشعار غير مقروء` : 'جميع الإشعارات مقروءة'}</p>
+              </div>
+              <div className="flex items-center gap-1">
+                {unreadCount > 0 && <button type="button" onClick={markAllAsRead} className="ikram-btn ikram-btn-outline min-h-11 px-3 text-xs" title="تحديد الكل كمقروء"><CheckCheck size={16} /><span className="hidden sm:inline">تحديد الكل</span></button>}
+                <button type="button" onClick={onClose} className="min-h-11 min-w-11" aria-label="إغلاق"><X size={18} /></button>
               </div>
             </div>
-
-            <div className="flex items-center gap-1">
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={markAllAsRead}
-                  className="p-1.5 text-xs text-[var(--color-brand-green)] hover:bg-green-50 rounded-lg font-bold flex items-center gap-1"
-                  title="تحديد الكل كمقروء"
-                >
-                  <CheckCheck size={16} />
-                  <span className="hidden sm:inline">تحديد الكل</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-soft)] rounded-lg cursor-pointer"
-                aria-label="إغلاق"
-              >
-                <X size={18} />
-              </button>
+            <div className="flex flex-wrap gap-1 border-b border-[var(--color-border)] px-3 py-2">
+              {Object.entries(categories).map(([key, label]) => <button key={key} type="button" className={`min-h-9 rounded-[var(--radius-control)] px-3 text-xs font-bold ${category === key ? 'bg-[var(--color-brand-green)] text-white' : 'text-[var(--color-text-muted)]'}`} onClick={() => setCategory(key)}>{label}{key === 'all' ? ` (${meta.total || notifications.length})` : ''}</button>)}
             </div>
-          </div>
-
-          {/* Filters Bar */}
-          <div className="px-3 py-2 bg-white border-b border-[var(--color-border)] flex items-center gap-1 text-[11px] overflow-x-auto">
-            <button
-              onClick={() => setFilterType('all')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
-                filterType === 'all' ? 'bg-[var(--color-brand-gold)] text-white' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)]'
-              }`}
-            >
-              الكل ({notifications.length})
-            </button>
-            <button
-              onClick={() => setFilterType('warehouse_expiry')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
-                filterType === 'warehouse_expiry' ? 'bg-[var(--color-brand-green)] text-white' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)]'
-              }`}
-            >
-              المستودع والصلاحية
-            </button>
-            <button
-              onClick={() => setFilterType('system_event')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
-                filterType === 'system_event' ? 'bg-[var(--color-brand-green)] text-white' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)]'
-              }`}
-            >
-              الأحداث والعمليات
-            </button>
-            <button
-              onClick={() => setFilterType('security')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
-                filterType === 'security' ? 'bg-[#C24B3F] text-white' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-soft)]'
-              }`}
-            >
-              الأمان
-            </button>
-          </div>
-
-          {error && <p role="alert" className="p-3 text-sm text-red-700">{error}</p>}
-          {/* Notifications List */}
-          <div className="overflow-y-auto flex-1 divide-y divide-[var(--color-border)]">
-            {filtered.length === 0 ? (
-              <div className="py-12 text-center text-[var(--color-text-muted)] space-y-2">
-                <Bell size={28} className="mx-auto text-[var(--color-text-muted)]" />
-                <p className="text-xs font-bold">لا توجد إشعارات مطابقة</p>
+            <div className="flex flex-wrap items-end gap-2 px-3 py-2">
+              {[['all', 'الكل'], ['unread', 'غير مقروء'], ['read', 'مقروء']].map(([key, label]) => <button key={key} type="button" className={`h-9 rounded-[var(--radius-control)] px-3 text-xs font-bold ${read === key ? 'bg-[var(--color-brand-gold)] text-white' : 'border border-[var(--color-border)]'}`} onClick={() => setRead(key)}>{label}</button>)}
+              <div className="grid w-full grid-cols-2 gap-2">
+              <label className="min-w-0 text-xs font-bold">تاريخ الإشعار من<input type="date" aria-label="تاريخ الإشعار من" className="ikram-control mt-1 min-w-0 max-w-full" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} /></label>
+              <label className="min-w-0 text-xs font-bold">تاريخ الإشعار إلى<input type="date" aria-label="تاريخ الإشعار إلى" className="ikram-control mt-1 min-w-0 max-w-full" value={dateTo} onChange={(event) => setDateTo(event.target.value)} /></label>
               </div>
-            ) : (
-              filtered.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedNotif(item)}
-                  className={`p-3.5 flex items-start gap-3 hover:bg-[var(--color-bg-soft)] transition-colors cursor-pointer text-right ${
-                    !item.isRead ? 'bg-[var(--color-bg-soft)]/60 font-semibold' : 'opacity-85'
-                  }`}
-                >
-                  <div className="p-2 bg-white rounded-xl border border-[var(--color-border)] shadow-xs mt-0.5">
-                    {getIcon(item.type)}
-                  </div>
-
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center justify-between gap-1">
-                      <h4 className="text-xs font-bold text-[var(--color-text-primary)] truncate">{item.title}</h4>
-                      {!item.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-[var(--color-brand-green)] flex-shrink-0" />
-                      )}
-                    </div>
-                    <p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-2 leading-relaxed">{item.message}</p>
-                    <div className="flex items-center justify-between text-[10px] text-[#9CA3AF] pt-1">
-                      <span className="flex items-center gap-1 font-mono">
-                        <Clock size={11} />
-                        {new Date(item.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      {item.details?.remainingDays !== undefined && (
-                        <span className="font-bold text-[var(--color-brand-green)]">
-                          متبقي: {item.details.remainingDays} يوم
-                        </span>
-                      )}
-                    </div>
-                  </div>
+            </div>
+            {(error || actionError) && <ErrorState compact title="تعذر تحديث الإشعارات" description={actionError || error} onRetry={() => { setActionError(''); loadList(paramsFor(meta.current_page)); }} />}
+            <div className="min-h-40 flex-1 shrink-0 sm:shrink overflow-y-auto">
+              {loading && <LoadingState message="جارٍ تحميل الإشعارات…" />}
+              {!loading && !error && notifications.length === 0 && <EmptyState title="لا توجد إشعارات مطابقة" description="جرّب مرشحاً آخر أو انتظر تنبيهاً جديداً." />}
+              {!loading && notifications.map((item) => (
+                <div key={item.id} className="flex items-start gap-2 border-b border-[var(--color-border)] p-3">
+                  {canDelete && <input type="checkbox" aria-label={`تحديد ${item.title}`} checked={selected.includes(item.id)} onChange={(event) => setSelected((old) => event.target.checked ? [...old, item.id] : old.filter((id) => id !== item.id))} />}
+                  <button type="button" className="min-w-0 flex-1 text-right" onClick={() => setSelectedNotif(item)}>
+                    <span className="flex items-center justify-between gap-2"><strong className="truncate text-sm">{item.title}</strong><StatusBadge status={item.isRead ? 'used' : 'active'} label={item.isRead ? 'مقروء' : 'غير مقروء'} /></span>
+                    <span className="mt-1 block break-words text-xs text-[var(--color-text-secondary)] [overflow-wrap:anywhere]">{item.message}</span>
+                    <span className="mt-1 flex items-center gap-2 text-[11px] text-[var(--color-text-muted)]"><Clock size={11} />{item.createdAt ? new Date(item.createdAt).toLocaleString('ar-SA') : ''}<span>{categories[item.type] || 'تنبيه'}</span></span>
+                  </button>
                 </div>
-              ))
-            )}
-          </div>
-
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="p-2.5 border-t border-[var(--color-border)] bg-[var(--color-bg-soft)] flex items-center justify-between text-xs">
-
-              <span className="text-[11px] text-[var(--color-text-muted)]">
-                إجمالي: {notifications.length} إشعار
-              </span>
+              ))}
             </div>
-          )}
-        </div>
-      </Scrim>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-border)] p-3">
+              <div className="flex gap-2">
+                <SecondaryButton disabled={loading || meta.current_page <= 1} onClick={() => { setSelected([]); loadList(paramsFor(meta.current_page - 1)); }}>السابق</SecondaryButton>
+                <span className="self-center text-xs">{meta.current_page} / {meta.last_page}</span>
+                <SecondaryButton disabled={loading || meta.current_page >= meta.last_page} onClick={() => { setSelected([]); loadList(paramsFor(meta.current_page + 1)); }}>التالي</SecondaryButton>
+              </div>
+              {canDelete && <div className="flex flex-wrap gap-2">
+                <SecondaryButton onClick={() => setSelected(notifications.map((item) => item.id))}>تحديد الصفحة</SecondaryButton>
+                <SecondaryButton onClick={() => setSelected([])}>مسح التحديد</SecondaryButton>
+                {selected.length > 0 && <DangerButton onClick={() => setPending({ type: 'selected' })}>حذف المحدد نهائيًا ({selected.length})</DangerButton>}
+                <details className="relative">
+                  <summary className="ikram-btn ikram-btn-outline flex h-9 cursor-pointer list-none items-center px-3 text-xs [&::-webkit-details-marker]:hidden">إجراءات</summary>
+                  <div className="min-w-52 rounded-[var(--radius-panel)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-[var(--shadow-overlay)]">
+                    <button type="button" className="block w-full px-3 py-2 text-right text-xs font-bold" onClick={() => setPending({ type: 'read' })}>حذف جميع المقروءة</button>
+                    {canPurge && <button type="button" className="block w-full px-3 py-2 text-right text-xs font-bold" onClick={() => setPending({ type: 'purge', days: 30 })}>تنظيف الإشعارات القديمة</button>}
+                  </div>
+                </details>
+              </div>}
+            </div>
+          </div>
+        </Scrim>
       )}
-
-      {/* Details Dialog */}
       {selectedNotif && (
-        <Dialog
-          isOpen={!!selectedNotif}
-          onClose={() => setSelectedNotif(null)}
-          title={selectedNotif.title}
-          subtitle={`تاريخ الإشعار: ${new Date(selectedNotif.createdAt).toLocaleString('ar-SA')}`}
-          icon={AlertTriangle}
-          maxWidth="max-w-lg"
-          footer={<div className="flex gap-2 flex-wrap">
-            {!selectedNotif.isRead && <button onClick={async () => { if (!await markAsRead(selectedNotif.id)) return; setSelectedNotif({ ...selectedNotif, isRead: true }); }} className="px-5 py-2 bg-[var(--color-brand-gold)] text-white rounded-xl font-bold text-xs">تحديد كمقروء</button>}
-            {selectedNotif.actionUrl && <button onClick={async () => { if (!selectedNotif.isRead && !await markAsRead(selectedNotif.id)) return; navigate(selectedNotif.actionUrl); setSelectedNotif(null); onClose(); }} className="px-5 py-2 bg-[var(--color-brand-green)] text-white rounded-xl font-bold text-xs">فتح السجل</button>}
-            <button onClick={() => setSelectedNotif(null)} className="px-5 py-2 bg-[var(--color-bg-soft)] border border-[var(--color-border)] text-[var(--color-text-primary)] rounded-xl font-bold text-xs hover:bg-[var(--color-bg-soft)]">إغلاق</button>
-          </div>}
-        >
-          <div className="space-y-3 text-xs text-[var(--color-text-secondary)]" dir="rtl">
-            <div className="p-3 bg-[var(--color-bg-soft)] rounded-xl border border-[var(--color-border)]">
-              <p className="leading-relaxed font-medium">{selectedNotif.message}</p>
+        <Scrim isOpen onClose={() => setSelectedNotif(null)}>
+          <div className="ikram-panel fixed top-4 left-1/2 z-[90] max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 overflow-y-auto p-5 [overflow-wrap:anywhere]" dir="rtl" role="dialog" aria-modal="true" aria-label="تفاصيل الإشعار">
+            {actionError && <p role="alert">{actionError}</p>}
+            <h3 className="font-extrabold">{selectedNotif.title}</h3>
+            <p className="mt-3 text-sm">{selectedNotif.message}</p>
+            <p className="mt-2 text-xs text-[var(--color-text-muted)]">{categories[selectedNotif.type] || 'تنبيه'}</p>
+            {selectedNotif.relatedRecordId && <p className="mt-2 break-all text-xs">{selectedNotif.relatedRecordId}</p>}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {!selectedNotif.isRead && <PrimaryButton onClick={async () => { if (!await markAsRead(selectedNotif.id)) return; setSelectedNotif({ ...selectedNotif, isRead: true }); }}>تحديد كمقروء</PrimaryButton>}
+              {selectedNotif.actionUrl && <PrimaryButton onClick={async () => { if (!selectedNotif.isRead && !await markAsRead(selectedNotif.id)) return; navigate(selectedNotif.actionUrl); setSelectedNotif(null); onClose(); }}>فتح السجل</PrimaryButton>}
+              {!selectedNotif.actionUrl && <p className="text-sm">السجل المرتبط لم يعد متاحاً.</p>}
+              {canDelete && <DangerButton onClick={() => setPending({ type: 'one', id: selectedNotif.id })}>حذف نهائي</DangerButton>}
+              <SecondaryButton onClick={() => setSelectedNotif(null)}>إغلاق</SecondaryButton>
             </div>
-
-            {selectedNotif.relatedRecordId && <div className="p-3 bg-white rounded-xl border border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)]"><strong>مرجع السجل:</strong> <span className="font-mono">{selectedNotif.relatedRecordId}</span></div>}
-
-            {selectedNotif.type === 'warehouse_expiry' && selectedNotif.details && (
-              <div className="space-y-2 border border-[var(--color-border)] rounded-xl p-3 bg-[var(--color-bg-soft)]/30">
-                <h4 className="font-bold text-[var(--color-brand-green)] text-xs">تفاصيل صنف المستودع:</h4>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div><strong>اسم الصنف:</strong> {selectedNotif.details.itemName}</div>
-                  <div><strong>رقم / اسم السلة:</strong> {selectedNotif.details.basketNumber}</div>
-                  <div><strong>تاريخ الانتهاء:</strong> {selectedNotif.details.expirationDate}</div>
-                  <div><strong>الأيام المتبقية:</strong> <span className="font-bold text-[var(--color-text-secondary)]">{selectedNotif.details.remainingDays} يوم</span></div>
-                  <div><strong>الكمية المتوفرة:</strong> {selectedNotif.details.currentQuantity} {selectedNotif.details.unit}</div>
-                </div>
-
-                {selectedNotif.recommendedAction && (
-                  <div className="mt-3 p-2.5 bg-amber-100/60 rounded-lg text-amber-900 font-bold text-[11px] border border-amber-300 flex items-center gap-2">
-                    <span>💡 الإجراء الموصى به:</span>
-                    <span>{selectedNotif.recommendedAction}</span>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
-        </Dialog>
+        </Scrim>
       )}
+      <ConfirmationDialog
+        isOpen={Boolean(pending)}
+        type="danger"
+        title="حذف نهائي"
+        message={pending?.type === 'selected' ? `هل أنت متأكد من حذف ${selected.length} إشعارات محددة نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.` : pending?.type === 'read' ? 'هل أنت متأكد من حذف جميع الإشعارات المقروءة الخاصة بك؟ الإشعارات غير المقروءة تبقى. لا يمكن التراجع عن هذا الإجراء.' : pending?.type === 'purge' ? 'هل أنت متأكد من التنظيف الإداري للإشعارات المقروءة الأقدم من 30 يوماً؟' : 'هل أنت متأكد من حذف هذا الإشعار نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.'}
+        confirmLabel="حذف نهائي"
+        cancelLabel="إلغاء"
+        onClose={() => setPending(null)}
+        onConfirm={confirmDelete}
+      />
     </>
   );
 }

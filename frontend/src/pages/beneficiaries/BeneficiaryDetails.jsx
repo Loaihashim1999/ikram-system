@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { hasModuleAction } from "../../utils/modulePermissions";
 import { displayLabel } from '../../utils/displayVocabulary';
@@ -8,17 +8,17 @@ import PolicyReviewLinks from "../../components/beneficiaries/PolicyReviewLinks"
 import api from "../../api/axios";
 import beneficiaryApi from "../../api/beneficiaries";
 import MainLayout from "../../components/layout/MainLayout";
-import PageHeader from "../../components/ui/PageHeader";
-import Button from "../../components/ui/Button";
-import {
-  User,
-  Users,
-  DollarSign,
-  FileText,
-  Package,
-  ExternalLink,
-  Edit
-} from "lucide-react";
+import PageShell from "../../components/ui/PageShell";
+import SectionCard from "../../components/ui/SectionCard";
+import Tabs from "../../components/ui/Tabs";
+import { PrimaryButton, SecondaryButton } from "../../components/ui/Button";
+import StatusBadge from "../../components/ui/StatusBadge";
+import EmptyState from "../../components/ui/EmptyState";
+import LoadingState from "../../components/ui/LoadingState";
+import ErrorState from "../../components/ui/ErrorState";
+import KpiCard from "../../components/ui/KpiCard";
+import DataTable from "../../components/ui/DataTable";
+import { Edit } from "lucide-react";
 import ReceiptHistoryTimeline from "../../components/common/ReceiptHistoryTimeline";
 
 export default function BeneficiaryDetailsPage() {
@@ -62,10 +62,7 @@ export default function BeneficiaryDetailsPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div className="p-12 text-center text-[var(--color-text-muted)]" dir="rtl">
-          <div className="inline-block w-8 h-8 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mb-2" />
-          <p className="font-bold text-sm">جاري تحميل بيانات المستفيد...</p>
-        </div>
+        <LoadingState message="جاري تحميل بيانات المستفيد..." />
       </MainLayout>
     );
   }
@@ -73,12 +70,7 @@ export default function BeneficiaryDetailsPage() {
   if (!b) {
     return (
       <MainLayout>
-        <div className="p-12 text-center text-red-500 font-bold" dir="rtl">
-          ❌ لم يتم العثور على المستفيد أو تم حذفه.
-          <div className="mt-4">
-            <Link to="/beneficiaries" className="text-amber-700 underline text-xs">العودة لقائمة المستفيدين</Link>
-          </div>
-        </div>
+        <ErrorState title="لم يتم العثور على المستفيد" description="تعذر عرض هذا السجل. قد يكون غير موجود أو لم يعد متاحاً." />
       </MainLayout>
     );
   }
@@ -90,7 +82,6 @@ export default function BeneficiaryDetailsPage() {
     const apiBase = getApiBaseUrl();
     const target = new URL(url, `${apiBase}/`);
     if (!/^\/api\/beneficiaries\/[^/]+\/documents\/[a-z_]+$/.test(target.pathname)) return "";
-
     return `${apiBase}${target.pathname}${target.search}`;
   };
 
@@ -99,7 +90,6 @@ export default function BeneficiaryDetailsPage() {
   const phone = b.phone || "—";
   const dateOfBirth = cleanDate(b.date_of_birth || b.birth_date);
   const placeOfBirth = b.place_of_birth || b.birth_place || "—";
-
   const isCitizen = (b.beneficiary_type || b.type) === "citizen";
   const nationality = String(b.nationality || "").trim();
   const identityLabel = nationality === "سعودي"
@@ -111,7 +101,7 @@ export default function BeneficiaryDetailsPage() {
         : (b.beneficiary_type || b.type) === "resident"
           ? "مقيم — الجنسية غير مسجلة"
           : "الجنسية غير مسجلة";
-
+  const canEvaluatePolicy = !b.archived_at && (user?.role === "admin" || user?.permissions?.beneficiary_policy?.evaluate === true);
   const documentsList = [
     { label: "صورة الهوية الوطنية / الإقامة", url: b.national_id_image_url || b.residence_id_image_url },
     { label: "إثبات حساب المواطن / الراتب", url: b.citizen_account_image_url || b.salary_certificate_url },
@@ -119,300 +109,198 @@ export default function BeneficiaryDetailsPage() {
     { label: "صورة راتب التقاعد", url: b.pension_certificate_image_url },
     { label: "عقد الإيجار / فاتورة الكهرباء", url: b.rental_contract_image_url || b.electricity_bill_image_url },
     { label: "إثبات العنوان الوطني", url: b.national_address_image_url },
-  ].filter(d => !!d.url);
+  ].filter((doc) => !!doc.url);
+  const incomeRows = [
+    ["salary", "monthly_salary", "الراتب الشهري"],
+    ["social_security", "social_security_amount", "الضمان الاجتماعي"],
+    ["citizen_account", "citizen_account_amount", "حساب المواطن"],
+    ["retirement", "retirement_pension", "المعاش التقاعدي"],
+    ["family_support", "family_support", "دعم الأسرة والأقارب"],
+  ].filter(([source]) => (b.income_sources || []).includes(source));
 
   return (
     <MainLayout>
-      <div className="mx-auto max-w-5xl space-y-5 px-0 sm:px-2" dir="rtl">
-        {actionError && <p role="alert">{actionError}</p>}
-        {b.archived_at && <p className="ikram-panel p-4">هذا المستفيد مؤرشف؛ سجلاته ووثائقه محفوظة.</p>}
-        <PolicyReviewLinks beneficiaryId={id} archived={Boolean(b.archived_at)} />
-        {/* Page Top Action Header */}
-        <PageHeader
-          title={`بطاقة بيانات المستفيد: ${fullName}`}
-          subtitle={`${identityLabel} | رقم الهوية: ${nationalId}`}
+      <div dir="rtl">
+        <PageShell
           breadcrumbs={[
             { label: "الرئيسية", href: "/" },
             { label: "إدارة المستفيدين", href: "/beneficiaries" },
-            { label: fullName }
+            { label: fullName },
           ]}
-          action={
-            <div className="flex items-center gap-2">
-              {canSupport && !b.archived_at && <Button as={Link} to={`/beneficiaries/${id}/support`}>إنشاء طلب دعم</Button>}
-              {canArchive && <Button variant="outline" disabled={actionBusy} onClick={archive}>{b.archived_at ? "استعادة المستفيد" : "أرشفة المستفيد"}</Button>}
-              {canEditBeneficiary && <Button
-                variant="gold"
-                size="sm"
-                icon={Edit}
-                as={Link}
-                to={`/beneficiaries/${b.id}/edit`}
-              >
-                تعديل البيانات
-              </Button>}
-              <Button
-                variant="outline"
-                size="sm"
-                as={Link}
-                to="/beneficiaries"
-              >
-                ← العودة للقائمة
-              </Button>
-            </div>
-          }
-        />
-
-        {/* ─── Standardized Amber Card Container ─── */}
-        <div className="ikram-panel mx-auto max-w-4xl overflow-hidden">
-          {/* Amber Header Banner */}
-          <div className="flex flex-col justify-between gap-3 bg-[var(--color-brand-green)] p-5 text-white sm:flex-row sm:items-center">
-            <div>
-              <h3 className="font-bold text-xl">{fullName}</h3>
-              <p className="text-xs text-amber-100 mt-0.5">
-                {identityLabel} | رقم الهوية: {nationalId}
-              </p>
-            </div>
-            <div className="bg-white/20 backdrop-blur-xs px-3 py-1 rounded-xl text-xs font-bold border border-white/30">
-              {displayLabel('priority', b.priority)}
-            </div>
+          title={fullName}
+          description={`${identityLabel} | رقم الهوية: ${nationalId}`}
+          primaryAction={canEditBeneficiary ? <PrimaryButton as={Link} to={`/beneficiaries/${b.id}/edit`} icon={Edit}>تعديل البيانات</PrimaryButton> : null}
+          secondaryActions={(
+            <>
+              {canEvaluatePolicy && <SecondaryButton type="button" onClick={() => setActiveTab("policy")}>تقييم السياسة</SecondaryButton>}
+              {canSupport && !b.archived_at && <SecondaryButton as={Link} to={`/beneficiaries/${id}/support`}>تقديم دعم</SecondaryButton>}
+              {canArchive && <SecondaryButton type="button" disabled={actionBusy} onClick={archive}>{b.archived_at ? "استعادة المستفيد" : "أرشفة المستفيد"}</SecondaryButton>}
+            </>
+          )}
+        >
+          {actionError && <ErrorState title="تعذر تحديث حالة الأرشفة" description={actionError} />}
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={b.archived_at ? "archived" : (b.status || "active")} label={b.archived_at ? "مؤرشف" : displayLabel("status", b.status || "active")} />
+            <StatusBadge tone="neutral" label={isCitizen ? "مواطن" : "مقيم"} />
+            <StatusBadge tone="info" label={displayLabel("priority", b.priority)} />
           </div>
+          {b.archived_at && <p className="text-sm text-[var(--color-text-secondary)]">هذا المستفيد مؤرشف، وسجلاته ووثائقه محفوظة.</p>}
+          <Tabs
+            tabs={[
+              { id: "basic", label: "بيانات المستفيد", testId: "workspace-tab-basic" },
+              { id: "family", label: "الأسرة والتابعون", testId: "workspace-tab-family" },
+              { id: "financial", label: "البيانات المالية والدخل", testId: "workspace-tab-financial" },
+              { id: "documents", label: "الوثائق والمرفقات", testId: "workspace-tab-documents" },
+              { id: "policy", label: "السياسة والاستحقاق", testId: "workspace-tab-policy" },
+              { id: "support", label: "الدعم", testId: "workspace-tab-support" },
+              { id: "receipts", label: "سجل الاستلام", testId: "workspace-tab-receipts" },
+              { id: "history", label: "السجل التاريخي", testId: "workspace-tab-history" },
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+          />
 
-          {/* Navigation Tabs Bar */}
-          <div className="flex overflow-x-auto border-b border-[var(--color-border)] bg-[var(--color-bg-soft)] text-xs font-bold" role="tablist" aria-label="أقسام ملف المستفيد">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "basic"}
-              onClick={() => setActiveTab("basic")}
-              className={`flex-1 py-3.5 px-3 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
-                activeTab === "basic"
-                  ? "border-amber-600 text-amber-900 bg-white font-extrabold"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-              }`}
-            >
-              <User className="w-4 h-4" />
-              <span>بيانات المستفيد</span>
-            </button>
+          {activeTab === "basic" && (
+            <SectionCard title="بيانات المستفيد">
+              <dl className="grid gap-3 md:grid-cols-2">
+                <Fact label="الاسم الكامل" value={fullName} />
+                <Fact label="رقم الهوية الوطنية / الإقامة" value={nationalId} />
+                <Fact label="رقم الهاتف" value={phone} />
+                <Fact label="تاريخ الميلاد" value={dateOfBirth} />
+                <Fact label="مكان الميلاد" value={placeOfBirth} />
+                <Fact label="نوع المستفيد" value={isCitizen ? "مواطن" : "مقيم"} />
+                <Fact label="الجنسية / الإقامة" value={identityLabel} />
+                {!isCitizen && <Fact label="المهنة الحالية" value={b.profession} />}
+                <Fact label="المدينة" value={b.city} />
+                <Fact label="اسم الحي السكني" value={b.district} />
+                <Fact label="الشارع / المعلم" value={b.street} />
+              </dl>
+            </SectionCard>
+          )}
 
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "family"}
-              onClick={() => setActiveTab("family")}
-              className={`flex-1 py-3.5 px-3 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
-                activeTab === "family"
-                  ? "border-amber-600 text-amber-900 bg-white font-extrabold"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>الأسرة والتابعين</span>
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "financial"}
-              onClick={() => setActiveTab("financial")}
-              className={`flex-1 py-3.5 px-3 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
-                activeTab === "financial"
-                  ? "border-amber-600 text-amber-900 bg-white font-extrabold"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-              }`}
-            >
-              <DollarSign className="w-4 h-4" />
-              <span>البيانات المالية والدخل</span>
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "documents"}
-              onClick={() => setActiveTab("documents")}
-              className={`flex-1 py-3.5 px-3 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
-                activeTab === "documents"
-                  ? "border-amber-600 text-amber-900 bg-white font-extrabold"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              <span>الوثائق والمرفقات</span>
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "history"}
-              onClick={() => setActiveTab("history")}
-              className={`flex-1 py-3.5 px-3 flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
-                activeTab === "history"
-                  ? "border-amber-600 text-amber-900 bg-white font-extrabold"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-              }`}
-            >
-              <Package className="w-4 h-4" />
-              <span>سجل السلات ({b.distributions?.length || 0})</span>
-            </button>
-          </div>
-
-          {/* Tab Content Body */}
-          <div className="p-6">
-            {/* TAB 1: Basic & National Address */}
-            {activeTab === "basic" && (
-              <div className="grid md:grid-cols-2 gap-4 text-xs">
-                <InfoBox label="الاسم الكامل" value={fullName} />
-                <InfoBox label="رقم الهوية الوطنية / الإقامة" value={nationalId} isMono />
-                <InfoBox label="رقم الهاتف الفعال" value={phone} isMono />
-                <InfoBox label="تاريخ الميلاد" value={dateOfBirth} />
-                <InfoBox label="مكان الميلاد" value={placeOfBirth} />
-                <InfoBox label="نوع المستفيد" value={isCitizen ? "مواطن" : "مقيم"} />
-                {!isCitizen && (
-                  <>
-                    <InfoBox label="الجنسية" value={b.nationality} />
-                    <InfoBox label="المهنة الحالية" value={b.profession} />
-                  </>
-                )}
-                <InfoBox label="المدينة" value={b.city} />
-                <InfoBox label="اسم الحي السكني" value={b.district} />
-                <InfoBox label="الشارع / المعلم" value={b.street} />
-              </div>
-            )}
-
-            {/* TAB 2: Family & Dependents */}
-            {activeTab === "family" && (
-              <div className="space-y-4 text-xs">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <InfoBox label="الحالة الاجتماعية" value={displayLabel('family', b.family_status)} />
-                  <InfoBox label="إجمالي أفراد الأسرة" value={b.family_members_count} />
-                  <InfoBox label="عدد العاملين بالأسرة" value={b.working_members_count || b.working_count} />
-                  <InfoBox label="عدد الأبناء غير العاملين" value={b.non_working_children_count || b.non_working_children} />
-                  <InfoBox label="ذوو الاحتياجات الخاصة (الإعاقة)" value={b.has_special_needs ? "نعم (مفعل)" : "لا"} />
-                  <InfoBox label="نوع السكن الحالي" value={displayLabel('housing', b.housing_type)} />
-                  {b.housing_type === "rent" && (
-                    <InfoBox label="مبلغ الإيجار السنوي" value={b.annual_rent_amount ? `${b.annual_rent_amount} ريال` : "—"} />
-                  )}
-                </div>
-
-                <div className="pt-2">
-                  <h4 className="font-bold text-[var(--color-text-primary)] mb-2">جدول المعالين والتابعين المباشرين:</h4>
-                  {(!b.dependents || b.dependents.length === 0) ? (
-                    <div className="p-6 text-center text-[var(--color-text-muted)] bg-[var(--color-bg-soft)] rounded-2xl border border-dashed border-[var(--color-border)]">
-                      لا يوجد معالون مضافون بهذا الحساب.
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto border border-[var(--color-border)] rounded-2xl">
-                      <table className="w-full text-xs text-right">
-                        <thead className="bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] font-bold">
-                          <tr>
-                            <th className="p-3">#</th>
-                            <th className="p-3">اسم التابع الكامل</th>
-                            <th className="p-3">صلة القرابة</th>
-                            <th className="p-3">تاريخ الميلاد</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[var(--color-border)]">
-                          {b.dependents.map((dep, idx) => (
-                            <tr key={dep.id || idx}>
-                              <td className="p-3 text-[var(--color-text-muted)]">{idx + 1}</td>
-                              <td className="p-3 font-bold text-[var(--color-text-primary)]">{dep.name}</td>
-                              <td className="p-3 text-[var(--color-text-secondary)]">{dep.relationship || "—"}</td>
-                              <td className="p-3 font-mono text-[var(--color-text-muted)]">{cleanDate(dep.date_of_birth)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: Financial & Income */}
-            {activeTab === "financial" && (
-              <div className="space-y-4 text-xs">
-                <div>
-                  <h4 className="font-bold text-[var(--color-text-primary)] mb-2">مصادر الدخل المحددة:</h4>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {[["salary", "monthly_salary", "الراتب الشهري"], ["social_security", "social_security_amount", "الضمان الاجتماعي"], ["citizen_account", "citizen_account_amount", "حساب المواطن"], ["retirement", "retirement_pension", "المعاش التقاعدي"], ["family_support", "family_support", "دعم الأسرة والأقارب"]]
-                      .filter(([source]) => (b.income_sources || []).includes(source))
-                      .map(([source, field, label]) => <InfoBox key={source} label={label} value={`${parseFloat(b[field] || 0).toLocaleString()} ريال`} />)
-                    }
-                    {(!b.income_sources || b.income_sources.length === 0) && <InfoBox label="مصادر الدخل" value="لا توجد مصادر محددة" />}
-                  </div>
-                </div>
-
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <InfoBox label="إجمالي الدخل الشهري قبل الإيجار" value={`${parseFloat(b.total_income || 0).toLocaleString()} ريال`} />
-                  <InfoBox label="الإيجار السنوي" value={`${parseFloat(b.annual_rent_amount || 0).toLocaleString()} ريال`} />
-                  <InfoBox label="الإيجار الشهري" value={`${parseFloat(b.monthly_rent || 0).toLocaleString()} ريال`} />
-                  <div className="bg-emerald-50 p-4 rounded-2xl border-2 border-emerald-600">
-                    <span className="text-emerald-800 block text-[11px] font-bold">صافي الدخل الشهري بعد الإيجار</span>
-                    <strong className="text-xl font-mono text-emerald-800">{parseFloat(b.net_income || 0).toLocaleString()} ريال</strong>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-3 rounded-2xl text-xs font-bold">الفئة: {b.priority === "first_class" ? "درجة أولى" : "درجة ثانية"}</div>
-              </div>
-            )}
-
-            {/* TAB 4: Documents */}
-            {activeTab === "documents" && (
-              <div className="text-xs">
-                {documentsList.length === 0 ? (
-                  <div className="p-8 text-center text-[var(--color-text-muted)] bg-[var(--color-bg-soft)] rounded-2xl border border-dashed border-[var(--color-border)]">
-                    لا توجد وثائق مرفقة مسجلة لهذا المستفيد حالياً
-                  </div>
+          {activeTab === "family" && (
+            <SectionCard title="الأسرة والتابعون">
+              <dl className="grid gap-3 md:grid-cols-2">
+                <Fact label="الحالة الاجتماعية" value={displayLabel("family", b.family_status)} />
+                <Fact label="إجمالي أفراد الأسرة" value={b.family_members_count} />
+                <Fact label="عدد العاملين بالأسرة" value={b.working_members_count || b.working_count} />
+                <Fact label="عدد الأبناء غير العاملين" value={b.non_working_children_count || b.non_working_children} />
+                <Fact label="ذوو الاحتياجات الخاصة" value={b.has_special_needs ? "نعم" : "لا"} />
+                <Fact label="نوع السكن الحالي" value={displayLabel("housing", b.housing_type)} />
+                {b.housing_type === "rent" && <Fact label="مبلغ الإيجار السنوي" value={b.annual_rent_amount ? `${b.annual_rent_amount} ريال` : "—"} />}
+              </dl>
+              <div className="mt-4">
+                {(!b.dependents || b.dependents.length === 0) ? (
+                  <EmptyState title="لا يوجد تابعون" description="لا يوجد معالون مضافون بهذا الحساب." />
                 ) : (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {documentsList.map((doc, i) => (
-                      <div key={i} className="border border-[var(--color-border)] p-3.5 rounded-2xl bg-[var(--color-bg-soft)] flex flex-col justify-between">
-                        <div>
-                          <span className="text-xs font-bold text-[var(--color-text-primary)] block mb-2">{doc.label}</span>
-                          <div className="w-full h-36 bg-[var(--color-bg-soft)] rounded-xl overflow-hidden mb-3 border flex items-center justify-center">
-                            <div className="text-center p-4">
-                              <FileText className="w-10 h-10 text-amber-600 mx-auto mb-1" />
-                              <span className="font-bold text-[var(--color-text-secondary)] text-xs">وثيقة خاصة - يلزم التحقق قبل التنزيل</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <a
-                          href={getDocUrl(doc.url)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green-hover)] text-white text-xs font-bold py-2 rounded-xl text-center flex items-center justify-center gap-1 transition-colors shadow-xs"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>فتح وتنزيل المستند</span>
-                        </a>
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right text-xs">
+                      <thead className="bg-[var(--color-bg-soft)]">
+                        <tr>
+                          <th className="p-3">#</th>
+                          <th className="p-3">اسم التابع</th>
+                          <th className="p-3">صلة القرابة</th>
+                          <th className="p-3">تاريخ الميلاد</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {b.dependents.map((dep, idx) => (
+                          <tr key={dep.id || idx}>
+                            <td className="p-3 text-[var(--color-text-muted)]">{idx + 1}</td>
+                            <td className="p-3 font-bold text-[var(--color-text-primary)]">{dep.name}</td>
+                            <td className="p-3">{dep.relationship || "—"}</td>
+                            <td className="p-3 font-mono">{cleanDate(dep.date_of_birth)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
-            )}
+            </SectionCard>
+          )}
 
-            {/* TAB 5: History */}
-            {activeTab === "history" && (
-              <><section className="ikram-panel p-4"><h3 className="font-bold">طلبات الدعم والاستلام</h3>{supportHistory.length ? supportHistory.map((row) => <div key={row.id} className="border-b py-3"><Link to={`/support-delivery?task=${row.id}`}>{row.fulfillment_method === "pickup" ? "استلام مباشر" : "توصيل منزلي"} — {({draft:"مسودة", approved:"معتمد",reserved:"محجوز",ready:"جاهز",in_delivery:"قيد التوصيل",completed:"مكتمل",cancelled:"ملغي"})[row.status]}</Link><p>{row.support_date || row.created_at?.slice(0,10)}</p></div>) : <p>لا توجد طلبات دعم.</p>}</section><ReceiptHistoryTimeline
-                records={b.distributions || []}
-                recipientName={fullName}
-                recipientType="beneficiary"
-                title={`سجل استلامات المستفيد: ${fullName}`}
-              /></>
-            )}
-          </div>
-        </div>
+          {activeTab === "financial" && (
+            <SectionCard title="البيانات المالية والدخل">
+              {incomeRows.length === 0 ? <EmptyState title="لا توجد مصادر دخل" description="لم تُسجل مصادر دخل لهذا المستفيد." /> : (
+                <dl className="grid gap-3 md:grid-cols-2">
+                  {incomeRows.map(([source, field, label]) => <Fact key={source} label={label} value={`${parseFloat(b[field] || 0).toLocaleString()} ريال`} />)}
+                </dl>
+              )}
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard title="إجمالي الدخل الشهري قبل الإيجار" value={`${parseFloat(b.total_income || 0).toLocaleString()} ريال`} />
+                <KpiCard title="الإيجار السنوي" value={`${parseFloat(b.annual_rent_amount || 0).toLocaleString()} ريال`} />
+                <KpiCard title="الإيجار الشهري" value={`${parseFloat(b.monthly_rent || 0).toLocaleString()} ريال`} />
+                <KpiCard title="صافي الدخل الشهري بعد الإيجار" value={`${parseFloat(b.net_income || 0).toLocaleString()} ريال`} />
+              </div>
+              <div className="mt-4"><StatusBadge tone="info" label={displayLabel("priority", b.priority)} /></div>
+            </SectionCard>
+          )}
+
+          {activeTab === "documents" && (
+            <SectionCard title="الوثائق والمرفقات">
+              {documentsList.length === 0 ? <EmptyState title="لا توجد وثائق" description="لا توجد وثائق مرفقة مسجلة لهذا المستفيد حالياً." /> : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {documentsList.map((doc) => (
+                    <div key={doc.label} className="space-y-3">
+                      <p className="text-sm font-bold text-[var(--color-text-primary)]">{doc.label}</p>
+                      <SecondaryButton as="a" href={getDocUrl(doc.url)} target="_blank" rel="noreferrer">فتح المستند</SecondaryButton>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {activeTab === "policy" && (
+            <SectionCard title="السياسة والاستحقاق">
+              <PolicyReviewLinks beneficiaryId={id} archived={Boolean(b.archived_at)} />
+            </SectionCard>
+          )}
+
+          {activeTab === "support" && (
+            <SectionCard title="الدعم">
+              <DataTable
+                columns={[
+                  { key: 'reference', header: 'مرجع الدعم', render: (row) => <Link to={`/support-delivery?task=${row.id}`}>{row.support_date?.slice?.(0, 10) || row.created_at?.slice?.(0, 10) || 'طلب دعم'}</Link> },
+                  { key: 'type', header: 'نوع الدعم', render: (row) => `${(row.items || []).length} صنف` },
+                  { key: 'quantity', header: 'الكمية', render: (row) => (row.items || []).reduce((sum, item) => sum + Number(item.requested_quantity || 0), 0) },
+                  { key: 'status', header: 'الحالة', render: (row) => displayLabel('status', row.status) },
+                  { key: 'method', header: 'طريقة التنفيذ', render: (row) => displayLabel('fulfillment', row.fulfillment_method) },
+                  { key: 'created', header: 'تاريخ الطلب', render: (row) => row.created_at?.slice?.(0, 10) || '—' },
+                  { key: 'completed', header: 'تاريخ الإكمال', render: (row) => row.completed_at?.slice?.(0, 10) || '—' },
+                ]}
+                data={supportHistory}
+                emptyMessage="لا توجد طلبات دعم"
+                emptySubMessage="لا توجد طلبات دعم مسجلة لهذا المستفيد."
+              />
+            </SectionCard>
+          )}
+
+          {activeTab === "receipts" && (
+            <SectionCard title="سجل الاستلام">
+              {(b.distributions || []).length === 0 ? <EmptyState title="لا توجد استلامات" description="لا يوجد سجل استلام محفوظ لهذا المستفيد." /> : (
+                <ReceiptHistoryTimeline records={b.distributions || []} beneficiaryId={b.id} recipientName={fullName} recipientType="beneficiary" title={`سجل استلامات المستفيد: ${fullName}`} />
+              )}
+            </SectionCard>
+          )}
+
+          {activeTab === "history" && (
+            <SectionCard title="السجل التاريخي">
+              <EmptyState title="لا يوجد سجل تاريخي في هذا العرض" description="تفاصيل الأرشفة والتقييم تبقى محفوظة في سجل النظام، ولا تُعرض هنا كبيانات جديدة." />
+            </SectionCard>
+          )}
+        </PageShell>
       </div>
     </MainLayout>
   );
 }
 
-function InfoBox({ label, value, isMono = false }) {
+function Fact({ label, value }) {
   return (
-    <div className="bg-[var(--color-bg-soft)]/90 p-3.5 rounded-2xl border border-[var(--color-border)]">
-      <span className="text-[var(--color-text-muted)] block mb-0.5 font-medium text-[11px]">{label}</span>
-      <span className={`text-xs font-bold text-[var(--color-text-primary)] block ${isMono ? 'font-mono' : ''}`}>
-        {value !== null && value !== undefined && value !== "" ? value : "—"}
-      </span>
+    <div>
+      <dt className="text-xs text-[var(--color-text-muted)]">{label}</dt>
+      <dd className="text-sm font-bold text-[var(--color-text-primary)]">{value !== null && value !== undefined && value !== "" ? value : "—"}</dd>
     </div>
   );
 }

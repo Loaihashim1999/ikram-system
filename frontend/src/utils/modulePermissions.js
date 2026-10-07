@@ -29,7 +29,12 @@ export function hasModuleAction(user, module, action) {
   if (!moduleAccountOpen(user) || !module || !action) return false;
   if (user.role === 'admin') return true;
   if (DRIVER_ROLES.includes(user.role)) return false;
-  if (module === 'notifications') return true;
+  if (module === 'notifications') {
+    if (action === 'view') return Boolean(user.can_receive_notifications || user.permissions?.can_receive_notifications);
+    if (action === 'delete') return user.permissions?.notifications?.delete === true;
+    if (action === 'purge') return user.permissions?.notifications?.purge === true;
+    return false;
+  }
   if (module === 'users' || module === 'audit') return false;
   if (module === 'support') return supportAction(user, action);
   if (module === 'governance') return user.permissions?.governance?.[action] === true;

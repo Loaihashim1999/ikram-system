@@ -72,6 +72,7 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
     Route::post('/support/assignments/reassign', [DeliveryCommunicationController::class, 'reassign']);
     Route::post('/support/assignments/{id}/revoke', [DeliveryCommunicationController::class, 'revoke']);
     Route::post('/support/assignments/{id}/resend', [DeliveryCommunicationController::class, 'resend']);
+    Route::post('/support/assignments/{id}/send', [DeliveryCommunicationController::class, 'send']);
     Route::get('/support/assignments/{id}/link', [DeliveryCommunicationController::class, 'link']);
     Route::get('/support/history', [SupportDistributionController::class, 'history']);
     Route::get('/support/distributions', [SupportDistributionController::class, 'index']);
@@ -124,6 +125,10 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
 
     // تصدير PDF العام وتنزيل الشيتات
     Route::get('/documents/beneficiary/{id}/pdf', [PdfExportController::class, 'exportBeneficiaryCard']);
+    Route::get('/documents/policy-evaluation/{id}/pdf', [PdfExportController::class, 'exportPolicyEvaluation']);
+    Route::get('/documents/inventory/pdf', [PdfExportController::class, 'exportInventoryReport']);
+    Route::get('/documents/drivers/pdf', [PdfExportController::class, 'exportDriverReport']);
+    Route::get('/documents/drivers/excel', [PdfExportController::class, 'exportDriverExcel']);
     Route::get('/documents/individual-receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
     Route::get('/documents/receipt/{id}/pdf', [PdfExportController::class, 'exportIndividualReceipt']);
     Route::get('/documents/total-delivery/{id}/pdf', [PdfExportController::class, 'exportTotalDelivery']);
@@ -148,8 +153,12 @@ Route::middleware(['auth:sanctum', ModulePermission::class])->group(function () 
     // ── إشعارات المستفيدين ──────────────────────────────────────────────────────
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
-    Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+    Route::post('/notifications/delete-selected', [NotificationController::class, 'destroySelected']);
+    Route::post('/notifications/delete-read', [NotificationController::class, 'destroyRead']);
+    Route::post('/notifications/purge', [NotificationController::class, 'purge']);
+    Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 
     // ── المستفيدون ──────────────────────────────────────────────────────────
     Route::get('/beneficiaries/unified/export', [BeneficiaryController::class, 'unifiedExport']);

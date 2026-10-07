@@ -56,8 +56,8 @@ class GovernanceReportService
             'filtered_registrations' => $permanentCount + $dailyCount,
             'policy_evaluations' => (clone $evaluations)->count(),
             'policy_decisions' => (clone $decisions)->count(),
-            'support_operations' => $supportCount,
-            'support_completed' => $supportCompleted,
+            'support_operations' => $analytics['operational_metrics']['total_due'] ?? $supportCount,
+            'support_completed' => $analytics['operational_metrics']['completed_in_period'] ?? $supportCompleted,
         ]);
         $analytics['charts'] = $this->charts($filters, $from, $to, $permanentCount, $dailyCount, $support);
         $analytics['report_scope'] = ['period_metrics' => ['filtered_registrations', 'policy_evaluations', 'policy_decisions', 'support_operations', 'support_completed'], 'snapshot_metrics' => ['inventory', 'staff', 'organizations']];
@@ -176,7 +176,8 @@ class GovernanceReportService
         $cursor = $from->copy()->startOfMonth();
         while ($cursor->lte($to)) {
             $bin = [$cursor->copy()->max($from), $cursor->copy()->endOfMonth()->min($to)];
-            $line[] = ['label' => $cursor->format('Y-m'), 'registrations' => ($f['domain'] === 'daily' ? 0 : $this->beneficiaries($f)->whereBetween('created_at', $bin)->count()) + ($f['domain'] === 'permanent' ? 0 : $this->daily($f)->whereBetween('created_at', $bin)->count()), 'receipts' => Distribution::where('status', 'delivered')->whereBetween('delivered_at', $bin)->count(), 'support_completed' => $this->support($f)->where('status', 'completed')->whereBetween('completed_at', $bin)->count()];
+            $completed = $this->support($f)->where('status', 'completed')->whereBetween('completed_at', $bin)->count();
+            $line[] = ['label' => $cursor->format('Y-m'), 'registrations' => ($f['domain'] === 'daily' ? 0 : $this->beneficiaries($f)->whereBetween('created_at', $bin)->count()) + ($f['domain'] === 'permanent' ? 0 : $this->daily($f)->whereBetween('created_at', $bin)->count()), 'distributions' => $completed, 'receipts' => $completed, 'support_completed' => $completed];
             $cursor->addMonth();
         }
         $ranks = ['draft' => 0, 'approved' => 1, 'reserved' => 2, 'ready' => 3, 'in_delivery' => 4, 'completed' => 5];
