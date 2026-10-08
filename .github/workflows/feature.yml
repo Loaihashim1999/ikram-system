@@ -17,6 +17,7 @@ jobs:
       - name: Verify Software Engineering AI Agents files
         run: |
           set -euo pipefail
+          export LANG=C.UTF-8
           required=(
             .cursor/rules/00-team-orchestrator.mdc
             .cursor/rules/01-engineering-standards.mdc
@@ -46,6 +47,33 @@ jobs:
             else
               echo "OK $f"
             fi
+          done
+
+          # First-class role labels must stay visible to humans and the lead.
+          labels=(
+            "واجهات"
+            "اختبار"
+            "برمجة"
+            "مهندس نظم"
+            "مهندس إداري"
+            "أمن"
+            "قاعدة بيانات"
+            "مراجعة كود وملفات"
+          )
+          labeled=(
+            .cursor/agents/README.md
+            .cursor/agents/AI_TEAM_WORKFLOW.md
+            .cursor/agents/team.md
+            .cursor/rules/00-team-orchestrator.mdc
+            .github/pull_request_template.md
+          )
+          for f in "${labeled[@]}"; do
+            for label in "${labels[@]}"; do
+              if ! grep -q -- "$label" "$f"; then
+                echo "::error file=$f::Missing first-class role label: $label"
+                missing=1
+              fi
+            done
           done
           exit "$missing"
 

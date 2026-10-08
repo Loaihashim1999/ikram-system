@@ -12,16 +12,31 @@
 - [ ] CI / DevOps
 - [ ] Security hardening
 
+## First-class roles
+
+The engineering lead (مهندس إداري) assigns each role or marks N/A.
+
+- [ ] Engineering lead / team admin — `@team` (مهندس إداري لإدارة الفرق)
+- [ ] UI / frontend — `@frontend` (واجهات) or N/A
+- [ ] Test / QA — `@qa` (اختبار) or N/A
+- [ ] Program / backend — `@backend` (برمجة) or N/A
+- [ ] Systems / DevOps — `@devops` (مهندس نظم) or N/A
+- [ ] Security — `@security` (أمن) or N/A
+- [ ] Database — `@database` (قاعدة بيانات) or N/A
+- [ ] Code review (code and files) — `@review` (مراجعة كود وملفات)
+
 ## AI team phases completed
 
+- [ ] Engineering lead role assignments
 - [ ] PM / Analyst brief
 - [ ] Architect design (or N/A — trivial)
-- [ ] Database / migrations (or N/A)
-- [ ] Backend
-- [ ] Frontend (or N/A)
-- [ ] Security review (or N/A)
-- [ ] QA evidence
-- [ ] Review verdict
+- [ ] Database / migrations (قاعدة بيانات) (or N/A)
+- [ ] Backend (برمجة)
+- [ ] Frontend (واجهات) (or N/A)
+- [ ] Security review (أمن) (or N/A)
+- [ ] QA evidence (اختبار)
+- [ ] Systems / DevOps (مهندس نظم) (or N/A)
+- [ ] Code and file review (مراجعة كود وملفات)
 
 ## Acceptance criteria
 
@@ -63,5 +78,6 @@ cd frontend && npm test -- --run
 ## Checklist
 
 - [ ] Diff is focused (no unrelated refactors)
+- [ ] Changed files belong in the paths they occupy
 - [ ] Migrations included if schema changed
 - [ ] Docs / agent files updated if workflow changed

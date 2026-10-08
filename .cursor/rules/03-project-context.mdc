@@ -30,9 +30,13 @@ frontend/             React SPA (Vite)
 resources/            Blade/views, legacy assets if any
 tests/                PHPUnit + Browser helpers
 docs/                 Design & testing strategy notes
-.cursor/agents/       Specialist AI agent definitions
+.cursor/agents/       Engineering AI team (lead + seven delivery roles + supporting specialists)
 .cursor/rules/        Always-on orchestration & standards
 ```
+
+## Engineering AI team
+
+First-class roles, routed by `@team` (مهندس إداري لإدارة الفرق): واجهات (`@frontend`), اختبار (`@qa`), برمجة (`@backend`), مهندس نظم (`@devops`), أمن (`@security`), قاعدة بيانات (`@database`), مراجعة كود وملفات (`@review`). Supporting specialists: `@pm`, `@analyst`, `@architect`. Index: `.cursor/agents/README.md`.
 
 ## Non-negotiables
 
