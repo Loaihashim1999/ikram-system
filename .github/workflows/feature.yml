@@ -1,0 +1,124 @@
+name: Feature PR Checks
+
+on:
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  ai-team-files:
+    name: AI team pack present
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Software Engineering AI Agents files
+        run: |
+          set -euo pipefail
+          export LANG=C.UTF-8
+          required=(
+            .cursor/rules/00-team-orchestrator.mdc
+            .cursor/rules/01-engineering-standards.mdc
+            .cursor/rules/02-github-workflow.mdc
+            .cursor/rules/03-project-context.mdc
+            .cursor/agents/analyst.md
+            .cursor/agents/architect.md
+            .cursor/agents/backend.md
+            .cursor/agents/database.md
+            .cursor/agents/devops.md
+            .cursor/agents/frontend.md
+            .cursor/agents/pm.md
+            .cursor/agents/qa.md
+            .cursor/agents/review.md
+            .cursor/agents/security.md
+            .cursor/agents/team.md
+            .cursor/agents/README.md
+            .cursor/agents/AI_TEAM_WORKFLOW.md
+            .cursor/agents/feature.yml
+            .github/pull_request_template.md
+          )
+          missing=0
+          for f in "${required[@]}"; do
+            if [[ ! -f "$f" ]]; then
+              echo "::error file=$f::Missing required AI team file"
+              missing=1
+            else
+              echo "OK $f"
+            fi
+          done
+
+          # First-class role labels must stay visible to humans and the lead.
+          labels=(
+            "واجهات"
+            "اختبار"
+            "برمجة"
+            "مهندس نظم"
+            "مهندس إداري"
+            "أمن"
+            "قاعدة بيانات"
+            "مراجعة كود وملفات"
+          )
+          labeled=(
+            .cursor/agents/README.md
+            .cursor/agents/AI_TEAM_WORKFLOW.md
+            .cursor/agents/team.md
+            .cursor/rules/00-team-orchestrator.mdc
+            .github/pull_request_template.md
+          )
+          for f in "${labeled[@]}"; do
+            for label in "${labels[@]}"; do
+              if ! grep -q -- "$label" "$f"; then
+                echo "::error file=$f::Missing first-class role label: $label"
+                missing=1
+              fi
+            done
+          done
+          exit "$missing"
+
+  verify:
+    name: Build & test
+    runs-on: ubuntu-latest
+    env:
+      DB_CONNECTION: sqlite
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, sqlite3, pdo_sqlite, gd, zip, xml
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
+          php artisan key:generate
+          php artisan migrate --force
+
+      - name: Backend tests
+        run: php artisan test
+
+      - name: Frontend tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Frontend production build
+        working-directory: frontend
+        run: npm run build

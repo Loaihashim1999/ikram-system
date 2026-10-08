@@ -1,0 +1,68 @@
+---
+description: Ikram engineering AI team orchestrator — routes work through the engineering lead to first-class specialists
+alwaysApply: true
+---
+
+# Team Orchestrator
+
+You are the entry point for the **Ikram engineering AI team**. Prefer the engineering lead and the specialist roles over doing every job yourself.
+
+## When to orchestrate
+
+Use the team workflow for:
+
+- New features or multi-file changes
+- Cross-cutting work (API + UI + DB + permissions)
+- Bugs that need root-cause analysis before a fix
+- Refactors, security-sensitive changes, CI/CD, or schema work
+
+Skip full orchestration for trivial one-file edits, typo fixes, or answers that need no code change. Still use `@review` (مراجعة كود وملفات) before opening a PR.
+
+## Engineering lead
+
+`@team` (`.cursor/agents/team.md`) is the engineering lead / team admin (مهندس إداري لإدارة الفرق). For a full delivery, delegate to `@team`. The lead assigns the roles below and records **N/A** with a reason when a role does not apply.
+
+## First-class roles
+
+| Agent | Path | Role | Use when |
+|-------|------|------|----------|
+| `@team` | `.cursor/agents/team.md` | Engineering lead (مهندس إداري لإدارة الفرق) | Coordinate the team and route work |
+| `@frontend` | `.cursor/agents/frontend.md` | UI / frontend (واجهات) | React UI, forms, RTL, design system |
+| `@qa` | `.cursor/agents/qa.md` | Test / QA (اختبار) | Tests, Playwright, regression evidence |
+| `@backend` | `.cursor/agents/backend.md` | Program / backend (برمجة) | Laravel API, services, auth, permissions |
+| `@devops` | `.cursor/agents/devops.md` | Systems / DevOps (مهندس نظم) | CI/CD, Docker, deploy, env, observability |
+| `@security` | `.cursor/agents/security.md` | Security (أمن) | AuthZ, uploads, secrets, PII, OWASP checks |
+| `@database` | `.cursor/agents/database.md` | Database (قاعدة بيانات) | Schema, migrations, indexes, data integrity |
+| `@review` | `.cursor/agents/review.md` | Code review (مراجعة كود وملفات) | Diff, files, PR readiness, merge call |
+
+## Supporting specialists
+
+| Agent | Path | Use when |
+|-------|------|----------|
+| `@pm` | `.cursor/agents/pm.md` | Scope, acceptance criteria, prioritization |
+| `@analyst` | `.cursor/agents/analyst.md` | Requirements, domain rules, edge cases |
+| `@architect` | `.cursor/agents/architect.md` | Design, boundaries, ADRs, API contracts |
+
+## Default feature pipeline
+
+Follow `.cursor/agents/feature.yml` and `AI_TEAM_WORKFLOW.md`:
+
+1. **Engineering lead** — assign first-class roles or mark N/A
+2. **PM / Analyst** — goal, acceptance criteria, out-of-scope
+3. **Architect** — approach, files, contracts (skip for tiny fixes)
+4. **Database (قاعدة بيانات)** — migrations when the data model changes
+5. **Backend (برمجة) + Frontend (واجهات)** — implement in parallel when scopes do not overlap
+6. **Security (أمن)** — auth, uploads, PII, permissions
+7. **QA (اختبار)** — add/run tests; never claim pass without evidence
+8. **Systems (مهندس نظم)** — CI/CD or runtime changes only
+9. **Code review (مراجعة كود وملفات)** — review code and files, then the PR checklist
+
+## Orchestration rules
+
+- One clear owner per phase; do not mix roles in a single messy pass.
+- Parallelize only disjoint paths (e.g. `app/` vs `frontend/src/`).
+- Preserve Arabic/RTL and existing Ikram domain language.
+- Never invent DB columns, permissions, or API fields without wiring migrations, models, validation, and UI.
+- Prefer existing patterns in `app/`, `routes/api.php`, and `frontend/src/`.
+- After implementation, run the relevant test commands from engineering standards before declaring done.
+- For PR text, use `.github/pull_request_template.md`.

@@ -1,0 +1,59 @@
+---
+description: Engineering standards for Ikram System (Laravel + React)
+alwaysApply: true
+---
+
+# Engineering Standards
+
+## Stack
+
+- **Backend:** PHP 8.3, Laravel 13, Sanctum, Eloquent, PHPUnit
+- **Frontend:** React (Vite), Tailwind 4, Vitest, Playwright
+- **Data:** SQLite (local/CI default); respect production DB constraints
+- **AuthZ:** `auth:sanctum` + `ModulePermission` middleware
+- **Observability:** Sentry (Laravel + React)
+
+## Code quality
+
+- Match existing naming, folder layout, and Arabic comments where present.
+- Keep controllers thin; put business rules in services / model methods already used by the module.
+- Validate every write path; return consistent JSON errors.
+- Soft-delete and audit trails must stay intact for beneficiary/staff/daily flows.
+- No secrets in source; use `.env` / GitHub secrets only.
+- Prefer small, reviewable diffs; avoid drive-by refactors.
+
+## Frontend
+
+- Follow `frontend/FRONTEND_DESIGN_SYSTEM.md` and `frontend/src/theme/`.
+- Preserve RTL Arabic UX; do not hardcode LTR-only layouts for primary flows.
+- Reuse shared components (`Button`, `PageHeader`, `ConfirmDialog`, forms, tables).
+- Keep API calls in `frontend/src/api/`; handle 401/403/422 explicitly.
+
+## Testing expectations
+
+Before claiming completion, run what applies:
+
+```bash
+# Backend
+php artisan test
+
+# Frontend unit
+cd frontend && npm test -- --run
+
+# Lint / format (changed PHP)
+./vendor/bin/pint --dirty
+
+# Browser (when UI flows change)
+npm run test:browser
+```
+
+- New API behavior → PHPUnit feature/unit tests.
+- New UI behavior → Vitest and/or Playwright coverage for the critical path.
+- Never skip failing tests to “finish”; fix or document a real blocker.
+
+## Security baseline
+
+- Throttle auth endpoints; never weaken rate limits without review.
+- Uploads: type, size, storage path isolation; reject executables.
+- Permissions: check module + action, not only “logged in”.
+- PII (national ID, phone, docs): minimize logging; no secrets in client bundles.

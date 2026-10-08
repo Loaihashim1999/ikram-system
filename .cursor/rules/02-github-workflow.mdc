@@ -1,0 +1,44 @@
+---
+description: GitHub branch, commit, PR, and CI workflow for Ikram System
+alwaysApply: true
+---
+
+# GitHub Workflow
+
+## Branches
+
+- Default base: `main`
+- Feature/fix work: short descriptive branches (e.g. `cursor/<topic>-9177` when using Cloud Agents)
+- Never force-push `main`; never commit directly to `main` in agent workflows
+
+## Commits
+
+- Use clear, imperative messages: `feat: …`, `fix: …`, `test: …`, `docs: …`, `ci: …`, `refactor: …`
+- One logical change per commit when practical
+- Do not commit `.env`, credentials, large binaries, or generated secrets
+
+## Pull requests
+
+- Fill `.github/pull_request_template.md` completely
+- Link related issues when they exist
+- Describe user-visible impact and test evidence (commands + results)
+- Keep PRs focused; split unrelated work
+
+## CI gates
+
+Existing workflows under `.github/workflows/`:
+
+- `ci.yml` — verify changes
+- `release.yml` — release / deploy path
+- `rollback.yml` — rollback path
+- `feature.yml` — AI team feature checklist automation (documentation + PR checks)
+
+Agents must not weaken CI to pass. If CI fails, fix the cause or explain the blocker.
+
+## Agent delivery checklist
+
+1. Implement on a feature branch
+2. Run relevant tests locally
+3. Commit and push (`git push -u origin <branch>`)
+4. Open/update PR with the template
+5. Ensure CI is green or document failures with root cause

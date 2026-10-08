@@ -6,7 +6,12 @@
 .phpactor.json
 .phpunit.result.cache
 /.codex
-/.cursor/
+# Track shared AI team rules/agents; ignore local Cursor state
+/.cursor/*
+!/.cursor/rules/
+!/.cursor/rules/**
+!/.cursor/agents/
+!/.cursor/agents/**
 /.idea
 /.nova
 /.phpunit.cache

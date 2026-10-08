@@ -1,0 +1,178 @@
+# Ikram engineering AI team — feature pipeline
+# Human guide: AI_TEAM_WORKFLOW.md
+# Index: README.md
+
+id: ikram-feature
+name: Ikram Feature Delivery
+description: >
+  End-to-end workflow for the Ikram engineering team
+  (Laravel API + React SPA). The engineering lead routes
+  first-class roles and supporting specialists.
+
+lead:
+  id: team
+  file: team.md
+  invoke: "@team"
+  role_en: Engineering lead / team admin
+  role_ar: مهندس إداري لإدارة الفرق
+
+core_team:
+  - id: team
+    file: team.md
+    invoke: "@team"
+    role_en: Engineering lead / team admin
+    role_ar: مهندس إداري لإدارة الفرق
+  - id: frontend
+    file: frontend.md
+    invoke: "@frontend"
+    role_en: UI / frontend engineer
+    role_ar: واجهات
+  - id: qa
+    file: qa.md
+    invoke: "@qa"
+    role_en: Test / QA engineer
+    role_ar: اختبار
+  - id: backend
+    file: backend.md
+    invoke: "@backend"
+    role_en: Program / backend engineer
+    role_ar: برمجة
+  - id: devops
+    file: devops.md
+    invoke: "@devops"
+    role_en: Systems / DevOps engineer
+    role_ar: مهندس نظم
+  - id: security
+    file: security.md
+    invoke: "@security"
+    role_en: Security engineer
+    role_ar: أمن
+  - id: database
+    file: database.md
+    invoke: "@database"
+    role_en: Database engineer
+    role_ar: قاعدة بيانات
+  - id: review
+    file: review.md
+    invoke: "@review"
+    role_en: Code reviewer (code and files)
+    role_ar: مراجعة كود وملفات
+
+triggers:
+  - feature
+  - fullstack
+  - "new module behavior"
+  - "api and ui"
+
+agents:
+  - id: team
+    file: team.md
+    tier: core
+  - id: pm
+    file: pm.md
+    tier: supporting
+  - id: analyst
+    file: analyst.md
+    tier: supporting
+  - id: architect
+    file: architect.md
+    tier: supporting
+  - id: database
+    file: database.md
+    tier: core
+  - id: backend
+    file: backend.md
+    tier: core
+  - id: frontend
+    file: frontend.md
+    tier: core
+  - id: security
+    file: security.md
+    tier: core
+  - id: qa
+    file: qa.md
+    tier: core
+  - id: review
+    file: review.md
+    tier: core
+  - id: devops
+    file: devops.md
+    tier: core
+
+steps:
+  - id: coordinate
+    name: Engineering lead assigns roles
+    agents: [team]
+    outputs:
+      - role_assignments
+    onComplete: brief
+
+  - id: brief
+    name: Product brief
+    agents: [pm, analyst]
+    outputs:
+      - goal
+      - acceptance_criteria
+      - business_rules
+      - out_of_scope
+    onComplete: design
+
+  - id: design
+    name: Technical design
+    agents: [architect]
+    optional_agents: [database]
+    outputs:
+      - approach
+      - api_contract
+      - file_list
+      - implementation_slices
+    onComplete: implement
+
+  - id: implement
+    name: Implementation
+    parallel:
+      - agent: database
+        when: schema_change
+      - agent: backend
+      - agent: frontend
+        when: ui_change
+    outputs:
+      - code_changes
+      - unit_tests
+    onComplete: harden
+
+  - id: harden
+    name: Security, QA, and systems
+    parallel:
+      - agent: security
+      - agent: qa
+      - agent: devops
+        when: ci_or_deploy_change
+    outputs:
+      - security_findings
+      - test_evidence
+    onComplete: review
+
+  - id: review
+    name: Code and file review, then PR
+    agents: [review]
+    outputs:
+      - files_reviewed
+      - verdict
+      - pr_body
+    checks:
+      - pull_request_template: ../../.github/pull_request_template.md
+      - ci_workflows:
+          - ../../.github/workflows/ci.yml
+          - ../../.github/workflows/feature.yml
+
+definition_of_done:
+  - acceptance_criteria_met
+  - role_assignments_recorded
+  - permissions_enforced
+  - tests_with_evidence
+  - security_reviewed_or_na
+  - database_reviewed_or_na
+  - code_and_files_reviewed
+  - pr_template_complete
+  - no_secrets_committed
